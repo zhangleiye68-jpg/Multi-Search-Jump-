@@ -1,0 +1,10 @@
+{
+  "name": "multi-search-jump",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate-icons": "node scripts/generate-icons.mjs",
+    "test": "node --test"
+  }
+}
