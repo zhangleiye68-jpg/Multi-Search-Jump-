@@ -127,24 +127,88 @@ button:disabled {
   opacity: 0.72;
 }
 
-.secondary-actions {
-  display: grid;
-}
-
-.ghost-button {
-  width: 100%;
+.preference-row {
   border: 1px solid #cfd8d3;
+  border-radius: 7px;
   background: #ffffff;
+}
+
+.switch-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 10px;
   color: #263331;
+  cursor: pointer;
 }
 
-.ghost-button:hover {
-  background: #edf3f0;
+.setting-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 
-.ghost-button:disabled {
-  cursor: default;
-  opacity: 0.48;
+.setting-title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.setting-state {
+  color: #5f6d68;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.switch-control {
+  position: relative;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 22px;
+}
+
+.switch-control input {
+  position: absolute;
+  inset: 0;
+  width: 40px;
+  height: 22px;
+  margin: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.switch-track {
+  display: block;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: #cfd8d3;
+  transition: background 120ms ease;
+}
+
+.switch-thumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(21, 32, 31, 0.24);
+  transform: translate(2px, 2px);
+  transition: transform 120ms ease;
+}
+
+.switch-control input:checked + .switch-track {
+  background: #176b63;
+}
+
+.switch-control input:checked + .switch-track .switch-thumb {
+  transform: translate(20px, 2px);
+}
+
+.switch-control input:focus-visible + .switch-track {
+  box-shadow: 0 0 0 3px rgba(23, 107, 99, 0.16);
 }
 
 .target-list {

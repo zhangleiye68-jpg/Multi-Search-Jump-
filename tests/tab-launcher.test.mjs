@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  AUTO_CLOSE_PREVIOUS_KEY,
   LAST_SEARCH_SESSION_KEY,
+  getAutoClosePrevious,
+  openManagedSearchTabs,
   closeLastSearchGroup,
   openGroupedSearchTabs,
+  setAutoClosePrevious,
 } from "../tabLauncher.js";
 
 function createStorageArea(initialValues = {}) {
@@ -169,5 +173,127 @@ describe("tab launcher", () => {
     ]);
     assert.deepEqual(result, { closedCount: 1 });
     assert.equal(storageArea.values[LAST_SEARCH_SESSION_KEY], undefined);
+  });
+
+  it("defaults to closing the previous search before a new search", async () => {
+    const storageArea = createStorageArea();
+
+    assert.equal(await getAutoClosePrevious(storageArea), true);
+  });
+
+  it("persists the auto-close preference", async () => {
+    const storageArea = createStorageArea();
+
+    await setAutoClosePrevious(storageArea, false);
+
+    assert.equal(storageArea.values[AUTO_CLOSE_PREVIOUS_KEY], false);
+    assert.equal(await getAutoClosePrevious(storageArea), false);
+  });
+
+  it("closes the previous saved group before opening a new managed search when enabled", async () => {
+    const calls = [];
+    const storageArea = createStorageArea({
+      [LAST_SEARCH_SESSION_KEY]: {
+        groupId: 77,
+        tabIds: [201, 202],
+        title: "Search: old",
+      },
+    });
+    const tabsApi = {
+      async query(options) {
+        calls.push(["query", options]);
+        return [{ id: 201 }, { id: 202 }];
+      },
+      async remove(tabIds) {
+        calls.push(["remove", tabIds]);
+      },
+      async create(options) {
+        const id = 301 + calls.filter(([type]) => type === "create").length;
+        calls.push(["create", options]);
+        return { id };
+      },
+      async group(options) {
+        calls.push(["group", options]);
+        return 88;
+      },
+      async update(id, options) {
+        calls.push(["update", id, options]);
+      },
+    };
+    const tabGroupsApi = {
+      async update(id, options) {
+        calls.push(["updateGroup", id, options]);
+      },
+    };
+
+    await openManagedSearchTabs({
+      tabsApi,
+      tabGroupsApi,
+      storageArea,
+      urls: ["https://new.example"],
+      title: "Search: new",
+      autoClosePrevious: true,
+    });
+
+    assert.deepEqual(calls, [
+      ["query", { groupId: 77 }],
+      ["remove", [201, 202]],
+      ["create", { url: "https://new.example", active: false }],
+      ["group", { tabIds: [301] }],
+      ["updateGroup", 88, { title: "Search: new", color: "cyan", collapsed: false }],
+      ["update", 301, { active: true }],
+    ]);
+  });
+
+  it("keeps the previous group before opening a new managed search when disabled", async () => {
+    const calls = [];
+    const storageArea = createStorageArea({
+      [LAST_SEARCH_SESSION_KEY]: {
+        groupId: 77,
+        tabIds: [201, 202],
+        title: "Search: old",
+      },
+    });
+    const tabsApi = {
+      async query(options) {
+        calls.push(["query", options]);
+        return [{ id: 201 }, { id: 202 }];
+      },
+      async remove(tabIds) {
+        calls.push(["remove", tabIds]);
+      },
+      async create(options) {
+        calls.push(["create", options]);
+        return { id: 301 };
+      },
+      async group(options) {
+        calls.push(["group", options]);
+        return 88;
+      },
+      async update(id, options) {
+        calls.push(["update", id, options]);
+      },
+    };
+    const tabGroupsApi = {
+      async update(id, options) {
+        calls.push(["updateGroup", id, options]);
+      },
+    };
+
+    await openManagedSearchTabs({
+      tabsApi,
+      tabGroupsApi,
+      storageArea,
+      urls: ["https://new.example"],
+      title: "Search: new",
+      autoClosePrevious: false,
+    });
+
+    assert.deepEqual(calls, [
+      ["create", { url: "https://new.example", active: false }],
+      ["group", { tabIds: [301] }],
+      ["updateGroup", 88, { title: "Search: new", color: "cyan", collapsed: false }],
+      ["update", 301, { active: true }],
+    ]);
   });
 });

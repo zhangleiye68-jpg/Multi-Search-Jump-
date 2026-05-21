@@ -1,15 +1,16 @@
 import { SEARCH_TARGETS, buildSearchUrls } from "./searchTargets.js";
 import {
   buildGroupTitle,
-  closeLastSearchGroup,
-  getLastSearchSession,
-  openGroupedSearchTabs,
+  getAutoClosePrevious,
+  openManagedSearchTabs,
+  setAutoClosePrevious,
 } from "./tabLauncher.js";
 
 const form = document.querySelector("#search-form");
 const input = document.querySelector("#search-input");
 const button = document.querySelector("#search-button");
-const closeGroupButton = document.querySelector("#close-group-button");
+const autoCloseToggle = document.querySelector("#auto-close-toggle");
+const autoCloseState = document.querySelector("#auto-close-state");
 const targetList = document.querySelector("#target-list");
 const statusMessage = document.querySelector("#status-message");
 const storageArea = chrome.storage.local;
@@ -31,9 +32,13 @@ function setStatus(message, state = "idle") {
   statusMessage.classList.toggle("is-busy", state === "busy");
 }
 
-async function refreshCloseButton() {
-  const session = await getLastSearchSession(storageArea);
-  closeGroupButton.disabled = !session;
+function renderAutoCloseState(enabled) {
+  autoCloseToggle.checked = enabled;
+  autoCloseState.textContent = enabled ? "开启" : "关闭";
+}
+
+async function loadAutoClosePreference() {
+  renderAutoCloseState(await getAutoClosePrevious(storageArea));
 }
 
 form.addEventListener("submit", async (event) => {
@@ -48,45 +53,37 @@ form.addEventListener("submit", async (event) => {
   }
 
   button.disabled = true;
-  setStatus("正在打开 4 个搜索页。", "busy");
+  autoCloseToggle.disabled = true;
+  setStatus("正在整理搜索页。", "busy");
 
   try {
-    await openGroupedSearchTabs({
+    const autoClosePrevious = autoCloseToggle.checked;
+    await setAutoClosePrevious(storageArea, autoClosePrevious);
+    await openManagedSearchTabs({
       tabsApi: chrome.tabs,
       tabGroupsApi: chrome.tabGroups,
       storageArea,
       urls,
       title: buildGroupTitle(input.value),
+      autoClosePrevious,
     });
     window.close();
   } catch (error) {
     console.error(error);
     button.disabled = false;
+    autoCloseToggle.disabled = false;
     setStatus("无法打开搜索页，请重新加载扩展后再试。", "error");
     input.focus();
   }
 });
 
-closeGroupButton.addEventListener("click", async () => {
-  closeGroupButton.disabled = true;
-  setStatus("正在关闭上次搜索组。", "busy");
-
-  try {
-    const result = await closeLastSearchGroup({
-      tabsApi: chrome.tabs,
-      storageArea,
-    });
-
-    setStatus(`已关闭 ${result.closedCount} 个搜索页。`);
-  } catch (error) {
-    console.error(error);
-    setStatus("无法关闭搜索组，请手动关闭后重新搜索。", "error");
-  } finally {
-    await refreshCloseButton();
-    input.focus();
-  }
+autoCloseToggle.addEventListener("change", async () => {
+  const enabled = autoCloseToggle.checked;
+  renderAutoCloseState(enabled);
+  await setAutoClosePrevious(storageArea, enabled);
+  setStatus(enabled ? "下次搜索前会关闭上次结果。" : "下次搜索会保留上次结果。");
 });
 
 renderTargets();
-refreshCloseButton();
+loadAutoClosePreference();
 input.focus();

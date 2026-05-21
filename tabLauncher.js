@@ -1,6 +1,8 @@
 export const LAST_SEARCH_SESSION_KEY = "lastSearchSession";
+export const AUTO_CLOSE_PREVIOUS_KEY = "autoClosePreviousSearch";
 
 const SEARCH_GROUP_COLOR = "cyan";
+const DEFAULT_AUTO_CLOSE_PREVIOUS = true;
 
 function getTabIds(tabs) {
   return tabs
@@ -55,6 +57,19 @@ export async function getLastSearchSession(storageArea) {
   return result[LAST_SEARCH_SESSION_KEY] ?? null;
 }
 
+export async function getAutoClosePrevious(storageArea) {
+  const result = await storageArea.get(AUTO_CLOSE_PREVIOUS_KEY);
+  const value = result[AUTO_CLOSE_PREVIOUS_KEY];
+
+  return typeof value === "boolean" ? value : DEFAULT_AUTO_CLOSE_PREVIOUS;
+}
+
+export async function setAutoClosePrevious(storageArea, enabled) {
+  await storageArea.set({
+    [AUTO_CLOSE_PREVIOUS_KEY]: Boolean(enabled),
+  });
+}
+
 export async function openGroupedSearchTabs({
   tabsApi,
   tabGroupsApi,
@@ -100,6 +115,27 @@ export async function openGroupedSearchTabs({
     tabIds,
     title,
   };
+}
+
+export async function openManagedSearchTabs({
+  tabsApi,
+  tabGroupsApi,
+  storageArea,
+  urls,
+  title,
+  autoClosePrevious,
+}) {
+  if (autoClosePrevious) {
+    await closeLastSearchGroup({ tabsApi, storageArea });
+  }
+
+  return openGroupedSearchTabs({
+    tabsApi,
+    tabGroupsApi,
+    storageArea,
+    urls,
+    title,
+  });
 }
 
 export async function closeLastSearchGroup({ tabsApi, storageArea }) {
