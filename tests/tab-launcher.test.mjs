@@ -1,10 +1,31 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { openSearchTabs } from "../tabLauncher.js";
+import {
+  LAST_SEARCH_SESSION_KEY,
+  closeLastSearchGroup,
+  openGroupedSearchTabs,
+} from "../tabLauncher.js";
+
+function createStorageArea(initialValues = {}) {
+  const values = { ...initialValues };
+
+  return {
+    values,
+    async get(key) {
+      return { [key]: values[key] };
+    },
+    async set(nextValues) {
+      Object.assign(values, nextValues);
+    },
+    async remove(key) {
+      delete values[key];
+    },
+  };
+}
 
 describe("tab launcher", () => {
-  it("creates every search tab in the background before activating the first one", async () => {
+  it("creates every search tab in a named group before activating the first one", async () => {
     const calls = [];
     const tabsApi = {
       async create(options) {
@@ -12,33 +33,141 @@ describe("tab launcher", () => {
         calls.push(["create", options]);
         return { id };
       },
+      async group(options) {
+        calls.push(["group", options]);
+        return 77;
+      },
       async update(id, options) {
         calls.push(["update", id, options]);
       },
     };
+    const tabGroupsApi = {
+      async update(id, options) {
+        calls.push(["updateGroup", id, options]);
+      },
+    };
+    const storageArea = createStorageArea();
 
-    await openSearchTabs(tabsApi, ["https://a.example", "https://b.example"]);
+    await openGroupedSearchTabs({
+      tabsApi,
+      tabGroupsApi,
+      storageArea,
+      urls: ["https://a.example", "https://b.example"],
+      title: "Search: ai",
+    });
 
     assert.deepEqual(calls, [
       ["create", { url: "https://a.example", active: false }],
       ["create", { url: "https://b.example", active: false }],
+      ["group", { tabIds: [101, 102] }],
+      ["updateGroup", 77, { title: "Search: ai", color: "cyan", collapsed: false }],
       ["update", 101, { active: true }],
     ]);
+    assert.deepEqual(storageArea.values[LAST_SEARCH_SESSION_KEY], {
+      groupId: 77,
+      tabIds: [101, 102],
+      title: "Search: ai",
+    });
   });
 
-  it("does nothing when there are no URLs to open", async () => {
+  it("does not create a group when there are no URLs to open", async () => {
     const calls = [];
     const tabsApi = {
       async create(options) {
         calls.push(["create", options]);
       },
+      async group(options) {
+        calls.push(["group", options]);
+      },
       async update(id, options) {
         calls.push(["update", id, options]);
       },
     };
+    const tabGroupsApi = {
+      async update(id, options) {
+        calls.push(["updateGroup", id, options]);
+      },
+    };
+    const storageArea = createStorageArea();
 
-    await openSearchTabs(tabsApi, []);
+    const result = await openGroupedSearchTabs({
+      tabsApi,
+      tabGroupsApi,
+      storageArea,
+      urls: [],
+      title: "Search",
+    });
 
+    assert.equal(result, null);
     assert.deepEqual(calls, []);
+  });
+
+  it("closes the saved search group and clears the saved session", async () => {
+    const calls = [];
+    const storageArea = createStorageArea({
+      [LAST_SEARCH_SESSION_KEY]: {
+        groupId: 77,
+        tabIds: [101, 102],
+        title: "Search: ai",
+      },
+    });
+    const tabsApi = {
+      async query(options) {
+        calls.push(["query", options]);
+        return [{ id: 101 }, { id: 102 }];
+      },
+      async remove(tabIds) {
+        calls.push(["remove", tabIds]);
+      },
+    };
+
+    const result = await closeLastSearchGroup({ tabsApi, storageArea });
+
+    assert.deepEqual(calls, [
+      ["query", { groupId: 77 }],
+      ["remove", [101, 102]],
+    ]);
+    assert.deepEqual(result, { closedCount: 2 });
+    assert.equal(storageArea.values[LAST_SEARCH_SESSION_KEY], undefined);
+  });
+
+  it("falls back to saved live tab IDs when the group is already gone", async () => {
+    const calls = [];
+    const storageArea = createStorageArea({
+      [LAST_SEARCH_SESSION_KEY]: {
+        groupId: 77,
+        tabIds: [101, 102],
+        title: "Search: ai",
+      },
+    });
+    const tabsApi = {
+      async query(options) {
+        calls.push(["query", options]);
+        return [];
+      },
+      async get(id) {
+        calls.push(["get", id]);
+
+        if (id === 102) {
+          throw new Error("No tab");
+        }
+
+        return { id };
+      },
+      async remove(tabIds) {
+        calls.push(["remove", tabIds]);
+      },
+    };
+
+    const result = await closeLastSearchGroup({ tabsApi, storageArea });
+
+    assert.deepEqual(calls, [
+      ["query", { groupId: 77 }],
+      ["get", 101],
+      ["get", 102],
+      ["remove", [101]],
+    ]);
+    assert.deepEqual(result, { closedCount: 1 });
+    assert.equal(storageArea.values[LAST_SEARCH_SESSION_KEY], undefined);
   });
 });

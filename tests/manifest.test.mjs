@@ -9,7 +9,7 @@ describe("extension manifest", () => {
     assert.equal(manifest.manifest_version, 3);
     assert.equal(manifest.name, "Multi Search Jump");
     assert.equal(manifest.action.default_popup, "popup.html");
-    assert.deepEqual(manifest.permissions, ["tabs"]);
+    assert.deepEqual(manifest.permissions, ["tabs", "tabGroups", "storage"]);
   });
 
   it("references loadable PNG icons", async () => {

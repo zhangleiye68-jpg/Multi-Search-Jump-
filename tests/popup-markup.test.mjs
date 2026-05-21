@@ -9,6 +9,7 @@ describe("popup markup", () => {
     assert.match(html, /<form[^>]+id="search-form"/);
     assert.match(html, /<input[^>]+id="search-input"/);
     assert.match(html, /<button[^>]+id="search-button"/);
+    assert.match(html, /<button[^>]+id="close-group-button"/);
     assert.match(html, /<script[^>]+type="module"[^>]+src="popup\.js"/);
   });
 });
