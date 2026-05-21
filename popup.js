@@ -2,7 +2,6 @@ import { SEARCH_TARGETS, buildSearchUrls } from "./searchTargets.js";
 import {
   buildGroupTitle,
   getAutoClosePrevious,
-  openManagedSearchTabs,
   setAutoClosePrevious,
 } from "./tabLauncher.js";
 
@@ -59,14 +58,17 @@ form.addEventListener("submit", async (event) => {
   try {
     const autoClosePrevious = autoCloseToggle.checked;
     await setAutoClosePrevious(storageArea, autoClosePrevious);
-    await openManagedSearchTabs({
-      tabsApi: chrome.tabs,
-      tabGroupsApi: chrome.tabGroups,
-      storageArea,
+    const response = await chrome.runtime.sendMessage({
+      type: "OPEN_SEARCH_GROUP",
       urls,
       title: buildGroupTitle(input.value),
       autoClosePrevious,
     });
+
+    if (!response?.ok) {
+      throw new Error(response?.error ?? "Unable to open search group");
+    }
+
     window.close();
   } catch (error) {
     console.error(error);

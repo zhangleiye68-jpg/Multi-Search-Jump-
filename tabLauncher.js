@@ -125,22 +125,26 @@ export async function openManagedSearchTabs({
   title,
   autoClosePrevious,
 }) {
-  if (autoClosePrevious) {
-    await closeLastSearchGroup({ tabsApi, storageArea });
-  }
+  const previousSession = autoClosePrevious
+    ? await getLastSearchSession(storageArea)
+    : null;
 
-  return openGroupedSearchTabs({
+  const nextSession = await openGroupedSearchTabs({
     tabsApi,
     tabGroupsApi,
     storageArea,
     urls,
     title,
   });
+
+  if (autoClosePrevious && previousSession) {
+    await closeSearchSessionTabs({ tabsApi, session: previousSession });
+  }
+
+  return nextSession;
 }
 
-export async function closeLastSearchGroup({ tabsApi, storageArea }) {
-  const session = await getLastSearchSession(storageArea);
-
+async function closeSearchSessionTabs({ tabsApi, session }) {
   if (!session) {
     return { closedCount: 0 };
   }
@@ -151,7 +155,14 @@ export async function closeLastSearchGroup({ tabsApi, storageArea }) {
     await tabsApi.remove(tabIds);
   }
 
+  return { closedCount: tabIds.length };
+}
+
+export async function closeLastSearchGroup({ tabsApi, storageArea }) {
+  const session = await getLastSearchSession(storageArea);
+  const result = await closeSearchSessionTabs({ tabsApi, session });
+
   await storageArea.remove(LAST_SEARCH_SESSION_KEY);
 
-  return { closedCount: tabIds.length };
+  return result;
 }

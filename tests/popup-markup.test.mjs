@@ -13,4 +13,12 @@ describe("popup markup", () => {
     assert.match(html, /id="auto-close-state"/);
     assert.match(html, /<script[^>]+type="module"[^>]+src="popup\.js"/);
   });
+
+  it("keeps direct tab APIs out of the popup script", async () => {
+    const script = await readFile("popup.js", "utf8");
+
+    assert.match(script, /chrome\.runtime\.sendMessage/);
+    assert.doesNotMatch(script, /chrome\.tabs/);
+    assert.doesNotMatch(script, /chrome\.tabGroups/);
+  });
 });

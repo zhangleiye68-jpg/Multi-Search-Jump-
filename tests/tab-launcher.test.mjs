@@ -190,7 +190,7 @@ describe("tab launcher", () => {
     assert.equal(await getAutoClosePrevious(storageArea), false);
   });
 
-  it("closes the previous saved group before opening a new managed search when enabled", async () => {
+  it("opens the new managed search before closing the previous saved group when enabled", async () => {
     const calls = [];
     const storageArea = createStorageArea({
       [LAST_SEARCH_SESSION_KEY]: {
@@ -236,13 +236,18 @@ describe("tab launcher", () => {
     });
 
     assert.deepEqual(calls, [
-      ["query", { groupId: 77 }],
-      ["remove", [201, 202]],
       ["create", { url: "https://new.example", active: false }],
       ["group", { tabIds: [301] }],
       ["updateGroup", 88, { title: "Search: new", color: "cyan", collapsed: false }],
       ["update", 301, { active: true }],
+      ["query", { groupId: 77 }],
+      ["remove", [201, 202]],
     ]);
+    assert.deepEqual(storageArea.values[LAST_SEARCH_SESSION_KEY], {
+      groupId: 88,
+      tabIds: [301],
+      title: "Search: new",
+    });
   });
 
   it("keeps the previous group before opening a new managed search when disabled", async () => {
