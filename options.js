@@ -4,11 +4,13 @@ import {
   getSearchSettings,
   saveSearchSettings,
 } from "./searchSettings.js";
+import { openShortcutSettings } from "./shortcutSettings.js";
 
 const storageArea = chrome.storage.local;
 const autoCloseToggle = document.querySelector("#auto-close-toggle");
 const googleImageToggle = document.querySelector("#google-image-toggle");
 const googleModeState = document.querySelector("#google-mode-state");
+const shortcutSettingsButton = document.querySelector("#shortcut-settings-button");
 const targetOrderList = document.querySelector("#target-order-list");
 const statusMessage = document.querySelector("#status-message");
 
@@ -121,6 +123,15 @@ targetOrderList.addEventListener("click", (event) => {
 
   if (event.target.classList.contains("move-down")) {
     moveTarget(row.dataset.targetId, 1);
+  }
+});
+
+shortcutSettingsButton.addEventListener("click", async () => {
+  try {
+    await openShortcutSettings(chrome.tabs);
+  } catch (error) {
+    console.error(error);
+    setStatus("无法自动打开快捷键页面，请手动访问 chrome://extensions/shortcuts。", "error");
   }
 });
 

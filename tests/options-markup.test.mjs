@@ -8,6 +8,7 @@ describe("options markup", () => {
 
     assert.match(html, /id="auto-close-toggle"/);
     assert.match(html, /id="google-image-toggle"/);
+    assert.match(html, /id="shortcut-settings-button"/);
     assert.match(html, /id="target-order-list"/);
     assert.match(html, /<script[^>]+type="module"[^>]+src="options\.js"/);
   });
