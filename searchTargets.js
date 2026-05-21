@@ -1,7 +1,7 @@
 export const SEARCH_TARGETS = Object.freeze([
   Object.freeze({
     name: "Google",
-    buildUrl: (query) => `https://www.google.com/search?q=${query}`,
+    buildUrl: (query) => `https://www.google.com/search?tbm=isch&q=${query}`,
   }),
   Object.freeze({
     name: "X",
