@@ -63,7 +63,7 @@ describe("selection search", () => {
     const tabsApi = {
       async query(options) {
         assert.deepEqual(options, { active: true, currentWindow: true });
-        return [{ id: 123 }];
+        return [{ id: 123, url: "https://example.com/" }];
       },
     };
     const scriptingApi = {
@@ -74,6 +74,51 @@ describe("selection search", () => {
     };
 
     assert.equal(await getSelectionFromActiveTab({ scriptingApi, tabsApi }), "maga");
+  });
+
+  it("skips shortcut selection reading on Chrome internal pages", async () => {
+    const tabsApi = {
+      async query() {
+        return [{ id: 123, url: "chrome://extensions/shortcuts" }];
+      },
+    };
+    const scriptingApi = {
+      async executeScript() {
+        assert.fail("should not inject scripts into Chrome internal pages");
+      },
+    };
+
+    assert.equal(await getSelectionFromActiveTab({ scriptingApi, tabsApi }), "");
+  });
+
+  it("skips shortcut selection reading when Chrome does not expose the active tab URL", async () => {
+    const tabsApi = {
+      async query() {
+        return [{ id: 123 }];
+      },
+    };
+    const scriptingApi = {
+      async executeScript() {
+        assert.fail("should not inject scripts without a scriptable tab URL");
+      },
+    };
+
+    assert.equal(await getSelectionFromActiveTab({ scriptingApi, tabsApi }), "");
+  });
+
+  it("silently ignores blocked selection injection on Chrome internal pages", async () => {
+    const tabsApi = {
+      async query() {
+        return [{ id: 123, url: "https://example.com/" }];
+      },
+    };
+    const scriptingApi = {
+      async executeScript() {
+        throw new Error("Cannot access a chrome:// URL");
+      },
+    };
+
+    assert.equal(await getSelectionFromActiveTab({ scriptingApi, tabsApi }), "");
   });
 
   it("opens selected text with saved site order and search settings", async () => {

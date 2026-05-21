@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Multi Search Jump",
   "description": "Open one query across Google, X, Facebook, and TikTok search results.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "action": {
     "default_title": "Multi Search Jump",
     "default_popup": "popup.html",

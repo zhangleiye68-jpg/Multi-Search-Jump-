@@ -2,6 +2,8 @@ import { openManagedSearchTabs } from "./tabLauncher.js";
 import {
   CONTEXT_MENU_ID,
   SEARCH_SELECTED_COMMAND,
+  canReadSelectionFromTab,
+  isRestrictedSelectionError,
   openSearchForActiveSelection,
   openSearchForText,
   resetSelectionContextMenu,
@@ -22,6 +24,30 @@ async function handleOpenSearchGroup(message) {
     urls: message.urls,
     title: message.title,
     autoClosePrevious: message.autoClosePrevious,
+  });
+}
+
+function handleCommandSearchError(error) {
+  if (isRestrictedSelectionError(error)) {
+    return;
+  }
+
+  console.error(error);
+}
+
+async function handleCommandSearch() {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (!canReadSelectionFromTab(activeTab)) {
+    return;
+  }
+
+  await openSearchForActiveSelection({
+    activeTab,
+    scriptingApi: chrome.scripting,
+    storageArea: chrome.storage.local,
+    tabGroupsApi: chrome.tabGroups,
+    tabsApi: chrome.tabs,
   });
 }
 
@@ -63,10 +89,5 @@ chrome.commands.onCommand.addListener((command) => {
     return;
   }
 
-  openSearchForActiveSelection({
-    scriptingApi: chrome.scripting,
-    storageArea: chrome.storage.local,
-    tabGroupsApi: chrome.tabGroups,
-    tabsApi: chrome.tabs,
-  }).catch((error) => console.error(error));
+  handleCommandSearch().catch(handleCommandSearchError);
 });

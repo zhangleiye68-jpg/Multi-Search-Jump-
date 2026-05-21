@@ -5,6 +5,38 @@ import { buildGroupTitle, openManagedSearchTabs } from "./tabLauncher.js";
 export const CONTEXT_MENU_ID = "multi-search-jump-selection";
 export const SEARCH_SELECTED_COMMAND = "search-selected-text";
 
+const SCRIPTABLE_SELECTION_PROTOCOLS = new Set(["http:", "https:"]);
+
+export function canReadSelectionFromTab(tab) {
+  if (!Number.isInteger(tab?.id)) {
+    return false;
+  }
+
+  const tabUrl = tab.url || tab.pendingUrl;
+  if (!tabUrl) {
+    return false;
+  }
+
+  try {
+    const url = new URL(tabUrl);
+    return SCRIPTABLE_SELECTION_PROTOCOLS.has(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+export function isRestrictedSelectionError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes("Cannot access a chrome:// URL") ||
+    message.includes("Cannot access contents of url \"chrome://") ||
+    message.includes("Cannot access contents of url \"chrome-extension://") ||
+    message.includes("Cannot access contents of url \"edge://") ||
+    message.includes("The extensions gallery cannot be scripted")
+  );
+}
+
 export async function resetSelectionContextMenu(contextMenusApi) {
   await contextMenusApi.removeAll();
   contextMenusApi.create({
@@ -14,17 +46,30 @@ export async function resetSelectionContextMenu(contextMenusApi) {
   });
 }
 
-export async function getSelectionFromActiveTab({ scriptingApi, tabsApi }) {
-  const [activeTab] = await tabsApi.query({ active: true, currentWindow: true });
+export async function getSelectionFromActiveTab({ activeTab, scriptingApi, tabsApi }) {
+  let targetTab = activeTab;
 
-  if (!Number.isInteger(activeTab?.id)) {
+  if (!targetTab) {
+    [targetTab] = await tabsApi.query({ active: true, currentWindow: true });
+  }
+
+  if (!canReadSelectionFromTab(targetTab)) {
     return "";
   }
 
-  const [injectionResult] = await scriptingApi.executeScript({
-    target: { tabId: activeTab.id },
-    func: () => window.getSelection()?.toString() ?? "",
-  });
+  let injectionResult;
+  try {
+    [injectionResult] = await scriptingApi.executeScript({
+      target: { tabId: targetTab.id },
+      func: () => window.getSelection()?.toString() ?? "",
+    });
+  } catch (error) {
+    if (isRestrictedSelectionError(error)) {
+      return "";
+    }
+
+    throw error;
+  }
 
   return normalizeQuery(injectionResult?.result);
 }
@@ -72,12 +117,17 @@ export async function openSearchForText({
 }
 
 export async function openSearchForActiveSelection({
+  activeTab,
   scriptingApi,
   storageArea,
   tabGroupsApi,
   tabsApi,
 }) {
-  const query = await getSelectionFromActiveTab({ scriptingApi, tabsApi });
+  const query = await getSelectionFromActiveTab({
+    activeTab,
+    scriptingApi,
+    tabsApi,
+  });
 
   return openSearchForText({
     query,

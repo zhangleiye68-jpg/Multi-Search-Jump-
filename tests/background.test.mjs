@@ -21,4 +21,17 @@ describe("background worker", () => {
     assert.match(source, /openSearchForActiveSelection/);
     assert.match(source, /chrome\.scripting/);
   });
+
+  it("does not log expected shortcut failures on restricted Chrome pages", async () => {
+    const source = await readFile("background.js", "utf8");
+
+    assert.match(source, /canReadSelectionFromTab/);
+    assert.match(source, /isRestrictedSelectionError/);
+    assert.match(source, /handleCommandSearch/);
+    assert.match(source, /handleCommandSearchError/);
+    assert.match(source, /chrome\.tabs\.query\(\{ active: true, currentWindow: true \}\)/);
+    assert.match(source, /if \(!canReadSelectionFromTab\(activeTab\)\) \{\s*return;\s*\}/);
+    assert.match(source, /handleCommandSearch\(\)\.catch\(handleCommandSearchError\)/);
+    assert.doesNotMatch(source, /openSearchForActiveSelection\(\{[^}]*\}\)\.catch/);
+  });
 });
