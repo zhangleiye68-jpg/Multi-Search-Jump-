@@ -20,6 +20,27 @@ describe("search targets", () => {
     ]);
   });
 
+  it("can switch Google from image search to regular search", () => {
+    assert.equal(
+      buildSearchUrls("ai", { googleSearchType: "web" })[0],
+      "https://www.google.com/search?q=ai",
+    );
+  });
+
+  it("uses the configured site order and enabled sites", () => {
+    assert.deepEqual(
+      buildSearchUrls("ai", {
+        enabledTargetIds: ["facebook", "google"],
+        googleSearchType: "web",
+        targetOrder: ["facebook", "x", "google", "tiktok"],
+      }),
+      [
+        "https://www.facebook.com/search/top/?q=ai",
+        "https://www.google.com/search?q=ai",
+      ],
+    );
+  });
+
   it("does not build URLs for blank input", () => {
     assert.deepEqual(buildSearchUrls("   "), []);
   });

@@ -1,0 +1,172 @@
+:root {
+  color-scheme: light;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #f7f8f5;
+  color: #15201f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f7f8f5;
+}
+
+.options-shell {
+  display: grid;
+  gap: 18px;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 18px;
+}
+
+.options-header h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.settings-section {
+  display: grid;
+  gap: 10px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.switch-setting,
+.target-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 54px;
+  border: 1px solid #d9e0dc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.setting-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.setting-note {
+  display: block;
+  margin-top: 3px;
+  color: #5f6d68;
+  font-size: 12px;
+}
+
+.switch-control {
+  position: relative;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+}
+
+.switch-control input {
+  position: absolute;
+  inset: 0;
+  width: 42px;
+  height: 24px;
+  margin: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.switch-track {
+  display: block;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: #cfd8d3;
+}
+
+.switch-thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(21, 32, 31, 0.24);
+  transform: translate(2px, 2px);
+}
+
+.switch-control input:checked + .switch-track {
+  background: #176b63;
+}
+
+.switch-control input:checked + .switch-track .switch-thumb {
+  transform: translate(20px, 2px);
+}
+
+.switch-control input:focus-visible + .switch-track {
+  box-shadow: 0 0 0 3px rgba(23, 107, 99, 0.16);
+}
+
+.target-order-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.target-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-weight: 750;
+}
+
+.target-label input {
+  width: 16px;
+  height: 16px;
+  accent-color: #176b63;
+}
+
+.target-actions {
+  display: flex;
+  gap: 6px;
+}
+
+button {
+  min-width: 52px;
+  height: 32px;
+  border: 1px solid #cfd8d3;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #263331;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+button:hover {
+  background: #edf3f0;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.status-message {
+  min-height: 20px;
+  color: #5f6d68;
+  font-size: 12px;
+}
+
+.status-message.is-error {
+  color: #b42318;
+}

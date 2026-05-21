@@ -9,16 +9,23 @@ describe("popup markup", () => {
     assert.match(html, /<form[^>]+id="search-form"/);
     assert.match(html, /<input[^>]+id="search-input"/);
     assert.match(html, /<button[^>]+id="search-button"/);
-    assert.match(html, /<input[^>]+id="auto-close-toggle"/);
-    assert.match(html, /id="auto-close-state"/);
+    assert.match(html, /<button[^>]+id="pin-panel-button"/);
+    assert.match(html, /<button[^>]+id="options-button"/);
+    assert.doesNotMatch(html, /auto-close-toggle/);
+    assert.doesNotMatch(html, /target-list/);
     assert.match(html, /<script[^>]+type="module"[^>]+src="popup\.js"/);
   });
 
-  it("keeps direct tab APIs out of the popup script", async () => {
-    const script = await readFile("popup.js", "utf8");
+  it("delegates browser actions through the shared search UI", async () => {
+    const popupScript = await readFile("popup.js", "utf8");
+    const sharedScript = await readFile("searchUi.js", "utf8");
 
-    assert.match(script, /chrome\.runtime\.sendMessage/);
-    assert.doesNotMatch(script, /chrome\.tabs/);
-    assert.doesNotMatch(script, /chrome\.tabGroups/);
+    assert.match(popupScript, /initSearchUi/);
+    assert.match(popupScript, /initPinButton/);
+    assert.match(sharedScript, /chrome\.runtime\.sendMessage/);
+    assert.match(sharedScript, /chrome\.runtime\.openOptionsPage/);
+    assert.match(sharedScript, /chrome\.sidePanel\.open/);
+    assert.doesNotMatch(sharedScript, /chrome\.tabs/);
+    assert.doesNotMatch(sharedScript, /chrome\.tabGroups/);
   });
 });

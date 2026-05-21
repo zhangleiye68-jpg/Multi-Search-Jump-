@@ -13,7 +13,14 @@ describe("extension manifest", () => {
       service_worker: "background.js",
       type: "module",
     });
-    assert.deepEqual(manifest.permissions, ["tabs", "tabGroups", "storage"]);
+    assert.deepEqual(manifest.options_ui, {
+      page: "options.html",
+      open_in_tab: true,
+    });
+    assert.deepEqual(manifest.side_panel, {
+      default_path: "panel.html",
+    });
+    assert.deepEqual(manifest.permissions, ["tabs", "tabGroups", "storage", "sidePanel"]);
   });
 
   it("references loadable PNG icons", async () => {

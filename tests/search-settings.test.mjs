@@ -1,0 +1,56 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
+import {
+  ENABLED_TARGET_IDS_KEY,
+  GOOGLE_SEARCH_TYPE_KEY,
+  TARGET_ORDER_KEY,
+  getSearchSettings,
+  saveSearchSettings,
+} from "../searchSettings.js";
+import { AUTO_CLOSE_PREVIOUS_KEY } from "../tabLauncher.js";
+
+function createStorageArea(initialValues = {}) {
+  const values = { ...initialValues };
+
+  return {
+    values,
+    async get(keys) {
+      return Object.fromEntries(keys.map((key) => [key, values[key]]));
+    },
+    async set(nextValues) {
+      Object.assign(values, nextValues);
+    },
+  };
+}
+
+describe("search settings", () => {
+  it("defaults to auto-close, all sites enabled, configured order, and Google images", async () => {
+    const settings = await getSearchSettings(createStorageArea());
+
+    assert.deepEqual(settings, {
+      autoClosePrevious: true,
+      enabledTargetIds: ["google", "x", "facebook", "tiktok"],
+      googleSearchType: "images",
+      targetOrder: ["google", "x", "facebook", "tiktok"],
+    });
+  });
+
+  it("persists search settings to chrome storage keys", async () => {
+    const storageArea = createStorageArea();
+
+    await saveSearchSettings(storageArea, {
+      autoClosePrevious: false,
+      enabledTargetIds: ["facebook", "google"],
+      googleSearchType: "web",
+      targetOrder: ["facebook", "google", "x", "tiktok"],
+    });
+
+    assert.deepEqual(storageArea.values, {
+      [AUTO_CLOSE_PREVIOUS_KEY]: false,
+      [ENABLED_TARGET_IDS_KEY]: ["facebook", "google"],
+      [GOOGLE_SEARCH_TYPE_KEY]: "web",
+      [TARGET_ORDER_KEY]: ["facebook", "google", "x", "tiktok"],
+    });
+  });
+});

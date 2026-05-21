@@ -4,15 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Multi Search Jump</title>
-    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="panel.css">
   </head>
   <body>
-    <main class="popup-shell">
-      <header class="popup-header">
+    <main class="panel-shell">
+      <header class="panel-header">
         <div class="mark" aria-hidden="true"></div>
-        <div>
-          <h1>Multi Search Jump</h1>
-        </div>
+        <h1>Multi Search Jump</h1>
       </header>
 
       <form id="search-form" class="search-form">
@@ -28,14 +26,10 @@
         <button id="search-button" type="submit">搜索</button>
       </form>
 
-      <div class="popup-actions">
-        <button id="pin-panel-button" class="ghost-button" type="button">固定</button>
-        <button id="options-button" class="ghost-button" type="button">设置</button>
-      </div>
-
+      <button id="options-button" class="ghost-button" type="button">设置</button>
       <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
     </main>
 
-    <script type="module" src="popup.js"></script>
+    <script type="module" src="panel.js"></script>
   </body>
 </html>

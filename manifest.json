@@ -16,6 +16,13 @@
     "service_worker": "background.js",
     "type": "module"
   },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -24,6 +31,7 @@
   "permissions": [
     "tabs",
     "tabGroups",
-    "storage"
+    "storage",
+    "sidePanel"
   ]
 }

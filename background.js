@@ -1,5 +1,11 @@
 import { openManagedSearchTabs } from "./tabLauncher.js";
 
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel
+    .setPanelBehavior({ openPanelOnActionClick: false })
+    .catch((error) => console.error(error));
+});
+
 async function handleOpenSearchGroup(message) {
   await openManagedSearchTabs({
     tabsApi: chrome.tabs,
