@@ -1,4 +1,5 @@
 import { SEARCH_TARGETS, buildSearchUrls } from "./searchTargets.js";
+import { openSearchTabs } from "./tabLauncher.js";
 
 const form = document.querySelector("#search-form");
 const input = document.querySelector("#search-input");
@@ -23,12 +24,6 @@ function setStatus(message, state = "idle") {
   statusMessage.classList.toggle("is-busy", state === "busy");
 }
 
-async function openSearchTabs(urls) {
-  for (const url of urls) {
-    await chrome.tabs.create({ url });
-  }
-}
-
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -44,7 +39,7 @@ form.addEventListener("submit", async (event) => {
   setStatus("正在打开 4 个搜索页。", "busy");
 
   try {
-    await openSearchTabs(urls);
+    await openSearchTabs(chrome.tabs, urls);
     window.close();
   } catch (error) {
     console.error(error);
