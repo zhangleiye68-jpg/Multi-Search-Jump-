@@ -1,9 +1,17 @@
 import { openManagedSearchTabs } from "./tabLauncher.js";
+import {
+  CONTEXT_MENU_ID,
+  SEARCH_SELECTED_COMMAND,
+  openSearchForActiveSelection,
+  openSearchForText,
+  resetSelectionContextMenu,
+} from "./selectionSearch.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel
     .setPanelBehavior({ openPanelOnActionClick: false })
     .catch((error) => console.error(error));
+  resetSelectionContextMenu(chrome.contextMenus).catch((error) => console.error(error));
 });
 
 async function handleOpenSearchGroup(message) {
@@ -35,4 +43,30 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     });
 
   return true;
+});
+
+chrome.contextMenus.onClicked.addListener((info) => {
+  if (info.menuItemId !== CONTEXT_MENU_ID) {
+    return;
+  }
+
+  openSearchForText({
+    query: info.selectionText,
+    storageArea: chrome.storage.local,
+    tabGroupsApi: chrome.tabGroups,
+    tabsApi: chrome.tabs,
+  }).catch((error) => console.error(error));
+});
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command !== SEARCH_SELECTED_COMMAND) {
+    return;
+  }
+
+  openSearchForActiveSelection({
+    scriptingApi: chrome.scripting,
+    storageArea: chrome.storage.local,
+    tabGroupsApi: chrome.tabGroups,
+    tabsApi: chrome.tabs,
+  }).catch((error) => console.error(error));
 });

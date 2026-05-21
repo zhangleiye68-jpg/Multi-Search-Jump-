@@ -23,6 +23,15 @@
   "side_panel": {
     "default_path": "panel.html"
   },
+  "commands": {
+    "search-selected-text": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "Search selected text with Multi Search Jump"
+    }
+  },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -32,6 +41,9 @@
     "tabs",
     "tabGroups",
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "contextMenus",
+    "activeTab",
+    "scripting"
   ]
 }

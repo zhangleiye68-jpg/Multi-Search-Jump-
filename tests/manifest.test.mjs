@@ -20,7 +20,22 @@ describe("extension manifest", () => {
     assert.deepEqual(manifest.side_panel, {
       default_path: "panel.html",
     });
-    assert.deepEqual(manifest.permissions, ["tabs", "tabGroups", "storage", "sidePanel"]);
+    assert.deepEqual(manifest.permissions, [
+      "tabs",
+      "tabGroups",
+      "storage",
+      "sidePanel",
+      "contextMenus",
+      "activeTab",
+      "scripting",
+    ]);
+    assert.deepEqual(manifest.commands["search-selected-text"], {
+      suggested_key: {
+        default: "Alt+Shift+S",
+        mac: "Alt+Shift+S",
+      },
+      description: "Search selected text with Multi Search Jump",
+    });
   });
 
   it("references loadable PNG icons", async () => {
