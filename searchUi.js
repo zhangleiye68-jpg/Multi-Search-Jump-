@@ -54,6 +54,9 @@ export function initSearchUi({
 
       if (closeOnSuccess) {
         window.close();
+      } else {
+        searchButton.disabled = false;
+        input.focus();
       }
     } catch (error) {
       console.error(error);
