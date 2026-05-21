@@ -58,6 +58,49 @@ function createFormHarness() {
 }
 
 describe("search UI", () => {
+  it("shows busy feedback before reading saved settings", async () => {
+    const harness = createFormHarness();
+    let resolveStorageGet = null;
+    const storageGetPromise = new Promise((resolve) => {
+      resolveStorageGet = resolve;
+    });
+
+    globalThis.chrome = {
+      runtime: {
+        async sendMessage() {
+          return { ok: true };
+        },
+      },
+      storage: {
+        local: {
+          async get(keys) {
+            return storageGetPromise.then(() =>
+              Object.fromEntries(keys.map((key) => [key, undefined])),
+            );
+          },
+        },
+      },
+    };
+
+    initSearchUi({
+      closeOnSuccess: false,
+      form: harness.form,
+      input: harness.input,
+      searchButton: harness.searchButton,
+      statusMessage: harness.statusMessage,
+    });
+
+    const submitPromise = harness.submit();
+    await Promise.resolve();
+
+    assert.equal(harness.searchButton.disabled, true);
+    assert.equal(harness.statusMessage.textContent, "正在整理搜索页。");
+    assert.equal(harness.statusMessage.classList.contains("is-busy"), true);
+
+    resolveStorageGet();
+    await submitPromise;
+  });
+
   it("re-enables the search button after a successful side panel search", async () => {
     const harness = createFormHarness();
     const messages = [];

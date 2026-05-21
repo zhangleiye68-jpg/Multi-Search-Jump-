@@ -25,6 +25,31 @@ export const SEARCH_TARGETS = Object.freeze([
     name: "TikTok",
     buildUrl: (query) => `https://www.tiktok.com/search?q=${query}`,
   }),
+  Object.freeze({
+    id: "xiaohongshu",
+    name: "小红书",
+    buildUrl: (query) => `https://www.xiaohongshu.com/search_result?keyword=${query}`,
+  }),
+  Object.freeze({
+    id: "douyin",
+    name: "抖音",
+    buildUrl: (query) => `https://www.douyin.com/search/${query}?type=general`,
+  }),
+  Object.freeze({
+    id: "weibo",
+    name: "微博",
+    buildUrl: (query) => `https://s.weibo.com/weibo?q=${query}`,
+  }),
+  Object.freeze({
+    id: "zhihu",
+    name: "知乎",
+    buildUrl: (query) => `https://www.zhihu.com/search?type=content&q=${query}`,
+  }),
+  Object.freeze({
+    id: "bilibili",
+    name: "哔哩哔哩",
+    buildUrl: (query) => `https://search.bilibili.com/all?keyword=${query}`,
+  }),
 ]);
 
 const TARGETS_BY_ID = new Map(SEARCH_TARGETS.map((target) => [target.id, target]));

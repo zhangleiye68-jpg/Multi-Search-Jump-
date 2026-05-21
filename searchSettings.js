@@ -32,12 +32,23 @@ function normalizeEnabledTargetIds(value, targetOrder) {
   return targetOrder.filter((id) => enabledIds.has(id));
 }
 
+function groupTargetOrderByEnabled(targetOrder, enabledTargetIds) {
+  const enabledIds = new Set(enabledTargetIds);
+
+  return [
+    ...targetOrder.filter((id) => enabledIds.has(id)),
+    ...targetOrder.filter((id) => !enabledIds.has(id)),
+  ];
+}
+
 export function normalizeSearchSettings(value = {}) {
-  const targetOrder = normalizeTargetOrder(value[TARGET_ORDER_KEY] ?? value.targetOrder);
-  const enabledTargetIds = normalizeEnabledTargetIds(
+  let targetOrder = normalizeTargetOrder(value[TARGET_ORDER_KEY] ?? value.targetOrder);
+  let enabledTargetIds = normalizeEnabledTargetIds(
     value[ENABLED_TARGET_IDS_KEY] ?? value.enabledTargetIds,
     targetOrder,
   );
+  targetOrder = groupTargetOrderByEnabled(targetOrder, enabledTargetIds);
+  enabledTargetIds = normalizeEnabledTargetIds(enabledTargetIds, targetOrder);
   const googleSearchType =
     (value[GOOGLE_SEARCH_TYPE_KEY] ?? value.googleSearchType) === GOOGLE_SEARCH_TYPES.WEB
       ? GOOGLE_SEARCH_TYPES.WEB

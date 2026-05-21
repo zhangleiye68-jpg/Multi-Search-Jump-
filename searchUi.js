@@ -26,17 +26,18 @@ export function initSearchUi({
       return;
     }
 
+    searchButton.disabled = true;
+    setStatus("正在整理搜索页。", "busy");
+
     const settings = await getSearchSettings(chrome.storage.local);
     const urls = buildSearchUrls(query, settings);
 
     if (urls.length === 0) {
+      searchButton.disabled = false;
       setStatus("请先在设置里选择至少一个搜索网站。", "error");
       input.focus();
       return;
     }
-
-    searchButton.disabled = true;
-    setStatus("正在整理搜索页。", "busy");
 
     try {
       const response = await chrome.runtime.sendMessage({

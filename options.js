@@ -2,6 +2,7 @@ import { SEARCH_TARGETS, getSearchTargetById } from "./searchTargets.js";
 import {
   GOOGLE_SEARCH_TYPES,
   getSearchSettings,
+  normalizeSearchSettings,
   saveSearchSettings,
 } from "./searchSettings.js";
 import { openShortcutSettings } from "./shortcutSettings.js";
@@ -15,6 +16,8 @@ const targetOrderList = document.querySelector("#target-order-list");
 const statusMessage = document.querySelector("#status-message");
 
 let settings = null;
+let dragState = null;
+let persistToken = 0;
 
 function setStatus(message, state = "idle") {
   statusMessage.textContent = message;
@@ -22,28 +25,194 @@ function setStatus(message, state = "idle") {
 }
 
 async function persist(nextSettings = settings) {
-  settings = await saveSearchSettings(storageArea, nextSettings);
+  const token = persistToken + 1;
+  const previousSettings = settings;
+
+  persistToken = token;
+  settings = normalizeSearchSettings(nextSettings);
   render();
-  setStatus("设置已保存。");
+  setStatus("设置已更新。");
+
+  try {
+    const savedSettings = await saveSearchSettings(storageArea, settings);
+
+    if (token === persistToken) {
+      settings = savedSettings;
+      setStatus("设置已保存。");
+    }
+  } catch (error) {
+    console.error(error);
+
+    if (token === persistToken) {
+      settings = previousSettings;
+      render();
+      setStatus("设置保存失败，请重新尝试。", "error");
+    }
+  }
 }
 
-function moveTarget(id, direction) {
-  const index = settings.targetOrder.indexOf(id);
-  const nextIndex = index + direction;
+function isTargetEnabled(id) {
+  return settings.enabledTargetIds.includes(id);
+}
 
-  if (index < 0 || nextIndex < 0 || nextIndex >= settings.targetOrder.length) {
+function reorderTarget(draggedId, targetId, position) {
+  if (draggedId === targetId) {
+    return;
+  }
+
+  if (isTargetEnabled(draggedId) !== isTargetEnabled(targetId)) {
     return;
   }
 
   const targetOrder = [...settings.targetOrder];
-  [targetOrder[index], targetOrder[nextIndex]] = [targetOrder[nextIndex], targetOrder[index]];
+  const fromIndex = targetOrder.indexOf(draggedId);
+
+  if (fromIndex < 0) {
+    return;
+  }
+
+  const [draggedIdInOrder] = targetOrder.splice(fromIndex, 1);
+  const targetIndex = targetOrder.indexOf(targetId);
+
+  if (targetIndex < 0) {
+    return;
+  }
+
+  targetOrder.splice(position === "after" ? targetIndex + 1 : targetIndex, 0, draggedIdInOrder);
   persist({ ...settings, targetOrder });
 }
 
-function toggleTarget(id, enabled) {
-  const enabledTargetIds = enabled
-    ? [...settings.enabledTargetIds, id]
-    : settings.enabledTargetIds.filter((targetId) => targetId !== id);
+function getDropLine() {
+  return targetOrderList.querySelector(".target-drop-line");
+}
+
+function hideDropLine() {
+  getDropLine()?.classList.remove("is-visible");
+}
+
+function clearDragState() {
+  if (dragState?.frameId) {
+    cancelAnimationFrame(dragState.frameId);
+  }
+
+  dragState = null;
+  hideDropLine();
+  targetOrderList
+    .querySelectorAll(".is-dragging")
+    .forEach((row) => row.classList.remove("is-dragging"));
+}
+
+function showDropIndicator(row, position) {
+  if (
+    dragState?.dropTargetId === row.dataset.targetId &&
+    dragState?.dropPosition === position
+  ) {
+    return;
+  }
+
+  if (dragState) {
+    dragState.dropTargetId = row.dataset.targetId;
+    dragState.dropPosition = position;
+  }
+
+  const listRect = targetOrderList.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  const lineTop = position === "before" ? rowRect.top : rowRect.bottom;
+  const dropLine = getDropLine();
+
+  if (!dropLine) {
+    return;
+  }
+
+  dropLine.style.transform = `translateY(${Math.round(lineTop - listRect.top)}px)`;
+  dropLine.classList.add("is-visible");
+}
+
+function getPointerDragRows(draggedId) {
+  const draggedIsEnabled = isTargetEnabled(draggedId);
+
+  return [...targetOrderList.querySelectorAll("[data-target-id]")]
+    .filter((row) => {
+      const id = row.dataset.targetId;
+      return id !== draggedId && isTargetEnabled(id) === draggedIsEnabled;
+    })
+    .map((row) => {
+      const rect = row.getBoundingClientRect();
+
+      return {
+        id: row.dataset.targetId,
+        middleY: rect.top + rect.height / 2,
+        row,
+      };
+    });
+}
+
+function getDropTargetFromPointer(clientY) {
+  if (!dragState || dragState.dragPreviewRows.length === 0) {
+    return null;
+  }
+
+  for (const previewRow of dragState.dragPreviewRows) {
+    if (clientY < previewRow.middleY) {
+      return {
+        position: "before",
+        row: previewRow.row,
+        targetId: previewRow.id,
+      };
+    }
+  }
+
+  const lastPreviewRow = dragState.dragPreviewRows.at(-1);
+
+  return {
+    position: "after",
+    row: lastPreviewRow.row,
+    targetId: lastPreviewRow.id,
+  };
+}
+
+function updatePointerDropIndicator() {
+  if (!dragState) {
+    return;
+  }
+
+  dragState.frameId = null;
+  const dropTarget = getDropTargetFromPointer(dragState.pointerY);
+
+  if (!dropTarget) {
+    hideDropLine();
+    dragState.dropTargetId = null;
+    dragState.dropPosition = null;
+    return;
+  }
+
+  if (
+    dragState.dropTargetId === dropTarget.targetId &&
+    dragState.dropPosition === dropTarget.position
+  ) {
+    return;
+  }
+
+  showDropIndicator(dropTarget.row, dropTarget.position);
+}
+
+function schedulePointerDropUpdate(clientY) {
+  if (!dragState) {
+    return;
+  }
+
+  dragState.pointerY = clientY;
+
+  if (!dragState.frameId) {
+    dragState.frameId = requestAnimationFrame(updatePointerDropIndicator);
+  }
+}
+
+function toggleTarget(id) {
+  const isEnabled = settings.enabledTargetIds.includes(id);
+  const enabledTargetIds = isEnabled
+    ? settings.enabledTargetIds.filter((targetId) => targetId !== id)
+    : [...new Set([...settings.enabledTargetIds, id])];
 
   if (enabledTargetIds.length === 0) {
     setStatus("至少保留一个搜索网站。", "error");
@@ -54,31 +223,54 @@ function toggleTarget(id, enabled) {
   persist({ ...settings, enabledTargetIds });
 }
 
-function renderTargetList() {
-  targetOrderList.innerHTML = settings.targetOrder
-    .map((id, index) => {
-      const target = getSearchTargetById(id);
+function renderTargetRow(id, index) {
+  const target = getSearchTargetById(id);
+  const isEnabled = settings.enabledTargetIds.includes(id);
+  const orderNumber = String(index + 1).padStart(2, "0");
 
-      return `
-        <li class="target-row" data-target-id="${id}">
-          <label class="target-label">
-            <input
-              class="target-enabled"
-              type="checkbox"
-              ${settings.enabledTargetIds.includes(id) ? "checked" : ""}
-            >
-            <span>${target.name}</span>
-          </label>
-          <span class="target-actions">
-            <button class="move-up" type="button" ${index === 0 ? "disabled" : ""}>上移</button>
-            <button class="move-down" type="button" ${
-              index === settings.targetOrder.length - 1 ? "disabled" : ""
-            }>下移</button>
+  return `
+    <li class="target-row" data-target-id="${id}">
+      <span class="target-label">
+        <span class="target-index">${orderNumber}</span>
+        <span>${target.name}</span>
+      </span>
+      <span class="target-actions">
+        <button
+          class="target-toggle ${isEnabled ? "is-on" : "is-off"}"
+          type="button"
+          aria-pressed="${isEnabled}"
+          aria-label="${isEnabled ? "关闭" : "开启"} ${target.name}"
+          title="${isEnabled ? "关闭" : "开启"} ${target.name}"
+        >
+          <span class="target-toggle-track" aria-hidden="true">
+            <span class="target-toggle-thumb"></span>
           </span>
-        </li>
-      `;
-    })
+        </button>
+      </span>
+    </li>
+  `;
+}
+
+function renderTargetSection(title, ids, startIndex) {
+  const rows = ids
+    .map((id, sectionIndex) => renderTargetRow(id, startIndex + sectionIndex))
     .join("");
+
+  return `
+    <li class="target-section-row">${title}</li>
+    ${rows}
+  `;
+}
+
+function renderTargetList() {
+  const enabledIds = settings.targetOrder.filter(isTargetEnabled);
+  const disabledIds = settings.targetOrder.filter((id) => !isTargetEnabled(id));
+
+  targetOrderList.innerHTML = [
+    '<li class="target-drop-line" aria-hidden="true"></li>',
+    renderTargetSection("已开启", enabledIds, 0),
+    renderTargetSection("未开启", disabledIds, enabledIds.length),
+  ].join("");
 }
 
 function render() {
@@ -101,15 +293,6 @@ googleImageToggle.addEventListener("change", () => {
   });
 });
 
-targetOrderList.addEventListener("change", (event) => {
-  if (!event.target.classList.contains("target-enabled")) {
-    return;
-  }
-
-  const row = event.target.closest("[data-target-id]");
-  toggleTarget(row.dataset.targetId, event.target.checked);
-});
-
 targetOrderList.addEventListener("click", (event) => {
   const row = event.target.closest("[data-target-id]");
 
@@ -117,14 +300,75 @@ targetOrderList.addEventListener("click", (event) => {
     return;
   }
 
-  if (event.target.classList.contains("move-up")) {
-    moveTarget(row.dataset.targetId, -1);
-  }
-
-  if (event.target.classList.contains("move-down")) {
-    moveTarget(row.dataset.targetId, 1);
+  if (event.target.closest(".target-toggle")) {
+    toggleTarget(row.dataset.targetId);
   }
 });
+
+targetOrderList.addEventListener("pointerdown", (event) => {
+  const row = event.target.closest("[data-target-id]");
+
+  if (
+    !row ||
+    event.button !== 0 ||
+    event.target.closest(".target-toggle")
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  row.setPointerCapture(event.pointerId);
+  const draggedTargetId = row.dataset.targetId;
+  row.classList.add("is-dragging");
+
+  dragState = {
+    dragPreviewRows: getPointerDragRows(draggedTargetId),
+    draggedTargetId,
+    dropPosition: null,
+    dropTargetId: null,
+    frameId: null,
+    pointerId: event.pointerId,
+    pointerY: event.clientY,
+    row,
+  };
+  schedulePointerDropUpdate(event.clientY);
+});
+
+targetOrderList.addEventListener("pointermove", (event) => {
+  if (!dragState || event.pointerId !== dragState.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  schedulePointerDropUpdate(event.clientY);
+});
+
+targetOrderList.addEventListener("pointerup", (event) => {
+  if (!dragState || event.pointerId !== dragState.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (dragState.frameId) {
+    cancelAnimationFrame(dragState.frameId);
+    updatePointerDropIndicator();
+  }
+
+  const { draggedTargetId, dropPosition, dropTargetId, row } = dragState;
+
+  if (row.hasPointerCapture(event.pointerId)) {
+    row.releasePointerCapture(event.pointerId);
+  }
+
+  if (dropTargetId && dropPosition) {
+    reorderTarget(draggedTargetId, dropTargetId, dropPosition);
+  }
+
+  clearDragState();
+});
+
+targetOrderList.addEventListener("pointercancel", clearDragState);
 
 shortcutSettingsButton.addEventListener("click", async () => {
   try {

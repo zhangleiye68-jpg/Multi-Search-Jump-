@@ -4,10 +4,20 @@ import { describe, it } from "node:test";
 import { buildSearchUrls, SEARCH_TARGETS } from "../searchTargets.js";
 
 describe("search targets", () => {
-  it("defines the four required search platforms in order", () => {
+  it("defines the required search platforms in order", () => {
     assert.deepEqual(
       SEARCH_TARGETS.map((target) => target.name),
-      ["Google", "X", "Facebook", "TikTok"],
+      [
+        "Google",
+        "X",
+        "Facebook",
+        "TikTok",
+        "小红书",
+        "抖音",
+        "微博",
+        "知乎",
+        "哔哩哔哩",
+      ],
     );
   });
 
@@ -17,6 +27,11 @@ describe("search targets", () => {
       "https://x.com/search?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C&src=typed_query",
       "https://www.facebook.com/search/top/?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
       "https://www.tiktok.com/search?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
+      "https://www.xiaohongshu.com/search_result?keyword=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
+      "https://www.douyin.com/search/%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C?type=general",
+      "https://s.weibo.com/weibo?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
+      "https://www.zhihu.com/search?type=content&q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
+      "https://search.bilibili.com/all?keyword=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
     ]);
   });
 

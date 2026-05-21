@@ -25,14 +25,26 @@ function createStorageArea(initialValues = {}) {
 }
 
 describe("search settings", () => {
+  const allTargetIds = [
+    "google",
+    "x",
+    "facebook",
+    "tiktok",
+    "xiaohongshu",
+    "douyin",
+    "weibo",
+    "zhihu",
+    "bilibili",
+  ];
+
   it("defaults to auto-close, all sites enabled, configured order, and Google images", async () => {
     const settings = await getSearchSettings(createStorageArea());
 
     assert.deepEqual(settings, {
       autoClosePrevious: true,
-      enabledTargetIds: ["google", "x", "facebook", "tiktok"],
+      enabledTargetIds: allTargetIds,
       googleSearchType: "images",
-      targetOrder: ["google", "x", "facebook", "tiktok"],
+      targetOrder: allTargetIds,
     });
   });
 
@@ -50,7 +62,39 @@ describe("search settings", () => {
       [AUTO_CLOSE_PREVIOUS_KEY]: false,
       [ENABLED_TARGET_IDS_KEY]: ["facebook", "google"],
       [GOOGLE_SEARCH_TYPE_KEY]: "web",
-      [TARGET_ORDER_KEY]: ["facebook", "google", "x", "tiktok"],
+      [TARGET_ORDER_KEY]: [
+        "facebook",
+        "google",
+        "x",
+        "tiktok",
+        "xiaohongshu",
+        "douyin",
+        "weibo",
+        "zhihu",
+        "bilibili",
+      ],
     });
+  });
+
+  it("keeps enabled targets before disabled targets when saving order", async () => {
+    const storageArea = createStorageArea();
+
+    await saveSearchSettings(storageArea, {
+      enabledTargetIds: ["google", "tiktok"],
+      targetOrder: ["weibo", "tiktok", "google", "x"],
+    });
+
+    assert.deepEqual(storageArea.values[TARGET_ORDER_KEY], [
+      "tiktok",
+      "google",
+      "weibo",
+      "x",
+      "facebook",
+      "xiaohongshu",
+      "douyin",
+      "zhihu",
+      "bilibili",
+    ]);
+    assert.deepEqual(storageArea.values[ENABLED_TARGET_IDS_KEY], ["tiktok", "google"]);
   });
 });

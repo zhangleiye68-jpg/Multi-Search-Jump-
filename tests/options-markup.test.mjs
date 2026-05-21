@@ -12,4 +12,42 @@ describe("options markup", () => {
     assert.match(html, /id="target-order-list"/);
     assert.match(html, /<script[^>]+type="module"[^>]+src="options\.js"/);
   });
+
+  it("renders numbered custom pointer-drag rows with compact switches", async () => {
+    const source = await readFile("options.js", "utf8");
+
+    assert.match(source, /class="target-index"/);
+    assert.match(source, /target-section-row/);
+    assert.match(source, /已开启/);
+    assert.match(source, /未开启/);
+    assert.match(source, /pointerdown/);
+    assert.match(source, /pointermove/);
+    assert.match(source, /pointerup/);
+    assert.match(source, /setPointerCapture/);
+    assert.match(source, /requestAnimationFrame/);
+    assert.match(source, /dragPreviewRows/);
+    assert.match(source, /target-drop-line/);
+    assert.match(source, /style\.transform/);
+    assert.match(source, /isTargetEnabled/);
+    assert.match(source, /normalizeSearchSettings/);
+    assert.match(source, /persistToken/);
+    assert.match(source, /设置已更新/);
+    assert.match(source, /class="target-toggle/);
+    assert.match(source, /class="target-toggle-track"/);
+    assert.match(source, /class="target-toggle-thumb"/);
+    assert.doesNotMatch(source, /draggable="true"/);
+    assert.doesNotMatch(source, /dragstart/);
+    assert.doesNotMatch(source, /dragover/);
+    assert.doesNotMatch(source, /addEventListener\("dragstart"/);
+    assert.doesNotMatch(source, /addEventListener\("dragover"/);
+    assert.doesNotMatch(source, /addEventListener\("drop"/);
+    assert.doesNotMatch(source, /class="move-up"/);
+    assert.doesNotMatch(source, /class="move-down"/);
+    assert.doesNotMatch(source, /is-drop-before/);
+    assert.doesNotMatch(source, /is-drop-after/);
+    assert.doesNotMatch(source, /is-drop-target/);
+    assert.doesNotMatch(source, /target-toggle-state/);
+    assert.doesNotMatch(source, /\? "开" : "关"/);
+    assert.doesNotMatch(source, /class="target-enabled"[\s\S]*type="checkbox"/);
+  });
 });
