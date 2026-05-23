@@ -9,6 +9,7 @@ describe("popup markup", () => {
     assert.match(html, /<form[^>]+id="search-form"/);
     assert.match(html, /<input[^>]+id="search-input"/);
     assert.match(html, /<button[^>]+id="search-button"/);
+    assert.match(html, /id="search-history"/);
     assert.match(html, /<button[^>]+id="pin-panel-button"/);
     assert.match(html, /<button[^>]+id="options-button"/);
     assert.doesNotMatch(html, /auto-close-toggle/);
@@ -21,6 +22,7 @@ describe("popup markup", () => {
     const sharedScript = await readFile("searchUi.js", "utf8");
 
     assert.match(popupScript, /initSearchUi/);
+    assert.match(popupScript, /#search-history/);
     assert.match(popupScript, /initPinButton/);
     assert.match(sharedScript, /chrome\.runtime\.sendMessage/);
     assert.match(sharedScript, /chrome\.runtime\.openOptionsPage/);

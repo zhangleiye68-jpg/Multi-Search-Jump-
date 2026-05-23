@@ -6,10 +6,17 @@ describe("options markup", () => {
   it("contains persistent toggles and target ordering UI", async () => {
     const html = await readFile("options.html", "utf8");
 
+    assert.match(html, /id="options-search-form"/);
+    assert.match(html, /id="options-search-input"/);
+    assert.match(html, /id="options-search-button"/);
+    assert.match(html, /id="options-search-history"/);
+    assert.match(html, /id="options-search-status"/);
     assert.match(html, /id="auto-close-toggle"/);
     assert.match(html, /id="google-image-toggle"/);
     assert.match(html, /id="shortcut-settings-button"/);
     assert.match(html, /id="target-order-list"/);
+    assert.match(html, /历史记录/);
+    assert.match(html, /id="all-search-history"/);
     assert.match(html, /<script[^>]+type="module"[^>]+src="options\.js"/);
   });
 
@@ -17,6 +24,14 @@ describe("options markup", () => {
     const source = await readFile("options.js", "utf8");
 
     assert.match(source, /class="target-index"/);
+    assert.match(source, /initSearchUi/);
+    assert.match(source, /#options-search-form/);
+    assert.match(source, /#options-search-history/);
+    assert.match(source, /#options-search-status/);
+    assert.match(source, /#all-search-history/);
+    assert.match(source, /getSearchHistory/);
+    assert.match(source, /removeSearchHistoryRecord/);
+    assert.match(source, /closeOnSuccess: false/);
     assert.match(source, /target-section-row/);
     assert.match(source, /已开启/);
     assert.match(source, /未开启/);

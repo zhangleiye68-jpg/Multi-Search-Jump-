@@ -5,12 +5,24 @@ import {
   normalizeSearchSettings,
   saveSearchSettings,
 } from "./searchSettings.js";
+import {
+  getSearchHistory,
+  removeSearchHistoryRecord,
+} from "./searchHistory.js";
+import { initSearchUi } from "./searchUi.js";
 import { openShortcutSettings } from "./shortcutSettings.js";
 
 const storageArea = chrome.storage.local;
+const allSearchHistory = document.querySelector("#all-search-history");
+const allSearchHistoryEmpty = document.querySelector("#all-search-history-empty");
 const autoCloseToggle = document.querySelector("#auto-close-toggle");
 const googleImageToggle = document.querySelector("#google-image-toggle");
 const googleModeState = document.querySelector("#google-mode-state");
+const optionsSearchButton = document.querySelector("#options-search-button");
+const optionsSearchForm = document.querySelector("#options-search-form");
+const optionsSearchHistory = document.querySelector("#options-search-history");
+const optionsSearchInput = document.querySelector("#options-search-input");
+const optionsSearchStatus = document.querySelector("#options-search-status");
 const shortcutSettingsButton = document.querySelector("#shortcut-settings-button");
 const targetOrderList = document.querySelector("#target-order-list");
 const statusMessage = document.querySelector("#status-message");
@@ -18,6 +30,7 @@ const statusMessage = document.querySelector("#status-message");
 let settings = null;
 let dragState = null;
 let persistToken = 0;
+let optionsSearchUi = null;
 
 function setStatus(message, state = "idle") {
   statusMessage.textContent = message;
@@ -273,6 +286,40 @@ function renderTargetList() {
   ].join("");
 }
 
+function createHistoryChip(record) {
+  const chip = document.createElement("span");
+  const openButton = document.createElement("button");
+  const removeButton = document.createElement("button");
+  const { id, query } = record;
+
+  chip.className = "search-history-chip";
+  openButton.className = "search-history-open";
+  openButton.type = "button";
+  openButton.textContent = query;
+  openButton.dataset.historyQuery = query;
+  openButton.title = `重新搜索 ${query}`;
+  removeButton.className = "search-history-remove";
+  removeButton.type = "button";
+  removeButton.textContent = "×";
+  removeButton.dataset.historyRemove = id;
+  removeButton.setAttribute("aria-label", `删除搜索记录 ${query}`);
+
+  chip.append(openButton, removeButton);
+  return chip;
+}
+
+async function renderAllSearchHistory() {
+  const records = await getSearchHistory(storageArea);
+
+  allSearchHistory.textContent = "";
+  allSearchHistory.hidden = records.length === 0;
+  allSearchHistoryEmpty.hidden = records.length > 0;
+
+  for (const record of records) {
+    allSearchHistory.append(createHistoryChip(record));
+  }
+}
+
 function render() {
   autoCloseToggle.checked = settings.autoClosePrevious;
   googleImageToggle.checked = settings.googleSearchType === GOOGLE_SEARCH_TYPES.IMAGES;
@@ -370,6 +417,27 @@ targetOrderList.addEventListener("pointerup", (event) => {
 
 targetOrderList.addEventListener("pointercancel", clearDragState);
 
+allSearchHistory.addEventListener("click", async (event) => {
+  const removeButton = event.target.closest("[data-history-remove]");
+
+  if (removeButton) {
+    await removeSearchHistoryRecord(storageArea, removeButton.dataset.historyRemove);
+    await renderAllSearchHistory();
+    await optionsSearchUi?.refreshHistory();
+    optionsSearchInput.focus();
+    return;
+  }
+
+  const openButton = event.target.closest("[data-history-query]");
+
+  if (!openButton) {
+    return;
+  }
+
+  optionsSearchInput.value = openButton.dataset.historyQuery;
+  optionsSearchForm.requestSubmit();
+});
+
 shortcutSettingsButton.addEventListener("click", async () => {
   try {
     await openShortcutSettings(chrome.tabs);
@@ -384,3 +452,13 @@ settings.targetOrder = settings.targetOrder.filter((id) =>
   SEARCH_TARGETS.some((target) => target.id === id),
 );
 render();
+await renderAllSearchHistory();
+optionsSearchUi = initSearchUi({
+  closeOnSuccess: false,
+  form: optionsSearchForm,
+  historyList: optionsSearchHistory,
+  input: optionsSearchInput,
+  onHistoryChange: renderAllSearchHistory,
+  searchButton: optionsSearchButton,
+  statusMessage: optionsSearchStatus,
+});

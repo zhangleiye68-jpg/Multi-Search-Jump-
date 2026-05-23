@@ -12,6 +12,36 @@
         <h1>Multi Search Jump 设置</h1>
       </header>
 
+      <section class="settings-section options-search-section" aria-labelledby="options-search-heading">
+        <div class="section-heading">
+          <h2 id="options-search-heading">直接搜索</h2>
+        </div>
+        <form id="options-search-form" class="options-search-form">
+          <label class="visually-hidden" for="options-search-input">搜索关键词</label>
+          <input
+            id="options-search-input"
+            name="query"
+            type="search"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="输入关键词"
+          >
+          <button id="options-search-button" type="submit">搜索</button>
+        </form>
+        <div
+          id="options-search-history"
+          class="search-history options-search-history"
+          aria-label="最近搜索记录"
+          hidden
+        ></div>
+        <p
+          id="options-search-status"
+          class="status-message options-search-status"
+          role="status"
+          aria-live="polite"
+        ></p>
+      </section>
+
       <section class="settings-section">
         <label class="switch-setting" for="auto-close-toggle">
           <span>
@@ -53,6 +83,19 @@
           <h2>搜索网站与顺序</h2>
         </div>
         <ul id="target-order-list" class="target-order-list" aria-label="搜索网站顺序"></ul>
+      </section>
+
+      <section class="settings-section">
+        <div class="section-heading">
+          <h2>历史记录</h2>
+        </div>
+        <div
+          id="all-search-history"
+          class="search-history all-search-history"
+          aria-label="全部搜索记录"
+          hidden
+        ></div>
+        <p id="all-search-history-empty" class="setting-note">暂无历史记录。</p>
       </section>
 
       <p id="status-message" class="status-message" role="status" aria-live="polite"></p>

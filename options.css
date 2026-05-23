@@ -41,6 +41,108 @@ body {
   letter-spacing: 0;
 }
 
+.options-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.options-search-form input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid #cfd8d3;
+  border-radius: 7px;
+  padding: 0 11px;
+  background: #ffffff;
+  color: #15201f;
+  font-size: 14px;
+  outline: none;
+}
+
+.options-search-form input:focus {
+  border-color: #176b63;
+  box-shadow: 0 0 0 3px rgba(23, 107, 99, 0.16);
+}
+
+.options-search-form button {
+  height: 38px;
+  border-color: #176b63;
+  padding: 0 14px;
+  background: #176b63;
+  color: #ffffff;
+}
+
+.options-search-form button:hover {
+  background: #0f5d56;
+}
+
+.options-search-form button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.options-search-status {
+  margin: -2px 0 0;
+}
+
+.search-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -2px;
+}
+
+.search-history[hidden] {
+  display: none;
+}
+
+.search-history-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid #d9e0dc;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.search-history-open,
+.search-history-remove {
+  height: 24px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #263331;
+}
+
+.search-history-open {
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  padding: 0 8px 0 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.all-search-history .search-history-open {
+  max-width: 320px;
+}
+
+.search-history-remove {
+  min-width: 22px;
+  width: 22px;
+  padding: 0;
+  color: #5f6d68;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.search-history-open:hover,
+.search-history-remove:hover {
+  background: #edf3f0;
+}
+
 .switch-setting,
 .settings-action-row,
 .target-row {
@@ -280,4 +382,18 @@ button:disabled {
 
 .status-message.is-error {
   color: #b42318;
+}
+
+.status-message.is-busy {
+  color: #176b63;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
 }

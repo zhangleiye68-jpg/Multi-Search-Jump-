@@ -13,12 +13,14 @@ import {
   GOOGLE_SEARCH_TYPE_KEY,
   TARGET_ORDER_KEY,
 } from "../searchSettings.js";
+import { SEARCH_HISTORY_KEY } from "../searchHistory.js";
 import { AUTO_CLOSE_PREVIOUS_KEY } from "../tabLauncher.js";
 
 function createStorageArea(initialValues = {}) {
   const values = { ...initialValues };
 
   return {
+    values,
     async get(keys) {
       if (Array.isArray(keys)) {
         return Object.fromEntries(keys.map((key) => [key, values[key]]));
@@ -168,6 +170,7 @@ describe("selection search", () => {
       ["updateGroup", 88, { title: "Search: maga", color: "cyan", collapsed: false }],
       ["update", 301, { active: true }],
     ]);
+    assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "maga");
   });
 
   it("ignores blank selected text", async () => {

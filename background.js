@@ -1,3 +1,4 @@
+import { addSearchHistoryRecord } from "./searchHistory.js";
 import { openManagedSearchTabs } from "./tabLauncher.js";
 import {
   CONTEXT_MENU_ID,
@@ -25,6 +26,12 @@ async function handleOpenSearchGroup(message) {
     title: message.title,
     autoClosePrevious: message.autoClosePrevious,
   });
+
+  try {
+    await addSearchHistoryRecord(chrome.storage.local, message.query);
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 function handleCommandSearchError(error) {

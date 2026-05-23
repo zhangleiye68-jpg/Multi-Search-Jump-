@@ -8,6 +8,8 @@ describe("background worker", () => {
 
     assert.match(source, /chrome\.runtime\.onMessage\.addListener/);
     assert.match(source, /openManagedSearchTabs/);
+    assert.match(source, /addSearchHistoryRecord/);
+    assert.match(source, /message\.query/);
     assert.match(source, /return true;/);
   });
 

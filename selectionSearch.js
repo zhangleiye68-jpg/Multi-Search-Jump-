@@ -1,4 +1,5 @@
 import { buildSearchUrls, normalizeQuery } from "./searchTargets.js";
+import { addSearchHistoryRecord } from "./searchHistory.js";
 import { getSearchSettings } from "./searchSettings.js";
 import { buildGroupTitle, openManagedSearchTabs } from "./tabLauncher.js";
 
@@ -108,6 +109,7 @@ export async function openSearchForText({
     title,
     urls,
   });
+  await addSearchHistoryRecord(storageArea, selectedText);
 
   return {
     count: urls.length,

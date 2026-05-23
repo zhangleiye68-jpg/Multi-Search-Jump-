@@ -1,11 +1,17 @@
 import { buildSearchUrls, normalizeQuery } from "./searchTargets.js";
+import {
+  getRecentSearchHistory,
+  removeSearchHistoryRecord,
+} from "./searchHistory.js";
 import { getSearchSettings } from "./searchSettings.js";
 import { buildGroupTitle } from "./tabLauncher.js";
 
 export function initSearchUi({
   closeOnSuccess,
   form,
+  historyList = null,
   input,
+  onHistoryChange = null,
   searchButton,
   statusMessage,
 }) {
@@ -15,10 +21,47 @@ export function initSearchUi({
     statusMessage.classList.toggle("is-busy", state === "busy");
   }
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  function renderHistory(records) {
+    if (!historyList) {
+      return;
+    }
 
-    const query = normalizeQuery(input.value);
+    historyList.textContent = "";
+    historyList.hidden = records.length === 0;
+
+    for (const record of records) {
+      const chip = document.createElement("span");
+      const openButton = document.createElement("button");
+      const removeButton = document.createElement("button");
+
+      chip.className = "search-history-chip";
+      openButton.className = "search-history-open";
+      openButton.type = "button";
+      openButton.textContent = record.query;
+      openButton.dataset.historyQuery = record.query;
+      openButton.title = `重新搜索 ${record.query}`;
+      removeButton.className = "search-history-remove";
+      removeButton.type = "button";
+      removeButton.textContent = "×";
+      removeButton.dataset.historyRemove = record.id;
+      removeButton.setAttribute("aria-label", `删除搜索记录 ${record.query}`);
+
+      chip.append(openButton, removeButton);
+      historyList.append(chip);
+    }
+  }
+
+  async function refreshHistory() {
+    if (!historyList) {
+      return;
+    }
+
+    renderHistory(await getRecentSearchHistory(chrome.storage.local));
+    await onHistoryChange?.();
+  }
+
+  async function openQuery(value) {
+    const query = normalizeQuery(value);
 
     if (!query) {
       setStatus("请输入关键词。", "error");
@@ -42,6 +85,7 @@ export function initSearchUi({
     try {
       const response = await chrome.runtime.sendMessage({
         type: "OPEN_SEARCH_GROUP",
+        query,
         urls,
         title: buildGroupTitle(query),
         autoClosePrevious: settings.autoClosePrevious,
@@ -52,6 +96,7 @@ export function initSearchUi({
       }
 
       setStatus("搜索页已打开。");
+      await refreshHistory();
 
       if (closeOnSuccess) {
         window.close();
@@ -65,9 +110,42 @@ export function initSearchUi({
       setStatus("无法打开搜索页，请重新加载扩展后再试。", "error");
       input.focus();
     }
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await openQuery(input.value);
   });
 
+  historyList?.addEventListener("click", async (event) => {
+    const removeButton = event.target.closest("[data-history-remove]");
+
+    if (removeButton) {
+      await removeSearchHistoryRecord(
+        chrome.storage.local,
+        removeButton.dataset.historyRemove,
+      );
+      await refreshHistory();
+      input.focus();
+      return;
+    }
+
+    const openButton = event.target.closest("[data-history-query]");
+
+    if (!openButton) {
+      return;
+    }
+
+    input.value = openButton.dataset.historyQuery;
+    await openQuery(input.value);
+  });
+
+  refreshHistory();
   input.focus();
+
+  return {
+    refreshHistory,
+  };
 }
 
 export function initOptionsButton(button) {

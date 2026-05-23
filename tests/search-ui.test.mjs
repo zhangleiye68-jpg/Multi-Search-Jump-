@@ -58,6 +58,21 @@ function createFormHarness() {
 }
 
 describe("search UI", () => {
+  function createStorageArea(initialValues = {}) {
+    const values = { ...initialValues };
+
+    return {
+      values,
+      async get(keys) {
+        const requestedKeys = Array.isArray(keys) ? keys : [keys];
+        return Object.fromEntries(requestedKeys.map((key) => [key, values[key]]));
+      },
+      async set(nextValues) {
+        Object.assign(values, nextValues);
+      },
+    };
+  }
+
   it("shows busy feedback before reading saved settings", async () => {
     const harness = createFormHarness();
     let resolveStorageGet = null;
@@ -74,10 +89,12 @@ describe("search UI", () => {
       storage: {
         local: {
           async get(keys) {
+            const requestedKeys = Array.isArray(keys) ? keys : [keys];
             return storageGetPromise.then(() =>
-              Object.fromEntries(keys.map((key) => [key, undefined])),
+              Object.fromEntries(requestedKeys.map((key) => [key, undefined])),
             );
           },
+          async set() {},
         },
       },
     };
@@ -115,8 +132,10 @@ describe("search UI", () => {
       storage: {
         local: {
           async get(keys) {
-            return Object.fromEntries(keys.map((key) => [key, undefined]));
+            const requestedKeys = Array.isArray(keys) ? keys : [keys];
+            return Object.fromEntries(requestedKeys.map((key) => [key, undefined]));
           },
+          async set() {},
         },
       },
     };
@@ -134,5 +153,36 @@ describe("search UI", () => {
     assert.equal(harness.searchButton.disabled, false);
     assert.equal(harness.statusMessage.textContent, "搜索页已打开。");
     assert.equal(messages.length, 1);
+  });
+
+  it("delegates successful search history to the background worker", async () => {
+    const harness = createFormHarness();
+    const storageArea = createStorageArea();
+    const messages = [];
+
+    globalThis.chrome = {
+      runtime: {
+        async sendMessage(message) {
+          messages.push(message);
+          return { ok: true };
+        },
+      },
+      storage: {
+        local: storageArea,
+      },
+    };
+
+    initSearchUi({
+      closeOnSuccess: false,
+      form: harness.form,
+      input: harness.input,
+      searchButton: harness.searchButton,
+      statusMessage: harness.statusMessage,
+    });
+
+    await harness.submit();
+
+    assert.equal(messages[0].query, "maga");
+    assert.equal(storageArea.values.searchHistory, undefined);
   });
 });
