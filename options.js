@@ -432,7 +432,9 @@ async function renderAllSearchHistory() {
 function render() {
   autoCloseToggle.checked = settings.autoClosePrevious;
   googleImageToggle.checked = settings.googleSearchType === GOOGLE_SEARCH_TYPES.IMAGES;
-  googleModeState.textContent = googleImageToggle.checked ? "图片搜索" : "普通搜索";
+  googleModeState.textContent = googleImageToggle.checked
+    ? "图片搜索，过去 24 小时"
+    : "普通搜索";
   showPopupHistoryToggle.checked = showPopupSearchHistory;
   translateChineseToggle.checked = settings.translateChineseToEnglish;
   renderTargetList();

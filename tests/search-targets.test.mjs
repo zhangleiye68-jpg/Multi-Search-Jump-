@@ -25,7 +25,7 @@ describe("search targets", () => {
 
   it("builds encoded search result URLs for a query", () => {
     assert.deepEqual(buildSearchUrls("人工智能 写作"), [
-      "https://www.google.com/search?tbm=isch&q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
+      "https://www.google.com/search?tbm=isch&tbs=qdr:d&q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
       "https://x.com/search?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C&src=typed_query",
       "https://www.facebook.com/search/top/?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
       "https://www.tiktok.com/search?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",

@@ -7,7 +7,7 @@ export const SEARCH_TARGETS = Object.freeze([
         return `https://www.google.com/search?q=${query}`;
       }
 
-      return `https://www.google.com/search?tbm=isch&q=${query}`;
+      return `https://www.google.com/search?tbm=isch&tbs=qdr:d&q=${query}`;
     },
   }),
   Object.freeze({
