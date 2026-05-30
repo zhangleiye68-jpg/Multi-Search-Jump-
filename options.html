@@ -12,150 +12,246 @@
         <h1>Multi Search Jump 设置</h1>
       </header>
 
-      <section class="settings-section options-search-section" aria-labelledby="options-search-heading">
-        <div class="section-heading">
-          <h2 id="options-search-heading">直接搜索</h2>
+      <div class="options-layout">
+        <nav class="options-sidebar" aria-label="设置功能模块">
+          <div class="options-sidebar-title">功能模块</div>
+          <a class="options-nav-link is-active" href="#settings-search" data-options-nav="settings-search" aria-current="true">搜索</a>
+          <a class="options-nav-link" href="#settings-display" data-options-nav="settings-display">显示</a>
+          <a class="options-nav-link" href="#settings-shortcuts" data-options-nav="settings-shortcuts">快捷键</a>
+          <a class="options-nav-link" href="#settings-targets" data-options-nav="settings-targets">搜索网站</a>
+          <a class="options-nav-link" href="#settings-history" data-options-nav="settings-history">历史记录</a>
+        </nav>
+
+        <div class="options-content">
+          <section
+            id="settings-search"
+            class="settings-module"
+            aria-labelledby="settings-search-heading"
+            data-settings-section
+          >
+            <div class="module-heading">
+              <h2 id="settings-search-heading">搜索</h2>
+              <p>控制搜索入口、关键词处理方式和 Google 搜索类型。</p>
+            </div>
+
+            <section class="settings-subsection options-search-section" aria-labelledby="options-search-heading">
+              <div class="subsection-heading">
+                <h3 id="options-search-heading">直接搜索</h3>
+              </div>
+              <form id="options-search-form" class="options-search-form">
+                <label class="visually-hidden" for="options-search-input">搜索关键词</label>
+                <textarea
+                  id="options-search-input"
+                  name="query"
+                  rows="1"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="输入关键词"
+                ></textarea>
+                <button id="options-search-button" type="submit">搜索</button>
+              </form>
+              <div
+                id="options-search-history"
+                class="search-history options-search-history"
+                aria-label="最近搜索记录"
+                hidden
+              ></div>
+              <p
+                id="options-search-status"
+                class="status-message options-search-status"
+                role="status"
+                aria-live="polite"
+              ></p>
+            </section>
+
+            <section class="settings-subsection" aria-labelledby="search-behavior-heading">
+              <div class="subsection-heading">
+                <h3 id="search-behavior-heading">搜索行为</h3>
+              </div>
+              <label class="switch-setting" for="auto-close-toggle">
+                <span>
+                  <span class="setting-title">新搜索前关闭上次结果</span>
+                  <span class="setting-note">开启后，搜索 B 前会自动关闭搜索 A 的标签组。</span>
+                </span>
+                <span class="switch-control">
+                  <input id="auto-close-toggle" type="checkbox">
+                  <span class="switch-track" aria-hidden="true">
+                    <span class="switch-thumb"></span>
+                  </span>
+                </span>
+              </label>
+
+              <label class="switch-setting" for="translate-chinese-toggle">
+                <span>
+                  <span class="setting-title">将中文翻译成英文后搜索</span>
+                  <span class="setting-note">开启后，包含中文的关键词会先翻译成英文，再打开搜索页。</span>
+                </span>
+                <span class="switch-control">
+                  <input id="translate-chinese-toggle" type="checkbox">
+                  <span class="switch-track" aria-hidden="true">
+                    <span class="switch-thumb"></span>
+                  </span>
+                </span>
+              </label>
+            </section>
+
+            <section class="settings-subsection" aria-labelledby="google-search-heading">
+              <div class="subsection-heading">
+                <h3 id="google-search-heading">Google 搜索类型</h3>
+              </div>
+              <label class="switch-setting" for="google-image-toggle">
+                <span>
+                  <span class="setting-title">Google 图片搜索</span>
+                  <span id="google-mode-state" class="setting-note">图片搜索</span>
+                </span>
+                <span class="switch-control">
+                  <input id="google-image-toggle" type="checkbox">
+                  <span class="switch-track" aria-hidden="true">
+                    <span class="switch-thumb"></span>
+                  </span>
+                </span>
+              </label>
+            </section>
+          </section>
+
+          <section
+            id="settings-display"
+            class="settings-module"
+            aria-labelledby="settings-display-heading"
+            data-settings-section
+          >
+            <div class="module-heading">
+              <h2 id="settings-display-heading">显示</h2>
+              <p>控制小窗口和侧边栏相关的显示入口。</p>
+            </div>
+
+            <section class="settings-subsection" aria-labelledby="popup-display-heading">
+              <div class="subsection-heading">
+                <h3 id="popup-display-heading">小窗口</h3>
+              </div>
+              <label class="switch-setting" for="show-popup-history-toggle">
+                <span>
+                  <span class="setting-title">小窗口显示历史</span>
+                  <span class="setting-note">开启后，小窗口会显示最近搜索记录。</span>
+                </span>
+                <span class="switch-control">
+                  <input id="show-popup-history-toggle" type="checkbox">
+                  <span class="switch-track" aria-hidden="true">
+                    <span class="switch-thumb"></span>
+                  </span>
+                </span>
+              </label>
+            </section>
+
+            <section class="settings-subsection" aria-labelledby="side-panel-heading">
+              <div class="subsection-heading">
+                <h3 id="side-panel-heading">侧边栏</h3>
+              </div>
+              <div class="settings-action-row">
+                <span>
+                  <span class="setting-title">侧边栏显示</span>
+                  <span class="setting-note">在 Chrome 侧边栏中打开搜索面板。</span>
+                </span>
+                <button id="side-panel-button" type="button">侧边栏显示</button>
+              </div>
+            </section>
+          </section>
+
+          <section
+            id="settings-shortcuts"
+            class="settings-module"
+            aria-labelledby="settings-shortcuts-heading"
+            data-settings-section
+          >
+            <div class="module-heading">
+              <h2 id="settings-shortcuts-heading">快捷键</h2>
+              <p>设置选中文字后直接搜索的键盘入口。</p>
+            </div>
+
+            <section class="settings-subsection" aria-labelledby="selection-shortcut-heading">
+              <div class="subsection-heading">
+                <h3 id="selection-shortcut-heading">选中文字搜索</h3>
+              </div>
+              <div class="settings-action-row">
+                <span>
+                  <span class="setting-title">快捷键搜索</span>
+                  <span class="setting-note">打开 Chrome 快捷键页面，设置或修改选中文字搜索的快捷键。</span>
+                </span>
+                <button id="shortcut-settings-button" type="button">设置快捷键</button>
+              </div>
+            </section>
+          </section>
+
+          <section
+            id="settings-targets"
+            class="settings-module"
+            aria-labelledby="settings-targets-heading"
+            data-settings-section
+          >
+            <div class="module-heading">
+              <h2 id="settings-targets-heading">搜索网站</h2>
+              <p>选择要打开的网站，并调整搜索结果页的打开顺序。</p>
+            </div>
+
+            <section class="settings-subsection" aria-labelledby="target-order-heading">
+              <div class="subsection-heading">
+                <h3 id="target-order-heading">网站开关与排序</h3>
+              </div>
+              <ul id="target-order-list" class="target-order-list" aria-label="搜索网站顺序"></ul>
+            </section>
+          </section>
+
+          <section
+            id="settings-history"
+            class="settings-module"
+            aria-labelledby="settings-history-heading"
+            data-settings-section
+          >
+            <div class="module-heading">
+              <h2 id="settings-history-heading">历史记录</h2>
+              <p>查找、重新搜索或删除本机保存的搜索记录。</p>
+            </div>
+
+            <section class="settings-subsection" aria-labelledby="history-management-heading">
+              <div class="subsection-heading">
+                <h3 id="history-management-heading">历史管理</h3>
+              </div>
+              <div
+                id="all-search-history"
+                class="history-panel"
+                aria-label="全部搜索记录"
+              >
+                <div class="history-toolbar">
+                  <label class="visually-hidden" for="history-filter-input">查找历史记录</label>
+                  <input
+                    id="history-filter-input"
+                    type="search"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="查找历史记录"
+                  >
+                  <button id="clear-history-button" type="button">清空全部历史</button>
+                </div>
+                <div class="history-table-scroll">
+                  <table class="history-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">搜索时间</th>
+                        <th scope="col">搜索关键词</th>
+                        <th scope="col">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="history-table-body"></tbody>
+                  </table>
+                </div>
+                <p id="all-search-history-empty" class="setting-note">暂无历史记录。</p>
+              </div>
+            </section>
+          </section>
+
+          <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
         </div>
-        <form id="options-search-form" class="options-search-form">
-          <label class="visually-hidden" for="options-search-input">搜索关键词</label>
-          <textarea
-            id="options-search-input"
-            name="query"
-            rows="1"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="输入关键词"
-          ></textarea>
-          <button id="options-search-button" type="submit">搜索</button>
-        </form>
-        <div
-          id="options-search-history"
-          class="search-history options-search-history"
-          aria-label="最近搜索记录"
-          hidden
-        ></div>
-        <p
-          id="options-search-status"
-          class="status-message options-search-status"
-          role="status"
-          aria-live="polite"
-        ></p>
-      </section>
-
-      <section class="settings-section">
-        <label class="switch-setting" for="auto-close-toggle">
-          <span>
-            <span class="setting-title">新搜索前关闭上次结果</span>
-            <span class="setting-note">开启后，搜索 B 前会自动关闭搜索 A 的标签组。</span>
-          </span>
-          <span class="switch-control">
-            <input id="auto-close-toggle" type="checkbox">
-            <span class="switch-track" aria-hidden="true">
-              <span class="switch-thumb"></span>
-            </span>
-          </span>
-        </label>
-
-        <label class="switch-setting" for="google-image-toggle">
-          <span>
-            <span class="setting-title">Google 图片搜索</span>
-            <span id="google-mode-state" class="setting-note">图片搜索</span>
-          </span>
-          <span class="switch-control">
-            <input id="google-image-toggle" type="checkbox">
-            <span class="switch-track" aria-hidden="true">
-              <span class="switch-thumb"></span>
-            </span>
-          </span>
-        </label>
-
-        <label class="switch-setting" for="translate-chinese-toggle">
-          <span>
-            <span class="setting-title">将中文翻译成英文后搜索</span>
-            <span class="setting-note">开启后，包含中文的关键词会先翻译成英文，再打开搜索页。</span>
-          </span>
-          <span class="switch-control">
-            <input id="translate-chinese-toggle" type="checkbox">
-            <span class="switch-track" aria-hidden="true">
-              <span class="switch-thumb"></span>
-            </span>
-          </span>
-        </label>
-
-        <label class="switch-setting" for="show-popup-history-toggle">
-          <span>
-            <span class="setting-title">小窗口显示历史</span>
-            <span class="setting-note">开启后，小窗口会显示最近搜索记录。</span>
-          </span>
-          <span class="switch-control">
-            <input id="show-popup-history-toggle" type="checkbox">
-            <span class="switch-track" aria-hidden="true">
-              <span class="switch-thumb"></span>
-            </span>
-          </span>
-        </label>
-
-        <div class="settings-action-row">
-          <span>
-            <span class="setting-title">侧边栏显示</span>
-            <span class="setting-note">在 Chrome 侧边栏中打开搜索面板。</span>
-          </span>
-          <button id="side-panel-button" type="button">侧边栏显示</button>
-        </div>
-
-        <div class="settings-action-row">
-          <span>
-            <span class="setting-title">快捷键搜索</span>
-            <span class="setting-note">打开 Chrome 快捷键页面，设置或修改选中文字搜索的快捷键。</span>
-          </span>
-          <button id="shortcut-settings-button" type="button">设置快捷键</button>
-        </div>
-      </section>
-
-      <section class="settings-section">
-        <div class="section-heading">
-          <h2>搜索网站与顺序</h2>
-        </div>
-        <ul id="target-order-list" class="target-order-list" aria-label="搜索网站顺序"></ul>
-      </section>
-
-      <section class="settings-section">
-        <div class="section-heading">
-          <h2>历史记录</h2>
-        </div>
-        <div
-          id="all-search-history"
-          class="history-panel"
-          aria-label="全部搜索记录"
-        >
-          <div class="history-toolbar">
-            <label class="visually-hidden" for="history-filter-input">查找历史记录</label>
-            <input
-              id="history-filter-input"
-              type="search"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="查找历史记录"
-            >
-            <button id="clear-history-button" type="button">清空全部历史</button>
-          </div>
-          <div class="history-table-scroll">
-            <table class="history-table">
-              <thead>
-                <tr>
-                  <th scope="col">搜索时间</th>
-                  <th scope="col">搜索关键词</th>
-                  <th scope="col">操作</th>
-                </tr>
-              </thead>
-              <tbody id="history-table-body"></tbody>
-            </table>
-          </div>
-          <p id="all-search-history-empty" class="setting-note">暂无历史记录。</p>
-        </div>
-      </section>
-
-      <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+      </div>
     </main>
 
     <script type="module" src="options.js"></script>

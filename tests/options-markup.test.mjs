@@ -6,6 +6,17 @@ describe("options markup", () => {
   it("contains persistent toggles and target ordering UI", async () => {
     const html = await readFile("options.html", "utf8");
 
+    assert.match(html, /class="options-layout"/);
+    assert.match(html, /<nav[^>]+class="options-sidebar"/);
+    assert.match(
+      html,
+      /href="#settings-search"[\s\S]*>搜索<[\s\S]*href="#settings-display"[\s\S]*>显示<[\s\S]*href="#settings-shortcuts"[\s\S]*>快捷键<[\s\S]*href="#settings-targets"[\s\S]*>搜索网站<[\s\S]*href="#settings-history"[\s\S]*>历史记录</,
+    );
+    assert.match(html, /id="settings-search"/);
+    assert.match(html, /id="settings-display"/);
+    assert.match(html, /id="settings-shortcuts"/);
+    assert.match(html, /id="settings-targets"/);
+    assert.match(html, /id="settings-history"/);
     assert.match(html, /id="options-search-form"/);
     assert.match(html, /<textarea[^>]+id="options-search-input"/);
     assert.doesNotMatch(html, /<input[^>]+id="options-search-input"/);
@@ -28,7 +39,25 @@ describe("options markup", () => {
     assert.match(html, /id="clear-history-button"/);
     assert.match(html, /id="history-table-body"/);
     assert.match(html, /id="all-search-history"/);
+    assert.match(html, /直接搜索/);
+    assert.match(html, /搜索行为/);
+    assert.match(html, /Google 搜索类型/);
+    assert.match(html, /小窗口/);
+    assert.match(html, /侧边栏/);
+    assert.match(html, /选中文字搜索/);
+    assert.match(html, /网站开关与排序/);
+    assert.match(html, /历史管理/);
     assert.match(html, /<script[^>]+type="module"[^>]+src="options\.js"/);
+  });
+
+  it("styles options as a single scrolling page with sidebar navigation", async () => {
+    const css = await readFile("options.css", "utf8");
+
+    assert.match(css, /\.options-layout\s*{[\s\S]*grid-template-columns: 168px minmax\(0, 1fr\)/);
+    assert.match(css, /\.options-sidebar\s*{[\s\S]*position: sticky/);
+    assert.match(css, /\.options-nav-link\.is-active/);
+    assert.match(css, /\.settings-module\s*{[\s\S]*scroll-margin-top/);
+    assert.match(css, /@media \(max-width: 760px\)/);
   });
 
   it("renders numbered custom pointer-drag rows with compact switches", async () => {
@@ -41,6 +70,11 @@ describe("options markup", () => {
     assert.match(source, /#options-search-status/);
     assert.match(source, /#translate-chinese-toggle/);
     assert.match(source, /translateChineseToEnglish/);
+    assert.match(source, /data-options-nav/);
+    assert.match(source, /IntersectionObserver/);
+    assert.match(source, /scrollIntoView/);
+    assert.match(source, /aria-current/);
+    assert.match(source, /is-active/);
     assert.match(source, /#show-popup-history-toggle/);
     assert.match(source, /getShowPopupSearchHistory/);
     assert.match(source, /saveShowPopupSearchHistory/);

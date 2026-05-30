@@ -29,12 +29,16 @@ const optionsSearchForm = document.querySelector("#options-search-form");
 const optionsSearchHistory = document.querySelector("#options-search-history");
 const optionsSearchInput = document.querySelector("#options-search-input");
 const optionsSearchStatus = document.querySelector("#options-search-status");
+const optionsNavLinks = [...document.querySelectorAll("[data-options-nav]")];
 const shortcutSettingsButton = document.querySelector("#shortcut-settings-button");
 const showPopupHistoryToggle = document.querySelector("#show-popup-history-toggle");
 const sidePanelButton = document.querySelector("#side-panel-button");
 const targetOrderList = document.querySelector("#target-order-list");
 const translateChineseToggle = document.querySelector("#translate-chinese-toggle");
 const statusMessage = document.querySelector("#status-message");
+const settingsSections = optionsNavLinks
+  .map((link) => document.getElementById(link.dataset.optionsNav))
+  .filter(Boolean);
 
 let settings = null;
 let dragState = null;
@@ -46,6 +50,65 @@ let showPopupSearchHistory = true;
 function setStatus(message, state = "idle") {
   statusMessage.textContent = message;
   statusMessage.classList.toggle("is-error", state === "error");
+}
+
+function setActiveOptionsNav(sectionId) {
+  for (const link of optionsNavLinks) {
+    const isActive = link.dataset.optionsNav === sectionId;
+
+    link.classList.toggle("is-active", isActive);
+
+    if (isActive) {
+      link.setAttribute("aria-current", "true");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  }
+}
+
+function initOptionsNavigation() {
+  if (optionsNavLinks.length === 0 || settingsSections.length === 0) {
+    return;
+  }
+
+  for (const link of optionsNavLinks) {
+    link.addEventListener("click", (event) => {
+      const section = document.getElementById(link.dataset.optionsNav);
+
+      if (!section) {
+        return;
+      }
+
+      event.preventDefault();
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveOptionsNav(section.id);
+    });
+  }
+
+  if (!("IntersectionObserver" in window)) {
+    setActiveOptionsNav(settingsSections[0].id);
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const visibleEntry = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+      if (visibleEntry) {
+        setActiveOptionsNav(visibleEntry.target.id);
+      }
+    },
+    {
+      rootMargin: "-20% 0px -60% 0px",
+      threshold: [0.1, 0.5],
+    },
+  );
+
+  for (const section of settingsSections) {
+    observer.observe(section);
+  }
 }
 
 async function persist(nextSettings = settings) {
@@ -534,6 +597,7 @@ shortcutSettingsButton.addEventListener("click", async () => {
 });
 
 initPinButton(sidePanelButton, statusMessage, { closeOnSuccess: false });
+initOptionsNavigation();
 
 showPopupSearchHistory = await getShowPopupSearchHistory(storageArea);
 settings = await getSearchSettings(storageArea);
