@@ -9,6 +9,20 @@ import {
 import { getSearchSettings } from "./searchSettings.js";
 import { buildGroupTitle } from "./tabLauncher.js";
 
+const SEARCH_INPUT_MAX_HEIGHT = 120;
+
+function resizeSearchInput(input) {
+  if (!input.style) {
+    return;
+  }
+
+  input.style.height = "auto";
+
+  if (input.scrollHeight > 0) {
+    input.style.height = `${Math.min(input.scrollHeight, SEARCH_INPUT_MAX_HEIGHT)}px`;
+  }
+}
+
 export function initSearchUi({
   closeOnSuccess,
   form,
@@ -30,6 +44,22 @@ export function initSearchUi({
     statusMessage.textContent = message;
     statusMessage.classList.toggle("is-error", state === "error");
     statusMessage.classList.toggle("is-busy", state === "busy");
+  }
+
+  function initMultilineInput() {
+    input.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
+        return;
+      }
+
+      event.preventDefault();
+      form.requestSubmit();
+    });
+
+    input.addEventListener("input", () => {
+      resizeSearchInput(input);
+    });
+    resizeSearchInput(input);
   }
 
   function renderHistory(records) {
@@ -165,6 +195,7 @@ export function initSearchUi({
     }
 
     input.value = openButton.dataset.historyQuery;
+    resizeSearchInput(input);
     await openQuery(input.value);
   });
 
@@ -183,6 +214,7 @@ export function initSearchUi({
   } else {
     refreshHistory();
   }
+  initMultilineInput();
   input.focus();
 
   return {

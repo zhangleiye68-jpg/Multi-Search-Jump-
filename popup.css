@@ -78,23 +78,29 @@ p {
 .search-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 8px;
 }
 
-input {
+.search-form textarea {
   width: 100%;
   min-width: 0;
-  height: 38px;
+  min-height: 38px;
+  max-height: 120px;
   border: 1px solid #cfd8d3;
   border-radius: 7px;
-  padding: 0 11px;
+  padding: 9px 11px;
   background: #ffffff;
   color: #15201f;
+  font-family: inherit;
   font-size: 14px;
+  line-height: 1.35;
   outline: none;
+  overflow-y: auto;
+  resize: none;
 }
 
-input:focus {
+.search-form textarea:focus {
   border-color: #176b63;
   box-shadow: 0 0 0 3px rgba(23, 107, 99, 0.16);
 }

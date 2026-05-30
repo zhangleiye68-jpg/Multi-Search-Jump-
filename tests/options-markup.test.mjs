@@ -7,7 +7,8 @@ describe("options markup", () => {
     const html = await readFile("options.html", "utf8");
 
     assert.match(html, /id="options-search-form"/);
-    assert.match(html, /id="options-search-input"/);
+    assert.match(html, /<textarea[^>]+id="options-search-input"/);
+    assert.doesNotMatch(html, /<input[^>]+id="options-search-input"/);
     assert.match(html, /id="options-search-button"/);
     assert.match(html, /id="options-search-history"/);
     assert.match(html, /id="options-search-status"/);

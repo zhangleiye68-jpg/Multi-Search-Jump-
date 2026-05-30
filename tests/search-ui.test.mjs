@@ -22,16 +22,26 @@ function createClassList() {
 
 function createFormHarness() {
   let submitHandler = null;
+  const inputHandlers = new Map();
+  let submitRequests = 0;
   const form = {
     addEventListener(type, handler) {
       if (type === "submit") {
         submitHandler = handler;
       }
     },
+    requestSubmit() {
+      submitRequests += 1;
+    },
   };
   const input = {
     focused: false,
+    scrollHeight: 38,
+    style: {},
     value: "maga",
+    addEventListener(type, handler) {
+      inputHandlers.set(type, handler);
+    },
     focus() {
       this.focused = true;
     },
@@ -45,6 +55,15 @@ function createFormHarness() {
   };
 
   return {
+    dispatchInputEvent() {
+      inputHandlers.get("input")?.({});
+    },
+    dispatchInputKeydown(event) {
+      inputHandlers.get("keydown")?.(event);
+    },
+    get submitRequests() {
+      return submitRequests;
+    },
     async submit() {
       await submitHandler({
         preventDefault() {},
@@ -231,6 +250,64 @@ describe("search UI", () => {
 
     assert.equal(messages[0].query, "maga");
     assert.equal(storageArea.values.searchHistory, undefined);
+  });
+
+  it("submits multiline search fields with Enter but keeps Shift+Enter for line breaks", () => {
+    const harness = createFormHarness();
+
+    initSearchUi({
+      closeOnSuccess: false,
+      form: harness.form,
+      input: harness.input,
+      searchButton: harness.searchButton,
+      statusMessage: harness.statusMessage,
+    });
+
+    let prevented = false;
+    harness.dispatchInputKeydown({
+      key: "Enter",
+      shiftKey: false,
+      isComposing: false,
+      preventDefault() {
+        prevented = true;
+      },
+    });
+
+    assert.equal(prevented, true);
+    assert.equal(harness.submitRequests, 1);
+
+    prevented = false;
+    harness.dispatchInputKeydown({
+      key: "Enter",
+      shiftKey: true,
+      isComposing: false,
+      preventDefault() {
+        prevented = true;
+      },
+    });
+
+    assert.equal(prevented, false);
+    assert.equal(harness.submitRequests, 1);
+  });
+
+  it("resizes multiline search fields as their content wraps", () => {
+    const harness = createFormHarness();
+    harness.input.scrollHeight = 72;
+
+    initSearchUi({
+      closeOnSuccess: false,
+      form: harness.form,
+      input: harness.input,
+      searchButton: harness.searchButton,
+      statusMessage: harness.statusMessage,
+    });
+
+    assert.equal(harness.input.style.height, "72px");
+
+    harness.input.scrollHeight = 96;
+    harness.dispatchInputEvent();
+
+    assert.equal(harness.input.style.height, "96px");
   });
 
   it("uses the translated query for manual Chinese searches when enabled", async () => {
