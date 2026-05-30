@@ -3,8 +3,18 @@ export const SEARCH_TARGETS = Object.freeze([
     id: "google",
     name: "Google",
     buildUrl: (query, settings = {}) => {
+      const recent24Hours = settings.googleRecent24Hours !== false;
+
       if (settings.googleSearchType === "web") {
+        if (recent24Hours) {
+          return `https://www.google.com/search?tbs=qdr:d&q=${query}`;
+        }
+
         return `https://www.google.com/search?q=${query}`;
+      }
+
+      if (!recent24Hours) {
+        return `https://www.google.com/search?tbm=isch&q=${query}`;
       }
 
       return `https://www.google.com/search?tbm=isch&tbs=qdr:d&q=${query}`;

@@ -42,6 +42,20 @@ describe("search targets", () => {
   it("can switch Google from image search to regular search", () => {
     assert.equal(
       buildSearchUrls("ai", { googleSearchType: "web" })[0],
+      "https://www.google.com/search?tbs=qdr:d&q=ai",
+    );
+  });
+
+  it("can use Google search without the recent 24 hours filter", () => {
+    assert.equal(
+      buildSearchUrls("ai", { googleRecent24Hours: false })[0],
+      "https://www.google.com/search?tbm=isch&q=ai",
+    );
+    assert.equal(
+      buildSearchUrls("ai", {
+        googleRecent24Hours: false,
+        googleSearchType: "web",
+      })[0],
       "https://www.google.com/search?q=ai",
     );
   });
@@ -55,7 +69,7 @@ describe("search targets", () => {
       }),
       [
         "https://www.facebook.com/search/top/?q=ai",
-        "https://www.google.com/search?q=ai",
+        "https://www.google.com/search?tbs=qdr:d&q=ai",
       ],
     );
   });

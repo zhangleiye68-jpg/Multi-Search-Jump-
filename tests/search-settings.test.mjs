@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   ENABLED_TARGET_IDS_KEY,
+  GOOGLE_RECENT_24H_KEY,
   GOOGLE_SEARCH_TYPE_KEY,
   TARGET_ORDER_KEY,
   TRANSLATE_CHINESE_TO_ENGLISH_KEY,
@@ -46,6 +47,7 @@ describe("search settings", () => {
     assert.deepEqual(settings, {
       autoClosePrevious: true,
       enabledTargetIds: allTargetIds,
+      googleRecent24Hours: true,
       googleSearchType: "images",
       targetOrder: allTargetIds,
       translateChineseToEnglish: false,
@@ -58,6 +60,7 @@ describe("search settings", () => {
     await saveSearchSettings(storageArea, {
       autoClosePrevious: false,
       enabledTargetIds: ["facebook", "google"],
+      googleRecent24Hours: false,
       googleSearchType: "web",
       targetOrder: [
         "facebook",
@@ -78,6 +81,7 @@ describe("search settings", () => {
     assert.deepEqual(storageArea.values, {
       [AUTO_CLOSE_PREVIOUS_KEY]: false,
       [ENABLED_TARGET_IDS_KEY]: ["facebook", "google"],
+      [GOOGLE_RECENT_24H_KEY]: false,
       [GOOGLE_SEARCH_TYPE_KEY]: "web",
       [TARGET_ORDER_KEY]: [
         "facebook",
@@ -94,6 +98,16 @@ describe("search settings", () => {
       ],
       [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
     });
+  });
+
+  it("migrates the older image-only Google 24 hours setting", async () => {
+    const storageArea = createStorageArea({
+      googleImageRecent24Hours: false,
+    });
+    const settings = await getSearchSettings(storageArea);
+
+    assert.equal(settings.googleRecent24Hours, false);
+    assert.equal(storageArea.values[GOOGLE_RECENT_24H_KEY], false);
   });
 
   it("keeps enabled targets before disabled targets when saving order", async () => {

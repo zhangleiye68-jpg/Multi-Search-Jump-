@@ -3,6 +3,7 @@ import { SEARCH_TARGETS } from "./searchTargets.js";
 
 export const TARGET_ORDER_KEY = "targetOrder";
 export const ENABLED_TARGET_IDS_KEY = "enabledTargetIds";
+export const GOOGLE_RECENT_24H_KEY = "googleRecent24Hours";
 export const GOOGLE_SEARCH_TYPE_KEY = "googleSearchType";
 export const TRANSLATE_CHINESE_TO_ENGLISH_KEY = "translateChineseToEnglish";
 
@@ -12,10 +13,12 @@ export const GOOGLE_SEARCH_TYPES = Object.freeze({
 });
 
 const DEFAULT_AUTO_CLOSE_PREVIOUS = true;
+const DEFAULT_GOOGLE_RECENT_24H = true;
 const DEFAULT_GOOGLE_SEARCH_TYPE = GOOGLE_SEARCH_TYPES.IMAGES;
 const DEFAULT_TRANSLATE_CHINESE_TO_ENGLISH = false;
 const DEFAULT_TARGET_ORDER = SEARCH_TARGETS.map((target) => target.id);
 const AUTO_ENABLE_ADDED_TARGET_IDS = new Set(["instagram", "reddit"]);
+const LEGACY_GOOGLE_IMAGE_RECENT_24H_KEY = "googleImageRecent24Hours";
 const VALID_TARGET_IDS = new Set(DEFAULT_TARGET_ORDER);
 
 function normalizeTargetOrder(value) {
@@ -62,6 +65,7 @@ function toStoredSearchSettings(settings) {
     [AUTO_CLOSE_PREVIOUS_KEY]: settings.autoClosePrevious,
     [TARGET_ORDER_KEY]: settings.targetOrder,
     [ENABLED_TARGET_IDS_KEY]: settings.enabledTargetIds,
+    [GOOGLE_RECENT_24H_KEY]: settings.googleRecent24Hours,
     [GOOGLE_SEARCH_TYPE_KEY]: settings.googleSearchType,
     [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: settings.translateChineseToEnglish,
   };
@@ -99,6 +103,14 @@ export function normalizeSearchSettings(value = {}) {
     (value[GOOGLE_SEARCH_TYPE_KEY] ?? value.googleSearchType) === GOOGLE_SEARCH_TYPES.WEB
       ? GOOGLE_SEARCH_TYPES.WEB
       : DEFAULT_GOOGLE_SEARCH_TYPE;
+  const savedGoogleRecent24Hours =
+    value[GOOGLE_RECENT_24H_KEY]
+    ?? value.googleRecent24Hours
+    ?? value[LEGACY_GOOGLE_IMAGE_RECENT_24H_KEY]
+    ?? value.googleImageRecent24Hours;
+  const googleRecent24Hours = typeof savedGoogleRecent24Hours === "boolean"
+    ? savedGoogleRecent24Hours
+    : DEFAULT_GOOGLE_RECENT_24H;
   const autoClosePrevious = typeof (value[AUTO_CLOSE_PREVIOUS_KEY] ?? value.autoClosePrevious) === "boolean"
     ? (value[AUTO_CLOSE_PREVIOUS_KEY] ?? value.autoClosePrevious)
     : DEFAULT_AUTO_CLOSE_PREVIOUS;
@@ -110,6 +122,7 @@ export function normalizeSearchSettings(value = {}) {
   return {
     autoClosePrevious,
     enabledTargetIds,
+    googleRecent24Hours,
     googleSearchType,
     targetOrder,
     translateChineseToEnglish,
@@ -121,6 +134,8 @@ export async function getSearchSettings(storageArea) {
     AUTO_CLOSE_PREVIOUS_KEY,
     TARGET_ORDER_KEY,
     ENABLED_TARGET_IDS_KEY,
+    GOOGLE_RECENT_24H_KEY,
+    LEGACY_GOOGLE_IMAGE_RECENT_24H_KEY,
     GOOGLE_SEARCH_TYPE_KEY,
     TRANSLATE_CHINESE_TO_ENGLISH_KEY,
   ]);

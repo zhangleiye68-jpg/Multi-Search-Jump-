@@ -25,6 +25,8 @@ describe("options markup", () => {
     assert.match(html, /id="options-search-status"/);
     assert.match(html, /id="auto-close-toggle"/);
     assert.match(html, /id="google-image-toggle"/);
+    assert.match(html, /id="google-recent-24h-toggle"/);
+    assert.match(html, /过去 24 小时/);
     assert.match(html, /id="translate-chinese-toggle"/);
     assert.match(html, /将中文翻译成英文后搜索/);
     assert.match(html, /id="show-popup-history-toggle"/);
@@ -70,6 +72,8 @@ describe("options markup", () => {
     assert.match(source, /#options-search-status/);
     assert.match(source, /#translate-chinese-toggle/);
     assert.match(source, /translateChineseToEnglish/);
+    assert.match(source, /#google-recent-24h-toggle/);
+    assert.match(source, /googleRecent24Hours/);
     assert.match(source, /data-options-nav/);
     assert.match(source, /IntersectionObserver/);
     assert.match(source, /scrollIntoView/);

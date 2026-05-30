@@ -166,7 +166,7 @@ describe("selection search", () => {
     });
     assert.deepEqual(calls, [
       ["create", { url: "https://www.facebook.com/search/top/?q=maga", active: false }],
-      ["create", { url: "https://www.google.com/search?q=maga", active: false }],
+      ["create", { url: "https://www.google.com/search?tbs=qdr:d&q=maga", active: false }],
       ["group", { tabIds: [301, 302] }],
       ["updateGroup", 88, { title: "Search: maga", color: "cyan", collapsed: false }],
       ["update", 301, { active: true }],
@@ -215,7 +215,7 @@ describe("selection search", () => {
     });
     assert.deepEqual(calls[0], [
       "create",
-      { url: "https://www.google.com/search?q=red%20dress", active: false },
+      { url: "https://www.google.com/search?tbs=qdr:d&q=red%20dress", active: false },
     ]);
     assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "red dress");
   });
@@ -259,7 +259,7 @@ describe("selection search", () => {
 
       assert.deepEqual(calls[0], [
         "create",
-        { url: "https://www.google.com/search?q=red%20dress", active: false },
+        { url: "https://www.google.com/search?tbs=qdr:d&q=red%20dress", active: false },
       ]);
       assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "red dress");
     } finally {
@@ -300,7 +300,7 @@ describe("selection search", () => {
 
     assert.deepEqual(calls[0], [
       "create",
-      { url: "https://www.google.com/search?q=%E7%BA%A2%E8%89%B2%E8%BF%9E%E8%A1%A3%E8%A3%99", active: false },
+      { url: "https://www.google.com/search?tbs=qdr:d&q=%E7%BA%A2%E8%89%B2%E8%BF%9E%E8%A1%A3%E8%A3%99", active: false },
     ]);
     assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "红色连衣裙");
   });

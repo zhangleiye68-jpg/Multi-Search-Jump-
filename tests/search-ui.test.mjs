@@ -345,7 +345,7 @@ describe("search UI", () => {
 
     assert.equal(messages[0].query, "red dress");
     assert.equal(messages[0].title, "Search: red dress");
-    assert.deepEqual(messages[0].urls, ["https://www.google.com/search?q=red%20dress"]);
+    assert.deepEqual(messages[0].urls, ["https://www.google.com/search?tbs=qdr:d&q=red%20dress"]);
   });
 
   it("hides popup history when the popup visibility preference is off", async () => {
