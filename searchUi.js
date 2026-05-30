@@ -2,7 +2,9 @@ import { buildSearchUrls, normalizeQuery } from "./searchTargets.js";
 import { translateQueryForSearch } from "./queryTranslator.js";
 import {
   getRecentSearchHistory,
+  getShowPopupSearchHistory,
   removeSearchHistoryRecord,
+  saveShowPopupSearchHistory,
 } from "./searchHistory.js";
 import { getSearchSettings } from "./searchSettings.js";
 import { buildGroupTitle } from "./tabLauncher.js";
@@ -11,12 +13,19 @@ export function initSearchUi({
   closeOnSuccess,
   form,
   historyList = null,
+  historyToggle = null,
   input,
   onHistoryChange = null,
   searchButton,
   statusMessage,
   translateQuery = translateQueryForSearch,
 }) {
+  let shouldShowHistory = true;
+
+  if (historyToggle && historyList) {
+    historyList.hidden = true;
+  }
+
   function setStatus(message, state = "idle") {
     statusMessage.textContent = message;
     statusMessage.classList.toggle("is-error", state === "error");
@@ -29,7 +38,11 @@ export function initSearchUi({
     }
 
     historyList.textContent = "";
-    historyList.hidden = records.length === 0;
+    historyList.hidden = !shouldShowHistory || records.length === 0;
+
+    if (!shouldShowHistory) {
+      return;
+    }
 
     for (const record of records) {
       const chip = document.createElement("span");
@@ -60,6 +73,16 @@ export function initSearchUi({
 
     renderHistory(await getRecentSearchHistory(chrome.storage.local));
     await onHistoryChange?.();
+  }
+
+  async function initHistoryToggle() {
+    if (!historyToggle) {
+      return;
+    }
+
+    shouldShowHistory = await getShowPopupSearchHistory(chrome.storage.local);
+    historyToggle.checked = shouldShowHistory;
+    await refreshHistory();
   }
 
   async function openQuery(value) {
@@ -145,7 +168,21 @@ export function initSearchUi({
     await openQuery(input.value);
   });
 
-  refreshHistory();
+  historyToggle?.addEventListener("change", async () => {
+    shouldShowHistory = await saveShowPopupSearchHistory(
+      chrome.storage.local,
+      historyToggle.checked,
+    );
+    historyToggle.checked = shouldShowHistory;
+    await refreshHistory();
+    input.focus();
+  });
+
+  if (historyToggle) {
+    initHistoryToggle();
+  } else {
+    refreshHistory();
+  }
   input.focus();
 
   return {

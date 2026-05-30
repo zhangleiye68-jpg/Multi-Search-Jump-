@@ -175,8 +175,35 @@ button:disabled {
 
 .popup-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
+}
+
+.history-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid #d9e0dc;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #263331;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.history-toggle:hover {
+  background: #edf3f0;
+}
+
+.history-toggle input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #176b63;
 }
 
 .ghost-button {

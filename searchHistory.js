@@ -1,7 +1,9 @@
 import { normalizeQuery } from "./searchTargets.js";
 
 export const SEARCH_HISTORY_KEY = "searchHistory";
+export const SHOW_POPUP_SEARCH_HISTORY_KEY = "showPopupSearchHistory";
 export const RECENT_SEARCH_HISTORY_LIMIT = 5;
+export const MAX_SEARCH_HISTORY_RECORDS = 1000;
 
 function createSearchHistoryId() {
   if (globalThis.crypto?.randomUUID) {
@@ -81,13 +83,36 @@ export async function addSearchHistoryRecord(storageArea, value) {
       searchedAt: Date.now(),
     },
     ...history,
-  ];
+  ].slice(0, MAX_SEARCH_HISTORY_RECORDS);
 
   await storageArea.set({
     [SEARCH_HISTORY_KEY]: nextHistory,
   });
 
   return nextHistory;
+}
+
+export async function clearSearchHistory(storageArea) {
+  await storageArea.set({
+    [SEARCH_HISTORY_KEY]: [],
+  });
+
+  return [];
+}
+
+export async function getShowPopupSearchHistory(storageArea) {
+  const result = await storageArea.get(SHOW_POPUP_SEARCH_HISTORY_KEY);
+  return result[SHOW_POPUP_SEARCH_HISTORY_KEY] !== false;
+}
+
+export async function saveShowPopupSearchHistory(storageArea, value) {
+  const showPopupSearchHistory = value !== false;
+
+  await storageArea.set({
+    [SHOW_POPUP_SEARCH_HISTORY_KEY]: showPopupSearchHistory,
+  });
+
+  return showPopupSearchHistory;
 }
 
 export async function removeSearchHistoryRecord(storageArea, value) {

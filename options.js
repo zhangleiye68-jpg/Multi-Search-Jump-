@@ -6,6 +6,7 @@ import {
   saveSearchSettings,
 } from "./searchSettings.js";
 import {
+  clearSearchHistory,
   getSearchHistory,
   removeSearchHistoryRecord,
 } from "./searchHistory.js";
@@ -16,8 +17,11 @@ const storageArea = chrome.storage.local;
 const allSearchHistory = document.querySelector("#all-search-history");
 const allSearchHistoryEmpty = document.querySelector("#all-search-history-empty");
 const autoCloseToggle = document.querySelector("#auto-close-toggle");
+const clearHistoryButton = document.querySelector("#clear-history-button");
 const googleImageToggle = document.querySelector("#google-image-toggle");
 const googleModeState = document.querySelector("#google-mode-state");
+const historyFilterInput = document.querySelector("#history-filter-input");
+const historyTableBody = document.querySelector("#history-table-body");
 const optionsSearchButton = document.querySelector("#options-search-button");
 const optionsSearchForm = document.querySelector("#options-search-form");
 const optionsSearchHistory = document.querySelector("#options-search-history");
@@ -32,6 +36,7 @@ let settings = null;
 let dragState = null;
 let persistToken = 0;
 let optionsSearchUi = null;
+let allHistoryRecords = [];
 
 function setStatus(message, state = "idle") {
   statusMessage.textContent = message;
@@ -287,38 +292,73 @@ function renderTargetList() {
   ].join("");
 }
 
-function createHistoryChip(record) {
-  const chip = document.createElement("span");
+function formatHistoryTime(searchedAt) {
+  if (!Number.isFinite(searchedAt) || searchedAt <= 0) {
+    return "未知时间";
+  }
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(searchedAt));
+}
+
+function getFilteredHistoryRecords() {
+  const filterText = historyFilterInput.value.trim().toLowerCase();
+
+  if (!filterText) {
+    return allHistoryRecords;
+  }
+
+  return allHistoryRecords.filter((record) =>
+    record.query.toLowerCase().includes(filterText),
+  );
+}
+
+function createHistoryTableRow(record) {
+  const row = document.createElement("tr");
+  const timeCell = document.createElement("td");
+  const queryCell = document.createElement("td");
+  const actionCell = document.createElement("td");
   const openButton = document.createElement("button");
   const removeButton = document.createElement("button");
-  const { id, query } = record;
 
-  chip.className = "search-history-chip";
-  openButton.className = "search-history-open";
+  timeCell.className = "history-time-cell";
+  timeCell.textContent = formatHistoryTime(record.searchedAt);
+  queryCell.className = "history-query-cell";
+  queryCell.textContent = record.query;
   openButton.type = "button";
-  openButton.textContent = query;
-  openButton.dataset.historyQuery = query;
-  openButton.title = `重新搜索 ${query}`;
-  removeButton.className = "search-history-remove";
+  openButton.textContent = "重新搜索";
+  openButton.dataset.historyQuery = record.query;
   removeButton.type = "button";
-  removeButton.textContent = "×";
-  removeButton.dataset.historyRemove = id;
-  removeButton.setAttribute("aria-label", `删除搜索记录 ${query}`);
+  removeButton.textContent = "删除";
+  removeButton.dataset.historyRemove = record.id;
+  removeButton.setAttribute("aria-label", `删除搜索记录 ${record.query}`);
+  actionCell.className = "history-action-cell";
+  actionCell.append(openButton, removeButton);
+  row.append(timeCell, queryCell, actionCell);
 
-  chip.append(openButton, removeButton);
-  return chip;
+  return row;
+}
+
+function renderHistoryTable() {
+  const records = getFilteredHistoryRecords();
+
+  historyTableBody.textContent = "";
+  allSearchHistoryEmpty.hidden = allHistoryRecords.length > 0;
+  clearHistoryButton.disabled = allHistoryRecords.length === 0;
+
+  for (const record of records) {
+    historyTableBody.append(createHistoryTableRow(record));
+  }
 }
 
 async function renderAllSearchHistory() {
-  const records = await getSearchHistory(storageArea);
-
-  allSearchHistory.textContent = "";
-  allSearchHistory.hidden = records.length === 0;
-  allSearchHistoryEmpty.hidden = records.length > 0;
-
-  for (const record of records) {
-    allSearchHistory.append(createHistoryChip(record));
-  }
+  allHistoryRecords = await getSearchHistory(storageArea);
+  renderHistoryTable();
 }
 
 function render() {
@@ -442,6 +482,25 @@ allSearchHistory.addEventListener("click", async (event) => {
 
   optionsSearchInput.value = openButton.dataset.historyQuery;
   optionsSearchForm.requestSubmit();
+});
+
+historyFilterInput.addEventListener("input", renderHistoryTable);
+
+clearHistoryButton.addEventListener("click", async () => {
+  if (allHistoryRecords.length === 0) {
+    return;
+  }
+
+  const confirmed = window.confirm("确定要清空全部历史记录吗？");
+
+  if (!confirmed) {
+    return;
+  }
+
+  await clearSearchHistory(storageArea);
+  await renderAllSearchHistory();
+  await optionsSearchUi?.refreshHistory();
+  optionsSearchInput.focus();
 });
 
 shortcutSettingsButton.addEventListener("click", async () => {

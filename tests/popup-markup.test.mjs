@@ -9,6 +9,8 @@ describe("popup markup", () => {
     assert.match(html, /<form[^>]+id="search-form"/);
     assert.match(html, /<input[^>]+id="search-input"/);
     assert.match(html, /<button[^>]+id="search-button"/);
+    assert.match(html, /id="show-history-toggle"/);
+    assert.match(html, /显示历史/);
     assert.match(html, /id="search-history"/);
     assert.match(html, /<button[^>]+id="pin-panel-button"/);
     assert.match(html, /<button[^>]+id="options-button"/);
@@ -23,6 +25,7 @@ describe("popup markup", () => {
 
     assert.match(popupScript, /initSearchUi/);
     assert.match(popupScript, /#search-history/);
+    assert.match(popupScript, /#show-history-toggle/);
     assert.match(popupScript, /initPinButton/);
     assert.match(sharedScript, /chrome\.runtime\.sendMessage/);
     assert.match(sharedScript, /chrome\.runtime\.openOptionsPage/);

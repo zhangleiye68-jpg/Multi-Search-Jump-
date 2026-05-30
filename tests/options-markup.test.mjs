@@ -18,6 +18,9 @@ describe("options markup", () => {
     assert.match(html, /id="shortcut-settings-button"/);
     assert.match(html, /id="target-order-list"/);
     assert.match(html, /历史记录/);
+    assert.match(html, /id="history-filter-input"/);
+    assert.match(html, /id="clear-history-button"/);
+    assert.match(html, /id="history-table-body"/);
     assert.match(html, /id="all-search-history"/);
     assert.match(html, /<script[^>]+type="module"[^>]+src="options\.js"/);
   });
@@ -33,6 +36,10 @@ describe("options markup", () => {
     assert.match(source, /#translate-chinese-toggle/);
     assert.match(source, /translateChineseToEnglish/);
     assert.match(source, /#all-search-history/);
+    assert.match(source, /#history-filter-input/);
+    assert.match(source, /#clear-history-button/);
+    assert.match(source, /#history-table-body/);
+    assert.match(source, /clearSearchHistory/);
     assert.match(source, /getSearchHistory/);
     assert.match(source, /removeSearchHistoryRecord/);
     assert.match(source, /closeOnSuccess: false/);

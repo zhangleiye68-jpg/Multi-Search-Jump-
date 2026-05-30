@@ -2,11 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  MAX_SEARCH_HISTORY_RECORDS,
   SEARCH_HISTORY_KEY,
+  SHOW_POPUP_SEARCH_HISTORY_KEY,
   addSearchHistoryRecord,
+  clearSearchHistory,
   getRecentSearchHistory,
   getSearchHistory,
+  getShowPopupSearchHistory,
   removeSearchHistoryRecord,
+  saveShowPopupSearchHistory,
 } from "../searchHistory.js";
 
 function createStorageArea(initialValues = {}) {
@@ -60,6 +65,20 @@ describe("search history", () => {
     );
   });
 
+  it("keeps only the latest 1000 history records", async () => {
+    const storageArea = createStorageArea();
+
+    for (let index = 0; index < MAX_SEARCH_HISTORY_RECORDS + 2; index += 1) {
+      await addSearchHistoryRecord(storageArea, `query-${index}`);
+    }
+
+    const history = await getSearchHistory(storageArea);
+
+    assert.equal(history.length, MAX_SEARCH_HISTORY_RECORDS);
+    assert.equal(history[0].query, "query-1001");
+    assert.equal(history.at(-1).query, "query-2");
+  });
+
   it("removes one permanent history record by id", async () => {
     const storageArea = createStorageArea({
       [SEARCH_HISTORY_KEY]: [
@@ -93,5 +112,28 @@ describe("search history", () => {
       storageArea.values[SEARCH_HISTORY_KEY].map((record) => record.query),
       ["beta"],
     );
+  });
+
+  it("clears all history records", async () => {
+    const storageArea = createStorageArea({
+      [SEARCH_HISTORY_KEY]: [
+        { id: "one", query: "alpha", searchedAt: 2 },
+        { id: "two", query: "beta", searchedAt: 1 },
+      ],
+    });
+
+    assert.deepEqual(await clearSearchHistory(storageArea), []);
+    assert.deepEqual(storageArea.values[SEARCH_HISTORY_KEY], []);
+  });
+
+  it("stores the popup history visibility preference", async () => {
+    const storageArea = createStorageArea();
+
+    assert.equal(await getShowPopupSearchHistory(storageArea), true);
+
+    await saveShowPopupSearchHistory(storageArea, false);
+
+    assert.equal(storageArea.values[SHOW_POPUP_SEARCH_HISTORY_KEY], false);
+    assert.equal(await getShowPopupSearchHistory(storageArea), false);
   });
 });

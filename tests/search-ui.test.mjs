@@ -57,6 +57,53 @@ function createFormHarness() {
   };
 }
 
+function createHistoryListHarness() {
+  const children = [];
+
+  return {
+    children,
+    hidden: false,
+    textContent: "",
+    addEventListener() {},
+    append(child) {
+      children.push(child);
+    },
+  };
+}
+
+function createHistoryToggleHarness() {
+  let changeHandler = null;
+
+  return {
+    checked: false,
+    addEventListener(type, handler) {
+      if (type === "change") {
+        changeHandler = handler;
+      }
+    },
+    async change(checked) {
+      this.checked = checked;
+      await changeHandler?.();
+    },
+  };
+}
+
+function createElementHarness() {
+  return {
+    dataset: {},
+    setAttribute() {},
+    append(...children) {
+      this.children = children;
+    },
+  };
+}
+
+async function flushAsyncWork() {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 describe("search UI", () => {
   function createStorageArea(initialValues = {}) {
     const values = { ...initialValues };
@@ -222,5 +269,57 @@ describe("search UI", () => {
     assert.equal(messages[0].query, "red dress");
     assert.equal(messages[0].title, "Search: red dress");
     assert.deepEqual(messages[0].urls, ["https://www.google.com/search?q=red%20dress"]);
+  });
+
+  it("hides popup history when the popup visibility preference is off", async () => {
+    const harness = createFormHarness();
+    const historyList = createHistoryListHarness();
+    const historyToggle = createHistoryToggleHarness();
+    const originalDocument = globalThis.document;
+    const storageArea = createStorageArea({
+      showPopupSearchHistory: false,
+      searchHistory: [
+        { id: "one", query: "alpha", searchedAt: 2 },
+        { id: "two", query: "beta", searchedAt: 1 },
+      ],
+    });
+
+    globalThis.chrome = {
+      runtime: {
+        async sendMessage() {
+          return { ok: true };
+        },
+      },
+      storage: {
+        local: storageArea,
+      },
+    };
+    globalThis.document = {
+      createElement: createElementHarness,
+    };
+
+    try {
+      initSearchUi({
+        closeOnSuccess: true,
+        form: harness.form,
+        historyList,
+        historyToggle,
+        input: harness.input,
+        searchButton: harness.searchButton,
+        statusMessage: harness.statusMessage,
+      });
+      await flushAsyncWork();
+
+      assert.equal(historyToggle.checked, false);
+      assert.equal(historyList.hidden, true);
+
+      await historyToggle.change(true);
+
+      assert.equal(storageArea.values.showPopupSearchHistory, true);
+      assert.equal(historyList.hidden, false);
+      assert.equal(historyList.children.length, 2);
+    } finally {
+      globalThis.document = originalDocument;
+    }
   });
 });

@@ -104,11 +104,34 @@
         </div>
         <div
           id="all-search-history"
-          class="search-history all-search-history"
+          class="history-panel"
           aria-label="全部搜索记录"
-          hidden
-        ></div>
-        <p id="all-search-history-empty" class="setting-note">暂无历史记录。</p>
+        >
+          <div class="history-toolbar">
+            <label class="visually-hidden" for="history-filter-input">查找历史记录</label>
+            <input
+              id="history-filter-input"
+              type="search"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="查找历史记录"
+            >
+            <button id="clear-history-button" type="button">清空全部历史</button>
+          </div>
+          <div class="history-table-scroll">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th scope="col">搜索时间</th>
+                  <th scope="col">搜索关键词</th>
+                  <th scope="col">操作</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body"></tbody>
+            </table>
+          </div>
+          <p id="all-search-history-empty" class="setting-note">暂无历史记录。</p>
+        </div>
       </section>
 
       <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
