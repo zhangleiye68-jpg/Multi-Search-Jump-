@@ -1,4 +1,5 @@
 import { buildSearchUrls, normalizeQuery } from "./searchTargets.js";
+import { containsChinese } from "./queryTranslator.js";
 import { addSearchHistoryRecord } from "./searchHistory.js";
 import { getSearchSettings } from "./searchSettings.js";
 import { buildGroupTitle, openManagedSearchTabs } from "./tabLauncher.js";
@@ -75,11 +76,77 @@ export async function getSelectionFromActiveTab({ activeTab, scriptingApi, tabsA
   return normalizeQuery(injectionResult?.result);
 }
 
-export async function openSearchForText({
+async function translateQueryInTab(query, activeTab, scriptingApi) {
+  if (!activeTab || !scriptingApi || !canReadSelectionFromTab(activeTab)) {
+    return query;
+  }
+
+  const [injectionResult] = await scriptingApi.executeScript({
+    target: { tabId: activeTab.id },
+    args: [query],
+    func: async (value) => {
+      const normalizedQuery = String(value ?? "").trim();
+
+      if (
+        !/[\u3400-\u9fff\uf900-\ufaff]/u.test(normalizedQuery) ||
+        !("Translator" in self) ||
+        !self.Translator?.create
+      ) {
+        return normalizedQuery;
+      }
+
+      const translator = await self.Translator.create({
+        sourceLanguage: "zh",
+        targetLanguage: "en",
+      });
+
+      try {
+        return String(await translator.translate(normalizedQuery) ?? "").trim() || normalizedQuery;
+      } finally {
+        translator.destroy?.();
+      }
+    },
+  });
+
+  return normalizeQuery(injectionResult?.result) || query;
+}
+
+async function getFinalQueryForSearch({
+  activeTab,
   query,
+  scriptingApi,
+  settings,
+  translateQuery,
+}) {
+  if (!settings.translateChineseToEnglish || !containsChinese(query)) {
+    return query;
+  }
+
+  try {
+    if (translateQuery) {
+      return normalizeQuery(
+        await translateQuery(query, {
+          activeTab,
+          enabled: true,
+          scriptingApi,
+        }),
+      ) || query;
+    }
+
+    return await translateQueryInTab(query, activeTab, scriptingApi);
+  } catch {
+    return query;
+  }
+}
+
+export async function openSearchForText({
+  activeTab,
+  query,
+  scriptingApi,
   storageArea,
   tabGroupsApi,
   tabsApi,
+  translateQuery = null,
 }) {
   const selectedText = normalizeQuery(query);
 
@@ -91,7 +158,14 @@ export async function openSearchForText({
   }
 
   const settings = await getSearchSettings(storageArea);
-  const urls = buildSearchUrls(selectedText, settings);
+  const finalQuery = await getFinalQueryForSearch({
+    activeTab,
+    query: selectedText,
+    scriptingApi,
+    settings,
+    translateQuery,
+  });
+  const urls = buildSearchUrls(finalQuery, settings);
 
   if (urls.length === 0) {
     return {
@@ -100,7 +174,7 @@ export async function openSearchForText({
     };
   }
 
-  const title = buildGroupTitle(selectedText);
+  const title = buildGroupTitle(finalQuery);
   await openManagedSearchTabs({
     autoClosePrevious: settings.autoClosePrevious,
     storageArea,
@@ -109,7 +183,7 @@ export async function openSearchForText({
     title,
     urls,
   });
-  await addSearchHistoryRecord(storageArea, selectedText);
+  await addSearchHistoryRecord(storageArea, finalQuery);
 
   return {
     count: urls.length,
@@ -132,7 +206,9 @@ export async function openSearchForActiveSelection({
   });
 
   return openSearchForText({
+    activeTab,
     query,
+    scriptingApi,
     storageArea,
     tabGroupsApi,
     tabsApi,

@@ -78,13 +78,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true;
 });
 
-chrome.contextMenus.onClicked.addListener((info) => {
+chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== CONTEXT_MENU_ID) {
     return;
   }
 
   openSearchForText({
+    activeTab: tab,
     query: info.selectionText,
+    scriptingApi: chrome.scripting,
     storageArea: chrome.storage.local,
     tabGroupsApi: chrome.tabGroups,
     tabsApi: chrome.tabs,

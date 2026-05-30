@@ -13,6 +13,8 @@ describe("options markup", () => {
     assert.match(html, /id="options-search-status"/);
     assert.match(html, /id="auto-close-toggle"/);
     assert.match(html, /id="google-image-toggle"/);
+    assert.match(html, /id="translate-chinese-toggle"/);
+    assert.match(html, /将中文翻译成英文后搜索/);
     assert.match(html, /id="shortcut-settings-button"/);
     assert.match(html, /id="target-order-list"/);
     assert.match(html, /历史记录/);
@@ -28,6 +30,8 @@ describe("options markup", () => {
     assert.match(source, /#options-search-form/);
     assert.match(source, /#options-search-history/);
     assert.match(source, /#options-search-status/);
+    assert.match(source, /#translate-chinese-toggle/);
+    assert.match(source, /translateChineseToEnglish/);
     assert.match(source, /#all-search-history/);
     assert.match(source, /getSearchHistory/);
     assert.match(source, /removeSearchHistoryRecord/);

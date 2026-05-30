@@ -25,6 +25,7 @@ const optionsSearchInput = document.querySelector("#options-search-input");
 const optionsSearchStatus = document.querySelector("#options-search-status");
 const shortcutSettingsButton = document.querySelector("#shortcut-settings-button");
 const targetOrderList = document.querySelector("#target-order-list");
+const translateChineseToggle = document.querySelector("#translate-chinese-toggle");
 const statusMessage = document.querySelector("#status-message");
 
 let settings = null;
@@ -324,6 +325,7 @@ function render() {
   autoCloseToggle.checked = settings.autoClosePrevious;
   googleImageToggle.checked = settings.googleSearchType === GOOGLE_SEARCH_TYPES.IMAGES;
   googleModeState.textContent = googleImageToggle.checked ? "图片搜索" : "普通搜索";
+  translateChineseToggle.checked = settings.translateChineseToEnglish;
   renderTargetList();
 }
 
@@ -338,6 +340,10 @@ googleImageToggle.addEventListener("change", () => {
       ? GOOGLE_SEARCH_TYPES.IMAGES
       : GOOGLE_SEARCH_TYPES.WEB,
   });
+});
+
+translateChineseToggle.addEventListener("change", () => {
+  persist({ ...settings, translateChineseToEnglish: translateChineseToggle.checked });
 });
 
 targetOrderList.addEventListener("click", (event) => {

@@ -1,4 +1,5 @@
 import { buildSearchUrls, normalizeQuery } from "./searchTargets.js";
+import { translateQueryForSearch } from "./queryTranslator.js";
 import {
   getRecentSearchHistory,
   removeSearchHistoryRecord,
@@ -14,6 +15,7 @@ export function initSearchUi({
   onHistoryChange = null,
   searchButton,
   statusMessage,
+  translateQuery = translateQueryForSearch,
 }) {
   function setStatus(message, state = "idle") {
     statusMessage.textContent = message;
@@ -73,7 +75,10 @@ export function initSearchUi({
     setStatus("正在整理搜索页。", "busy");
 
     const settings = await getSearchSettings(chrome.storage.local);
-    const urls = buildSearchUrls(query, settings);
+    const finalQuery = await translateQuery(query, {
+      enabled: settings.translateChineseToEnglish,
+    });
+    const urls = buildSearchUrls(finalQuery, settings);
 
     if (urls.length === 0) {
       searchButton.disabled = false;
@@ -85,9 +90,9 @@ export function initSearchUi({
     try {
       const response = await chrome.runtime.sendMessage({
         type: "OPEN_SEARCH_GROUP",
-        query,
+        query: finalQuery,
         urls,
-        title: buildGroupTitle(query),
+        title: buildGroupTitle(finalQuery),
         autoClosePrevious: settings.autoClosePrevious,
       });
 

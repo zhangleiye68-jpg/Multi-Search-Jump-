@@ -185,4 +185,42 @@ describe("search UI", () => {
     assert.equal(messages[0].query, "maga");
     assert.equal(storageArea.values.searchHistory, undefined);
   });
+
+  it("uses the translated query for manual Chinese searches when enabled", async () => {
+    const harness = createFormHarness();
+    const storageArea = createStorageArea({
+      translateChineseToEnglish: true,
+      enabledTargetIds: ["google"],
+      googleSearchType: "web",
+    });
+    const messages = [];
+    harness.input.value = "红色连衣裙";
+
+    globalThis.chrome = {
+      runtime: {
+        async sendMessage(message) {
+          messages.push(message);
+          return { ok: true };
+        },
+      },
+      storage: {
+        local: storageArea,
+      },
+    };
+
+    initSearchUi({
+      closeOnSuccess: false,
+      form: harness.form,
+      input: harness.input,
+      searchButton: harness.searchButton,
+      statusMessage: harness.statusMessage,
+      translateQuery: async () => "red dress",
+    });
+
+    await harness.submit();
+
+    assert.equal(messages[0].query, "red dress");
+    assert.equal(messages[0].title, "Search: red dress");
+    assert.deepEqual(messages[0].urls, ["https://www.google.com/search?q=red%20dress"]);
+  });
 });

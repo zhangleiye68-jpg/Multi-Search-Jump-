@@ -4,6 +4,7 @@ import { SEARCH_TARGETS } from "./searchTargets.js";
 export const TARGET_ORDER_KEY = "targetOrder";
 export const ENABLED_TARGET_IDS_KEY = "enabledTargetIds";
 export const GOOGLE_SEARCH_TYPE_KEY = "googleSearchType";
+export const TRANSLATE_CHINESE_TO_ENGLISH_KEY = "translateChineseToEnglish";
 
 export const GOOGLE_SEARCH_TYPES = Object.freeze({
   WEB: "web",
@@ -12,6 +13,7 @@ export const GOOGLE_SEARCH_TYPES = Object.freeze({
 
 const DEFAULT_AUTO_CLOSE_PREVIOUS = true;
 const DEFAULT_GOOGLE_SEARCH_TYPE = GOOGLE_SEARCH_TYPES.IMAGES;
+const DEFAULT_TRANSLATE_CHINESE_TO_ENGLISH = false;
 const DEFAULT_TARGET_ORDER = SEARCH_TARGETS.map((target) => target.id);
 const VALID_TARGET_IDS = new Set(DEFAULT_TARGET_ORDER);
 
@@ -56,12 +58,17 @@ export function normalizeSearchSettings(value = {}) {
   const autoClosePrevious = typeof (value[AUTO_CLOSE_PREVIOUS_KEY] ?? value.autoClosePrevious) === "boolean"
     ? (value[AUTO_CLOSE_PREVIOUS_KEY] ?? value.autoClosePrevious)
     : DEFAULT_AUTO_CLOSE_PREVIOUS;
+  const translateChineseToEnglish =
+    typeof (value[TRANSLATE_CHINESE_TO_ENGLISH_KEY] ?? value.translateChineseToEnglish) === "boolean"
+      ? (value[TRANSLATE_CHINESE_TO_ENGLISH_KEY] ?? value.translateChineseToEnglish)
+      : DEFAULT_TRANSLATE_CHINESE_TO_ENGLISH;
 
   return {
     autoClosePrevious,
     enabledTargetIds,
     googleSearchType,
     targetOrder,
+    translateChineseToEnglish,
   };
 }
 
@@ -71,6 +78,7 @@ export async function getSearchSettings(storageArea) {
     TARGET_ORDER_KEY,
     ENABLED_TARGET_IDS_KEY,
     GOOGLE_SEARCH_TYPE_KEY,
+    TRANSLATE_CHINESE_TO_ENGLISH_KEY,
   ]);
 
   return normalizeSearchSettings(result);
@@ -84,6 +92,7 @@ export async function saveSearchSettings(storageArea, settings) {
     [TARGET_ORDER_KEY]: normalized.targetOrder,
     [ENABLED_TARGET_IDS_KEY]: normalized.enabledTargetIds,
     [GOOGLE_SEARCH_TYPE_KEY]: normalized.googleSearchType,
+    [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: normalized.translateChineseToEnglish,
   });
 
   return normalized;

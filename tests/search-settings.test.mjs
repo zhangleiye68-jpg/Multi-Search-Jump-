@@ -5,6 +5,7 @@ import {
   ENABLED_TARGET_IDS_KEY,
   GOOGLE_SEARCH_TYPE_KEY,
   TARGET_ORDER_KEY,
+  TRANSLATE_CHINESE_TO_ENGLISH_KEY,
   getSearchSettings,
   saveSearchSettings,
 } from "../searchSettings.js";
@@ -45,6 +46,7 @@ describe("search settings", () => {
       enabledTargetIds: allTargetIds,
       googleSearchType: "images",
       targetOrder: allTargetIds,
+      translateChineseToEnglish: false,
     });
   });
 
@@ -56,6 +58,7 @@ describe("search settings", () => {
       enabledTargetIds: ["facebook", "google"],
       googleSearchType: "web",
       targetOrder: ["facebook", "google", "x", "tiktok"],
+      translateChineseToEnglish: true,
     });
 
     assert.deepEqual(storageArea.values, {
@@ -73,6 +76,7 @@ describe("search settings", () => {
         "zhihu",
         "bilibili",
       ],
+      [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
     });
   });
 
