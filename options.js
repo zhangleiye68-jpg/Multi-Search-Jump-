@@ -8,9 +8,11 @@ import {
 import {
   clearSearchHistory,
   getSearchHistory,
+  getShowPopupSearchHistory,
   removeSearchHistoryRecord,
+  saveShowPopupSearchHistory,
 } from "./searchHistory.js";
-import { initSearchUi } from "./searchUi.js";
+import { initPinButton, initSearchUi } from "./searchUi.js";
 import { openShortcutSettings } from "./shortcutSettings.js";
 
 const storageArea = chrome.storage.local;
@@ -28,6 +30,8 @@ const optionsSearchHistory = document.querySelector("#options-search-history");
 const optionsSearchInput = document.querySelector("#options-search-input");
 const optionsSearchStatus = document.querySelector("#options-search-status");
 const shortcutSettingsButton = document.querySelector("#shortcut-settings-button");
+const showPopupHistoryToggle = document.querySelector("#show-popup-history-toggle");
+const sidePanelButton = document.querySelector("#side-panel-button");
 const targetOrderList = document.querySelector("#target-order-list");
 const translateChineseToggle = document.querySelector("#translate-chinese-toggle");
 const statusMessage = document.querySelector("#status-message");
@@ -37,6 +41,7 @@ let dragState = null;
 let persistToken = 0;
 let optionsSearchUi = null;
 let allHistoryRecords = [];
+let showPopupSearchHistory = true;
 
 function setStatus(message, state = "idle") {
   statusMessage.textContent = message;
@@ -365,6 +370,7 @@ function render() {
   autoCloseToggle.checked = settings.autoClosePrevious;
   googleImageToggle.checked = settings.googleSearchType === GOOGLE_SEARCH_TYPES.IMAGES;
   googleModeState.textContent = googleImageToggle.checked ? "图片搜索" : "普通搜索";
+  showPopupHistoryToggle.checked = showPopupSearchHistory;
   translateChineseToggle.checked = settings.translateChineseToEnglish;
   renderTargetList();
 }
@@ -384,6 +390,21 @@ googleImageToggle.addEventListener("change", () => {
 
 translateChineseToggle.addEventListener("change", () => {
   persist({ ...settings, translateChineseToEnglish: translateChineseToggle.checked });
+});
+
+showPopupHistoryToggle.addEventListener("change", async () => {
+  try {
+    showPopupSearchHistory = await saveShowPopupSearchHistory(
+      storageArea,
+      showPopupHistoryToggle.checked,
+    );
+    showPopupHistoryToggle.checked = showPopupSearchHistory;
+    setStatus("设置已保存。");
+  } catch (error) {
+    console.error(error);
+    showPopupHistoryToggle.checked = showPopupSearchHistory;
+    setStatus("设置保存失败，请重新尝试。", "error");
+  }
 });
 
 targetOrderList.addEventListener("click", (event) => {
@@ -512,6 +533,9 @@ shortcutSettingsButton.addEventListener("click", async () => {
   }
 });
 
+initPinButton(sidePanelButton, statusMessage, { closeOnSuccess: false });
+
+showPopupSearchHistory = await getShowPopupSearchHistory(storageArea);
 settings = await getSearchSettings(storageArea);
 settings.targetOrder = settings.targetOrder.filter((id) =>
   SEARCH_TARGETS.some((target) => target.id === id),

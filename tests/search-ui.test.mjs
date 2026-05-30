@@ -399,4 +399,49 @@ describe("search UI", () => {
       globalThis.document = originalDocument;
     }
   });
+
+  it("can apply popup history visibility preference without an inline toggle", async () => {
+    const harness = createFormHarness();
+    const historyList = createHistoryListHarness();
+    const originalDocument = globalThis.document;
+    const storageArea = createStorageArea({
+      showPopupSearchHistory: false,
+      searchHistory: [
+        { id: "one", query: "alpha", searchedAt: 2 },
+        { id: "two", query: "beta", searchedAt: 1 },
+      ],
+    });
+
+    globalThis.chrome = {
+      runtime: {
+        async sendMessage() {
+          return { ok: true };
+        },
+      },
+      storage: {
+        local: storageArea,
+      },
+    };
+    globalThis.document = {
+      createElement: createElementHarness,
+    };
+
+    try {
+      initSearchUi({
+        closeOnSuccess: true,
+        form: harness.form,
+        historyList,
+        input: harness.input,
+        searchButton: harness.searchButton,
+        statusMessage: harness.statusMessage,
+        useHistoryVisibilityPreference: true,
+      });
+      await flushAsyncWork();
+
+      assert.equal(historyList.hidden, true);
+      assert.equal(historyList.children.length, 0);
+    } finally {
+      globalThis.document = originalDocument;
+    }
+  });
 });

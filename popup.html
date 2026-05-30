@@ -9,22 +9,33 @@
   <body>
     <main class="popup-shell">
       <header class="popup-header">
-        <div class="mark" aria-hidden="true"></div>
-        <div>
-          <h1>Multi Search Jump</h1>
+        <div class="popup-title">
+          <div class="mark" aria-hidden="true"></div>
+          <div>
+            <h1>Multi Search Jump</h1>
+          </div>
         </div>
+        <button
+          id="options-button"
+          class="settings-icon-button"
+          type="button"
+          aria-label="打开设置"
+          title="打开设置"
+        >⚙</button>
       </header>
 
       <form id="search-form" class="search-form">
         <label class="visually-hidden" for="search-input">搜索关键词</label>
-        <textarea
-          id="search-input"
-          name="query"
-          rows="1"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="输入关键词"
-        ></textarea>
+        <div class="search-input-shell">
+          <textarea
+            id="search-input"
+            name="query"
+            rows="1"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="输入关键词"
+          ></textarea>
+        </div>
         <button id="search-button" type="submit">搜索</button>
       </form>
       <div
@@ -33,15 +44,6 @@
         aria-label="最近搜索记录"
         hidden
       ></div>
-
-      <div class="popup-actions">
-        <label class="history-toggle" for="show-history-toggle">
-          <input id="show-history-toggle" type="checkbox">
-          <span>显示历史</span>
-        </label>
-        <button id="pin-panel-button" class="ghost-button" type="button">固定</button>
-        <button id="options-button" class="ghost-button" type="button">设置</button>
-      </div>
 
       <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
     </main>

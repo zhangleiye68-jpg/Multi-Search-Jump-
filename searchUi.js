@@ -33,10 +33,11 @@ export function initSearchUi({
   searchButton,
   statusMessage,
   translateQuery = translateQueryForSearch,
+  useHistoryVisibilityPreference = false,
 }) {
   let shouldShowHistory = true;
 
-  if (historyToggle && historyList) {
+  if ((historyToggle || useHistoryVisibilityPreference) && historyList) {
     historyList.hidden = true;
   }
 
@@ -105,13 +106,13 @@ export function initSearchUi({
     await onHistoryChange?.();
   }
 
-  async function initHistoryToggle() {
-    if (!historyToggle) {
-      return;
+  async function initHistoryVisibility() {
+    shouldShowHistory = await getShowPopupSearchHistory(chrome.storage.local);
+
+    if (historyToggle) {
+      historyToggle.checked = shouldShowHistory;
     }
 
-    shouldShowHistory = await getShowPopupSearchHistory(chrome.storage.local);
-    historyToggle.checked = shouldShowHistory;
     await refreshHistory();
   }
 
@@ -209,8 +210,8 @@ export function initSearchUi({
     input.focus();
   });
 
-  if (historyToggle) {
-    initHistoryToggle();
+  if (historyToggle || useHistoryVisibilityPreference) {
+    initHistoryVisibility();
   } else {
     refreshHistory();
   }
@@ -228,10 +229,10 @@ export function initOptionsButton(button) {
   });
 }
 
-export function initPinButton(button, statusMessage) {
+export function initPinButton(button, statusMessage, { closeOnSuccess = true } = {}) {
   if (!chrome.sidePanel?.open) {
     button.disabled = true;
-    button.title = "当前浏览器不支持固定侧边栏";
+    button.title = "当前浏览器不支持侧边栏显示";
     return;
   }
 
@@ -239,10 +240,13 @@ export function initPinButton(button, statusMessage) {
     try {
       const currentWindow = await chrome.windows.getCurrent();
       await chrome.sidePanel.open({ windowId: currentWindow.id });
-      window.close();
+
+      if (closeOnSuccess) {
+        window.close();
+      }
     } catch (error) {
       console.error(error);
-      statusMessage.textContent = "无法打开固定面板，请确认浏览器支持 Side Panel。";
+      statusMessage.textContent = "无法打开侧边栏，请确认浏览器支持 Side Panel。";
       statusMessage.classList.add("is-error");
     }
   });

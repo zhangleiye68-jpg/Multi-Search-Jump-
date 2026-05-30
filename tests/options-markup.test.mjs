@@ -16,6 +16,11 @@ describe("options markup", () => {
     assert.match(html, /id="google-image-toggle"/);
     assert.match(html, /id="translate-chinese-toggle"/);
     assert.match(html, /将中文翻译成英文后搜索/);
+    assert.match(html, /id="show-popup-history-toggle"/);
+    assert.match(html, /显示历史/);
+    assert.match(html, /id="side-panel-button"/);
+    assert.match(html, /侧边栏显示/);
+    assert.doesNotMatch(html, />固定</);
     assert.match(html, /id="shortcut-settings-button"/);
     assert.match(html, /id="target-order-list"/);
     assert.match(html, /历史记录/);
@@ -36,6 +41,12 @@ describe("options markup", () => {
     assert.match(source, /#options-search-status/);
     assert.match(source, /#translate-chinese-toggle/);
     assert.match(source, /translateChineseToEnglish/);
+    assert.match(source, /#show-popup-history-toggle/);
+    assert.match(source, /getShowPopupSearchHistory/);
+    assert.match(source, /saveShowPopupSearchHistory/);
+    assert.match(source, /#side-panel-button/);
+    assert.match(source, /initPinButton/);
+    assert.match(source, /closeOnSuccess: false/);
     assert.match(source, /#all-search-history/);
     assert.match(source, /#history-filter-input/);
     assert.match(source, /#clear-history-button/);
