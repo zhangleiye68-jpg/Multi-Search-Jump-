@@ -45,5 +45,8 @@
     "contextMenus",
     "activeTab",
     "scripting"
+  ],
+  "host_permissions": [
+    "https://translate.googleapis.com/"
   ]
 }

@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   containsChinese,
   translateChineseQueryToEnglish,
+  translateChineseQueryWithGoogle,
   translateQueryForSearch,
 } from "../queryTranslator.js";
 
@@ -64,19 +65,64 @@ describe("query translator", () => {
     assert.deepEqual(calls, [{ sourceLanguage: "zh", targetLanguage: "en" }]);
   });
 
-  it("falls back to the original query when translation fails", async () => {
+  it("falls back to the original query when all translation paths fail", async () => {
     const translatorApi = {
       async create() {
         throw new Error("not available");
       },
     };
+    const fetchApi = async () => {
+      throw new Error("network unavailable");
+    };
 
     assert.equal(
       await translateQueryForSearch("红色连衣裙", {
         enabled: true,
+        fetchApi,
         translatorApi,
       }),
       "红色连衣裙",
     );
+  });
+
+  it("uses Google web translation when Chrome Translator is unavailable", async () => {
+    const requests = [];
+    const fetchApi = async (url) => {
+      requests.push(url);
+
+      return {
+        ok: true,
+        async json() {
+          return [[[ "red dress", "红色连衣裙" ]]];
+        },
+      };
+    };
+
+    assert.equal(
+      await translateQueryForSearch("红色连衣裙", {
+        enabled: true,
+        fetchApi,
+        translatorApi: null,
+      }),
+      "red dress",
+    );
+    assert.equal(requests.length, 1);
+    assert.match(requests[0], /^https:\/\/translate\.googleapis\.com\/translate_a\/single\?/);
+  });
+
+  it("parses Google web translation response chunks", async () => {
+    const fetchApi = async () => ({
+      ok: true,
+      async json() {
+        return [
+          [
+            ["red ", "红色"],
+            ["dress", "连衣裙"],
+          ],
+        ];
+      },
+    });
+
+    assert.equal(await translateChineseQueryWithGoogle("红色连衣裙", fetchApi), "red dress");
   });
 });

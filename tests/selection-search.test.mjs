@@ -220,6 +220,53 @@ describe("selection search", () => {
     assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "red dress");
   });
 
+  it("uses the default web translation fallback for selected Chinese text", async () => {
+    const originalFetch = globalThis.fetch;
+    const calls = [];
+    globalThis.fetch = async () => ({
+      ok: true,
+      async json() {
+        return [[[ "red dress", "红色连衣裙" ]]];
+      },
+    });
+
+    try {
+      const storageArea = createStorageArea({
+        [ENABLED_TARGET_IDS_KEY]: ["google"],
+        [GOOGLE_SEARCH_TYPE_KEY]: "web",
+        [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
+      });
+      const tabsApi = {
+        async create(options) {
+          calls.push(["create", options]);
+          return { id: 301 };
+        },
+        async group() {
+          return 88;
+        },
+        async update() {},
+      };
+      const tabGroupsApi = {
+        async update() {},
+      };
+
+      await openSearchForText({
+        query: "红色连衣裙",
+        storageArea,
+        tabGroupsApi,
+        tabsApi,
+      });
+
+      assert.deepEqual(calls[0], [
+        "create",
+        { url: "https://www.google.com/search?q=red%20dress", active: false },
+      ]);
+      assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "red dress");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("falls back to selected Chinese text when translation fails", async () => {
     const calls = [];
     const storageArea = createStorageArea({

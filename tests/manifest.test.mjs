@@ -29,6 +29,7 @@ describe("extension manifest", () => {
       "activeTab",
       "scripting",
     ]);
+    assert.deepEqual(manifest.host_permissions, ["https://translate.googleapis.com/"]);
     assert.deepEqual(manifest.commands["search-selected-text"], {
       suggested_key: {
         default: "Alt+Shift+S",
