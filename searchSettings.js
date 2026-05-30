@@ -15,6 +15,7 @@ const DEFAULT_AUTO_CLOSE_PREVIOUS = true;
 const DEFAULT_GOOGLE_SEARCH_TYPE = GOOGLE_SEARCH_TYPES.IMAGES;
 const DEFAULT_TRANSLATE_CHINESE_TO_ENGLISH = false;
 const DEFAULT_TARGET_ORDER = SEARCH_TARGETS.map((target) => target.id);
+const AUTO_ENABLE_ADDED_TARGET_IDS = new Set(["instagram", "reddit"]);
 const VALID_TARGET_IDS = new Set(DEFAULT_TARGET_ORDER);
 
 function normalizeTargetOrder(value) {
@@ -27,9 +28,22 @@ function normalizeTargetOrder(value) {
   ];
 }
 
-function normalizeEnabledTargetIds(value, targetOrder) {
+function normalizeEnabledTargetIds(value, targetOrder, savedTargetOrder = null) {
   const savedIds = Array.isArray(value) ? value : DEFAULT_TARGET_ORDER;
   const enabledIds = new Set(savedIds.filter((id) => VALID_TARGET_IDS.has(id)));
+
+  if (Array.isArray(value) && Array.isArray(savedTargetOrder)) {
+    const missingTargetIds = DEFAULT_TARGET_ORDER.filter((id) => !savedTargetOrder.includes(id));
+    const shouldEnableAddedTargets =
+      missingTargetIds.length > 0
+      && missingTargetIds.every((id) => AUTO_ENABLE_ADDED_TARGET_IDS.has(id));
+
+    if (shouldEnableAddedTargets) {
+      for (const id of missingTargetIds) {
+        enabledIds.add(id);
+      }
+    }
+  }
 
   return targetOrder.filter((id) => enabledIds.has(id));
 }
@@ -43,11 +57,41 @@ function groupTargetOrderByEnabled(targetOrder, enabledTargetIds) {
   ];
 }
 
+function toStoredSearchSettings(settings) {
+  return {
+    [AUTO_CLOSE_PREVIOUS_KEY]: settings.autoClosePrevious,
+    [TARGET_ORDER_KEY]: settings.targetOrder,
+    [ENABLED_TARGET_IDS_KEY]: settings.enabledTargetIds,
+    [GOOGLE_SEARCH_TYPE_KEY]: settings.googleSearchType,
+    [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: settings.translateChineseToEnglish,
+  };
+}
+
+function isSameStoredValue(currentValue, nextValue) {
+  if (Array.isArray(nextValue)) {
+    return (
+      Array.isArray(currentValue) &&
+      currentValue.length === nextValue.length &&
+      currentValue.every((item, index) => item === nextValue[index])
+    );
+  }
+
+  return currentValue === nextValue;
+}
+
+function shouldSaveNormalizedSettings(currentValues, nextValues) {
+  return Object.entries(nextValues).some(
+    ([key, value]) => !isSameStoredValue(currentValues[key], value),
+  );
+}
+
 export function normalizeSearchSettings(value = {}) {
-  let targetOrder = normalizeTargetOrder(value[TARGET_ORDER_KEY] ?? value.targetOrder);
+  const savedTargetOrder = value[TARGET_ORDER_KEY] ?? value.targetOrder;
+  let targetOrder = normalizeTargetOrder(savedTargetOrder);
   let enabledTargetIds = normalizeEnabledTargetIds(
     value[ENABLED_TARGET_IDS_KEY] ?? value.enabledTargetIds,
     targetOrder,
+    savedTargetOrder,
   );
   targetOrder = groupTargetOrderByEnabled(targetOrder, enabledTargetIds);
   enabledTargetIds = normalizeEnabledTargetIds(enabledTargetIds, targetOrder);
@@ -81,19 +125,20 @@ export async function getSearchSettings(storageArea) {
     TRANSLATE_CHINESE_TO_ENGLISH_KEY,
   ]);
 
-  return normalizeSearchSettings(result);
+  const normalized = normalizeSearchSettings(result);
+  const storedSettings = toStoredSearchSettings(normalized);
+
+  if (shouldSaveNormalizedSettings(result, storedSettings)) {
+    await storageArea.set(storedSettings);
+  }
+
+  return normalized;
 }
 
 export async function saveSearchSettings(storageArea, settings) {
   const normalized = normalizeSearchSettings(settings);
 
-  await storageArea.set({
-    [AUTO_CLOSE_PREVIOUS_KEY]: normalized.autoClosePrevious,
-    [TARGET_ORDER_KEY]: normalized.targetOrder,
-    [ENABLED_TARGET_IDS_KEY]: normalized.enabledTargetIds,
-    [GOOGLE_SEARCH_TYPE_KEY]: normalized.googleSearchType,
-    [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: normalized.translateChineseToEnglish,
-  });
+  await storageArea.set(toStoredSearchSettings(normalized));
 
   return normalized;
 }

@@ -31,6 +31,8 @@ describe("search settings", () => {
     "x",
     "facebook",
     "tiktok",
+    "instagram",
+    "reddit",
     "xiaohongshu",
     "douyin",
     "weibo",
@@ -57,7 +59,19 @@ describe("search settings", () => {
       autoClosePrevious: false,
       enabledTargetIds: ["facebook", "google"],
       googleSearchType: "web",
-      targetOrder: ["facebook", "google", "x", "tiktok"],
+      targetOrder: [
+        "facebook",
+        "google",
+        "x",
+        "tiktok",
+        "instagram",
+        "reddit",
+        "xiaohongshu",
+        "douyin",
+        "weibo",
+        "zhihu",
+        "bilibili",
+      ],
       translateChineseToEnglish: true,
     });
 
@@ -70,6 +84,8 @@ describe("search settings", () => {
         "google",
         "x",
         "tiktok",
+        "instagram",
+        "reddit",
         "xiaohongshu",
         "douyin",
         "weibo",
@@ -85,7 +101,19 @@ describe("search settings", () => {
 
     await saveSearchSettings(storageArea, {
       enabledTargetIds: ["google", "tiktok"],
-      targetOrder: ["weibo", "tiktok", "google", "x"],
+      targetOrder: [
+        "weibo",
+        "tiktok",
+        "google",
+        "x",
+        "instagram",
+        "reddit",
+        "facebook",
+        "xiaohongshu",
+        "douyin",
+        "zhihu",
+        "bilibili",
+      ],
     });
 
     assert.deepEqual(storageArea.values[TARGET_ORDER_KEY], [
@@ -93,6 +121,8 @@ describe("search settings", () => {
       "google",
       "weibo",
       "x",
+      "instagram",
+      "reddit",
       "facebook",
       "xiaohongshu",
       "douyin",
@@ -100,5 +130,38 @@ describe("search settings", () => {
       "bilibili",
     ]);
     assert.deepEqual(storageArea.values[ENABLED_TARGET_IDS_KEY], ["tiktok", "google"]);
+  });
+
+  it("enables newly added targets when normalizing older saved settings", async () => {
+    const storageArea = createStorageArea({
+      [ENABLED_TARGET_IDS_KEY]: [
+        "google",
+        "x",
+        "facebook",
+        "tiktok",
+        "xiaohongshu",
+        "douyin",
+        "weibo",
+        "zhihu",
+        "bilibili",
+      ],
+      [TARGET_ORDER_KEY]: [
+        "google",
+        "x",
+        "facebook",
+        "tiktok",
+        "xiaohongshu",
+        "douyin",
+        "weibo",
+        "zhihu",
+        "bilibili",
+      ],
+    });
+    const settings = await getSearchSettings(storageArea);
+
+    assert.equal(settings.enabledTargetIds.includes("instagram"), true);
+    assert.equal(settings.enabledTargetIds.includes("reddit"), true);
+    assert.deepEqual(storageArea.values[ENABLED_TARGET_IDS_KEY], settings.enabledTargetIds);
+    assert.deepEqual(storageArea.values[TARGET_ORDER_KEY], settings.targetOrder);
   });
 });

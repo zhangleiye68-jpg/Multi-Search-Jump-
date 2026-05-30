@@ -26,6 +26,16 @@ export const SEARCH_TARGETS = Object.freeze([
     buildUrl: (query) => `https://www.tiktok.com/search?q=${query}`,
   }),
   Object.freeze({
+    id: "instagram",
+    name: "Instagram",
+    buildUrl: (query) => `https://www.instagram.com/explore/search/keyword/?q=${query}`,
+  }),
+  Object.freeze({
+    id: "reddit",
+    name: "Reddit",
+    buildUrl: (query) => `https://www.reddit.com/search/?q=${query}`,
+  }),
+  Object.freeze({
     id: "xiaohongshu",
     name: "小红书",
     buildUrl: (query) => `https://www.xiaohongshu.com/search_result?keyword=${query}`,
