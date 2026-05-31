@@ -118,6 +118,15 @@
   word-break: break-word;
 }
 
+.msj-tiktok-caption-original,
+.msj-tiktok-caption-translation {
+  display: block;
+}
+
+.msj-tiktok-caption-translation {
+  color: #4e615d;
+}
+
 .msj-tiktok-caption-actions {
   display: flex;
   justify-content: flex-end;
