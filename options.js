@@ -21,7 +21,6 @@ const allSearchHistoryEmpty = document.querySelector("#all-search-history-empty"
 const autoCloseToggle = document.querySelector("#auto-close-toggle");
 const clearHistoryButton = document.querySelector("#clear-history-button");
 const googleImageToggle = document.querySelector("#google-image-toggle");
-const googleModeState = document.querySelector("#google-mode-state");
 const googleRecent24hToggle = document.querySelector("#google-recent-24h-toggle");
 const historyFilterInput = document.querySelector("#history-filter-input");
 const historyTableBody = document.querySelector("#history-table-body");
@@ -433,7 +432,6 @@ async function renderAllSearchHistory() {
 function render() {
   autoCloseToggle.checked = settings.autoClosePrevious;
   googleImageToggle.checked = settings.googleSearchType === GOOGLE_SEARCH_TYPES.IMAGES;
-  googleModeState.textContent = googleImageToggle.checked ? "图片搜索" : "普通搜索";
   googleRecent24hToggle.checked = settings.googleRecent24Hours;
   showPopupHistoryToggle.checked = showPopupSearchHistory;
   translateChineseToggle.checked = settings.translateChineseToEnglish;

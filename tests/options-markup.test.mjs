@@ -12,6 +12,14 @@ describe("options markup", () => {
       html,
       /href="#settings-search"[\s\S]*>搜索<[\s\S]*href="#settings-display"[\s\S]*>显示<[\s\S]*href="#settings-shortcuts"[\s\S]*>快捷键<[\s\S]*href="#settings-targets"[\s\S]*>搜索网站<[\s\S]*href="#settings-history"[\s\S]*>历史记录</,
     );
+    assert.match(
+      html,
+      /options-nav-index">01<[\s\S]*options-nav-index">02<[\s\S]*options-nav-index">03<[\s\S]*options-nav-index">04<[\s\S]*options-nav-index">05</,
+    );
+    assert.match(
+      html,
+      /module-index">01<[\s\S]*id="settings-search-heading"[\s\S]*module-index">02<[\s\S]*id="settings-display-heading"[\s\S]*module-index">03<[\s\S]*id="settings-shortcuts-heading"[\s\S]*module-index">04<[\s\S]*id="settings-targets-heading"[\s\S]*module-index">05<[\s\S]*id="settings-history-heading"/,
+    );
     assert.match(html, /id="settings-search"/);
     assert.match(html, /id="settings-display"/);
     assert.match(html, /id="settings-shortcuts"/);
@@ -49,6 +57,9 @@ describe("options markup", () => {
     assert.match(html, /选中文字搜索/);
     assert.match(html, /网站开关与排序/);
     assert.match(html, /历史管理/);
+    assert.match(html, /class="setting-help"/);
+    assert.match(html, /data-tooltip="开启后，搜索 B 前会自动关闭搜索 A 的标签组。"/);
+    assert.doesNotMatch(html, /<span class="setting-note">开启后，搜索 B 前会自动关闭搜索 A 的标签组。<\/span>/);
     assert.match(html, /<script[^>]+type="module"[^>]+src="options\.js"/);
   });
 
@@ -57,8 +68,12 @@ describe("options markup", () => {
 
     assert.match(css, /\.options-layout\s*{[\s\S]*grid-template-columns: 168px minmax\(0, 1fr\)/);
     assert.match(css, /\.options-sidebar\s*{[\s\S]*position: sticky/);
+    assert.match(css, /\.options-nav-index/);
+    assert.match(css, /\.module-index/);
     assert.match(css, /\.options-nav-link\.is-active/);
     assert.match(css, /\.settings-module\s*{[\s\S]*scroll-margin-top/);
+    assert.match(css, /\.setting-help:hover::after/);
+    assert.match(css, /\.setting-help:focus-visible::after/);
     assert.match(css, /@media \(max-width: 760px\)/);
   });
 

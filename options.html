@@ -15,11 +15,26 @@
       <div class="options-layout">
         <nav class="options-sidebar" aria-label="设置功能模块">
           <div class="options-sidebar-title">功能模块</div>
-          <a class="options-nav-link is-active" href="#settings-search" data-options-nav="settings-search" aria-current="true">搜索</a>
-          <a class="options-nav-link" href="#settings-display" data-options-nav="settings-display">显示</a>
-          <a class="options-nav-link" href="#settings-shortcuts" data-options-nav="settings-shortcuts">快捷键</a>
-          <a class="options-nav-link" href="#settings-targets" data-options-nav="settings-targets">搜索网站</a>
-          <a class="options-nav-link" href="#settings-history" data-options-nav="settings-history">历史记录</a>
+          <a class="options-nav-link is-active" href="#settings-search" data-options-nav="settings-search" aria-current="true">
+            <span class="options-nav-index">01</span>
+            <span>搜索</span>
+          </a>
+          <a class="options-nav-link" href="#settings-display" data-options-nav="settings-display">
+            <span class="options-nav-index">02</span>
+            <span>显示</span>
+          </a>
+          <a class="options-nav-link" href="#settings-shortcuts" data-options-nav="settings-shortcuts">
+            <span class="options-nav-index">03</span>
+            <span>快捷键</span>
+          </a>
+          <a class="options-nav-link" href="#settings-targets" data-options-nav="settings-targets">
+            <span class="options-nav-index">04</span>
+            <span>搜索网站</span>
+          </a>
+          <a class="options-nav-link" href="#settings-history" data-options-nav="settings-history">
+            <span class="options-nav-index">05</span>
+            <span>历史记录</span>
+          </a>
         </nav>
 
         <div class="options-content">
@@ -30,7 +45,10 @@
             data-settings-section
           >
             <div class="module-heading">
-              <h2 id="settings-search-heading">搜索</h2>
+              <div class="module-title-row">
+                <span class="module-index">01</span>
+                <h2 id="settings-search-heading">搜索</h2>
+              </div>
               <p>控制搜索入口、关键词处理方式和 Google 搜索类型。</p>
             </div>
 
@@ -69,9 +87,16 @@
                 <h3 id="search-behavior-heading">搜索行为</h3>
               </div>
               <label class="switch-setting" for="auto-close-toggle">
-                <span>
-                  <span class="setting-title">新搜索前关闭上次结果</span>
-                  <span class="setting-note">开启后，搜索 B 前会自动关闭搜索 A 的标签组。</span>
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">新搜索前关闭上次结果</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：开启后，搜索 B 前会自动关闭搜索 A 的标签组。"
+                      data-tooltip="开启后，搜索 B 前会自动关闭搜索 A 的标签组。"
+                    >!</span>
+                  </span>
                 </span>
                 <span class="switch-control">
                   <input id="auto-close-toggle" type="checkbox">
@@ -82,9 +107,16 @@
               </label>
 
               <label class="switch-setting" for="translate-chinese-toggle">
-                <span>
-                  <span class="setting-title">将中文翻译成英文后搜索</span>
-                  <span class="setting-note">开启后，包含中文的关键词会先翻译成英文，再打开搜索页。</span>
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">将中文翻译成英文后搜索</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：开启后，包含中文的关键词会先翻译成英文，再打开搜索页。"
+                      data-tooltip="开启后，包含中文的关键词会先翻译成英文，再打开搜索页。"
+                    >!</span>
+                  </span>
                 </span>
                 <span class="switch-control">
                   <input id="translate-chinese-toggle" type="checkbox">
@@ -100,9 +132,16 @@
                 <h3 id="google-search-heading">Google 搜索类型</h3>
               </div>
               <label class="switch-setting" for="google-image-toggle">
-                <span>
-                  <span class="setting-title">Google 图片搜索</span>
-                  <span id="google-mode-state" class="setting-note">图片搜索</span>
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">Google 图片搜索</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：开启后，Google 打开图片搜索结果；关闭后打开普通网页搜索结果。"
+                      data-tooltip="开启后，Google 打开图片搜索结果；关闭后打开普通网页搜索结果。"
+                    >!</span>
+                  </span>
                 </span>
                 <span class="switch-control">
                   <input id="google-image-toggle" type="checkbox">
@@ -115,9 +154,16 @@
                 class="switch-setting"
                 for="google-recent-24h-toggle"
               >
-                <span>
-                  <span class="setting-title">使用过去 24 小时搜索</span>
-                  <span class="setting-note">开启后，Google 网页和图片结果都只显示过去 24 小时内容。</span>
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">使用过去 24 小时搜索</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：开启后，Google 网页和图片结果都只显示过去 24 小时内容。"
+                      data-tooltip="开启后，Google 网页和图片结果都只显示过去 24 小时内容。"
+                    >!</span>
+                  </span>
                 </span>
                 <span class="switch-control">
                   <input id="google-recent-24h-toggle" type="checkbox">
@@ -136,7 +182,10 @@
             data-settings-section
           >
             <div class="module-heading">
-              <h2 id="settings-display-heading">显示</h2>
+              <div class="module-title-row">
+                <span class="module-index">02</span>
+                <h2 id="settings-display-heading">显示</h2>
+              </div>
               <p>控制小窗口和侧边栏相关的显示入口。</p>
             </div>
 
@@ -145,9 +194,16 @@
                 <h3 id="popup-display-heading">小窗口</h3>
               </div>
               <label class="switch-setting" for="show-popup-history-toggle">
-                <span>
-                  <span class="setting-title">小窗口显示历史</span>
-                  <span class="setting-note">开启后，小窗口会显示最近搜索记录。</span>
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">小窗口显示历史</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：开启后，小窗口会显示最近搜索记录。"
+                      data-tooltip="开启后，小窗口会显示最近搜索记录。"
+                    >!</span>
+                  </span>
                 </span>
                 <span class="switch-control">
                   <input id="show-popup-history-toggle" type="checkbox">
@@ -163,9 +219,16 @@
                 <h3 id="side-panel-heading">侧边栏</h3>
               </div>
               <div class="settings-action-row">
-                <span>
-                  <span class="setting-title">侧边栏显示</span>
-                  <span class="setting-note">在 Chrome 侧边栏中打开搜索面板。</span>
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">侧边栏显示</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：在 Chrome 侧边栏中打开搜索面板。"
+                      data-tooltip="在 Chrome 侧边栏中打开搜索面板。"
+                    >!</span>
+                  </span>
                 </span>
                 <button id="side-panel-button" type="button">侧边栏显示</button>
               </div>
@@ -179,7 +242,10 @@
             data-settings-section
           >
             <div class="module-heading">
-              <h2 id="settings-shortcuts-heading">快捷键</h2>
+              <div class="module-title-row">
+                <span class="module-index">03</span>
+                <h2 id="settings-shortcuts-heading">快捷键</h2>
+              </div>
               <p>设置选中文字后直接搜索的键盘入口。</p>
             </div>
 
@@ -188,9 +254,16 @@
                 <h3 id="selection-shortcut-heading">选中文字搜索</h3>
               </div>
               <div class="settings-action-row">
-                <span>
-                  <span class="setting-title">快捷键搜索</span>
-                  <span class="setting-note">打开 Chrome 快捷键页面，设置或修改选中文字搜索的快捷键。</span>
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">快捷键搜索</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：打开 Chrome 快捷键页面，设置或修改选中文字搜索的快捷键。"
+                      data-tooltip="打开 Chrome 快捷键页面，设置或修改选中文字搜索的快捷键。"
+                    >!</span>
+                  </span>
                 </span>
                 <button id="shortcut-settings-button" type="button">设置快捷键</button>
               </div>
@@ -204,7 +277,10 @@
             data-settings-section
           >
             <div class="module-heading">
-              <h2 id="settings-targets-heading">搜索网站</h2>
+              <div class="module-title-row">
+                <span class="module-index">04</span>
+                <h2 id="settings-targets-heading">搜索网站</h2>
+              </div>
               <p>选择要打开的网站，并调整搜索结果页的打开顺序。</p>
             </div>
 
@@ -223,7 +299,10 @@
             data-settings-section
           >
             <div class="module-heading">
-              <h2 id="settings-history-heading">历史记录</h2>
+              <div class="module-title-row">
+                <span class="module-index">05</span>
+                <h2 id="settings-history-heading">历史记录</h2>
+              </div>
               <p>查找、重新搜索或删除本机保存的搜索记录。</p>
             </div>
 

@@ -57,6 +57,9 @@ body {
 }
 
 .options-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border-radius: 7px;
   padding: 8px 10px;
   color: #5f6d68;
@@ -66,6 +69,14 @@ body {
   text-decoration: none;
 }
 
+.options-nav-index {
+  flex: 0 0 auto;
+  color: #91a09a;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+}
+
 .options-nav-link:hover {
   background: #edf3f0;
   color: #263331;
@@ -73,6 +84,10 @@ body {
 
 .options-nav-link.is-active {
   background: #e3efeb;
+  color: #176b63;
+}
+
+.options-nav-link.is-active .options-nav-index {
   color: #176b63;
 }
 
@@ -97,6 +112,25 @@ body {
 .module-heading {
   display: grid;
   gap: 4px;
+}
+
+.module-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.module-index {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 24px;
+  border: 1px solid #d9e0dc;
+  border-radius: 999px;
+  color: #5f6d68;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
 }
 
 .module-heading h2 {
@@ -330,10 +364,71 @@ body {
   background: #ffffff;
 }
 
+.setting-label {
+  min-width: 0;
+}
+
+.setting-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .setting-title {
-  display: block;
+  display: inline;
   font-size: 14px;
   font-weight: 750;
+}
+
+.setting-help {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #cfd8d3;
+  border-radius: 999px;
+  color: #5f6d68;
+  cursor: help;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.setting-help::after {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  width: max-content;
+  max-width: 260px;
+  min-width: 210px;
+  border-radius: 7px;
+  padding: 8px 9px;
+  background: #15201f;
+  color: #ffffff;
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.setting-help:hover::after,
+.setting-help:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.setting-help:focus-visible {
+  outline: 3px solid rgba(23, 107, 99, 0.16);
+  outline-offset: 2px;
 }
 
 .setting-note {
