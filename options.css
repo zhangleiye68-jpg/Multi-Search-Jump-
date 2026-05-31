@@ -149,6 +149,25 @@ body {
 .settings-subsection {
   display: grid;
   gap: 10px;
+  padding-left: 24px;
+}
+
+.settings-subsection > :not(.subsection-heading) {
+  margin-left: 24px;
+}
+
+.subsection-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subsection-index {
+  flex: 0 0 auto;
+  color: #5f6d68;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
 }
 
 .subsection-heading h3 {
@@ -693,6 +712,14 @@ button:disabled {
 
   .options-nav-link {
     flex: 0 0 auto;
+  }
+
+  .settings-subsection {
+    padding-left: 12px;
+  }
+
+  .settings-subsection > :not(.subsection-heading) {
+    margin-left: 12px;
   }
 
   .history-toolbar {

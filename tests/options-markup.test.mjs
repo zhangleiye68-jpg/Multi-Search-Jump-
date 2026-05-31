@@ -20,6 +20,10 @@ describe("options markup", () => {
       html,
       /module-index">01<[\s\S]*id="settings-search-heading"[\s\S]*module-index">02<[\s\S]*id="settings-display-heading"[\s\S]*module-index">03<[\s\S]*id="settings-shortcuts-heading"[\s\S]*module-index">04<[\s\S]*id="settings-targets-heading"[\s\S]*module-index">05<[\s\S]*id="settings-history-heading"/,
     );
+    assert.match(
+      html,
+      /subsection-index">1\.1<[\s\S]*id="options-search-heading"[\s\S]*subsection-index">1\.2<[\s\S]*id="search-behavior-heading"[\s\S]*subsection-index">1\.3<[\s\S]*id="google-search-heading"[\s\S]*subsection-index">2\.1<[\s\S]*id="popup-display-heading"[\s\S]*subsection-index">2\.2<[\s\S]*id="side-panel-heading"[\s\S]*subsection-index">3\.1<[\s\S]*id="selection-shortcut-heading"[\s\S]*subsection-index">4\.1<[\s\S]*id="target-order-heading"[\s\S]*subsection-index">5\.1<[\s\S]*id="history-management-heading"/,
+    );
     assert.match(html, /id="settings-search"/);
     assert.match(html, /id="settings-display"/);
     assert.match(html, /id="settings-shortcuts"/);
@@ -74,6 +78,10 @@ describe("options markup", () => {
     assert.match(css, /\.options-sidebar\s*{[\s\S]*position: sticky/);
     assert.match(css, /\.options-nav-index/);
     assert.match(css, /\.module-index/);
+    assert.match(css, /\.subsection-index/);
+    assert.match(css, /\.settings-subsection\s*{[\s\S]*padding-left: 24px/);
+    assert.match(css, /\.settings-subsection > :not\(\.subsection-heading\)\s*{[\s\S]*margin-left: 24px/);
+    assert.match(css, /\.subsection-heading\s*{[\s\S]*display: flex/);
     assert.match(css, /\.options-nav-link\.is-active/);
     assert.match(css, /\.settings-module\s*{[\s\S]*scroll-margin-top/);
     assert.match(css, /\.setting-help:hover::after/);
