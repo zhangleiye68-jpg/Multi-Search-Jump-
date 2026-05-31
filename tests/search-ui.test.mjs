@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { initSearchUi } from "../searchUi.js";
+import { initPinButton, initSearchUi } from "../searchUi.js";
 
 function createClassList() {
   const values = new Set();
@@ -113,6 +113,26 @@ function createElementHarness() {
     setAttribute() {},
     append(...children) {
       this.children = children;
+    },
+  };
+}
+
+function createSwitchHarness() {
+  let changeHandler = null;
+
+  return {
+    checked: false,
+    disabled: false,
+    title: "",
+    type: "checkbox",
+    addEventListener(type, handler) {
+      if (type === "change") {
+        changeHandler = handler;
+      }
+    },
+    async change(checked) {
+      this.checked = checked;
+      await changeHandler?.();
     },
   };
 }
@@ -443,5 +463,35 @@ describe("search UI", () => {
     } finally {
       globalThis.document = originalDocument;
     }
+  });
+
+  it("opens the side panel from a switch only when switched on", async () => {
+    const sidePanelSwitch = createSwitchHarness();
+    const openedWindows = [];
+    const statusMessage = {
+      classList: createClassList(),
+      textContent: "",
+    };
+
+    globalThis.chrome = {
+      sidePanel: {
+        async open(options) {
+          openedWindows.push(options.windowId);
+        },
+      },
+      windows: {
+        async getCurrent() {
+          return { id: 7 };
+        },
+      },
+    };
+
+    initPinButton(sidePanelSwitch, statusMessage, { closeOnSuccess: false });
+
+    await sidePanelSwitch.change(true);
+    await sidePanelSwitch.change(false);
+
+    assert.deepEqual(openedWindows, [7]);
+    assert.equal(sidePanelSwitch.checked, false);
   });
 });

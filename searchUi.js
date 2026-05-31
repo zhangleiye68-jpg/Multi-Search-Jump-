@@ -236,7 +236,13 @@ export function initPinButton(button, statusMessage, { closeOnSuccess = true } =
     return;
   }
 
-  button.addEventListener("click", async () => {
+  const isSwitchControl = button.type === "checkbox";
+
+  button.addEventListener(isSwitchControl ? "change" : "click", async () => {
+    if (isSwitchControl && !button.checked) {
+      return;
+    }
+
     try {
       const currentWindow = await chrome.windows.getCurrent();
       await chrome.sidePanel.open({ windowId: currentWindow.id });
@@ -246,6 +252,9 @@ export function initPinButton(button, statusMessage, { closeOnSuccess = true } =
       }
     } catch (error) {
       console.error(error);
+      if (isSwitchControl) {
+        button.checked = false;
+      }
       statusMessage.textContent = "无法打开侧边栏，请确认浏览器支持 Side Panel。";
       statusMessage.classList.add("is-error");
     }

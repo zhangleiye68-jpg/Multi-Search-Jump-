@@ -39,7 +39,11 @@ describe("options markup", () => {
     assert.match(html, /将中文翻译成英文后搜索/);
     assert.match(html, /id="show-popup-history-toggle"/);
     assert.match(html, /显示历史/);
-    assert.match(html, /id="side-panel-button"/);
+    assert.match(
+      html,
+      /<label class="switch-setting" for="side-panel-button">[\s\S]*<input id="side-panel-button" type="checkbox">[\s\S]*class="switch-track"/,
+    );
+    assert.doesNotMatch(html, /<button id="side-panel-button"/);
     assert.match(html, /侧边栏显示/);
     assert.doesNotMatch(html, />固定</);
     assert.match(html, /id="shortcut-settings-button"/);
