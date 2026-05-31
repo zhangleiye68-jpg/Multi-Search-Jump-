@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { buildSearchUrls, SEARCH_TARGETS } from "../searchTargets.js";
+import { buildSearchUrls, SEARCH_TARGETS } from "../extension/src/searchTargets.js";
 
 describe("search targets", () => {
   it("defines the required search platforms in order", () => {

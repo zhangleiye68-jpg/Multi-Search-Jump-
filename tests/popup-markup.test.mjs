@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 
 describe("popup markup", () => {
   it("contains a focused search form and module script", async () => {
-    const html = await readFile("popup.html", "utf8");
+    const html = await readFile("extension/popup/popup.html", "utf8");
 
     assert.match(html, /<form[^>]+id="search-form"/);
     assert.match(html, /<textarea[^>]+id="search-input"/);
@@ -26,8 +26,8 @@ describe("popup markup", () => {
   });
 
   it("delegates browser actions through the shared search UI", async () => {
-    const popupScript = await readFile("popup.js", "utf8");
-    const sharedScript = await readFile("searchUi.js", "utf8");
+    const popupScript = await readFile("extension/popup/popup.js", "utf8");
+    const sharedScript = await readFile("extension/src/searchUi.js", "utf8");
 
     assert.match(popupScript, /initSearchUi/);
     assert.match(popupScript, /#search-history/);
@@ -42,7 +42,7 @@ describe("popup markup", () => {
   });
 
   it("styles the settings button as a header action", async () => {
-    const css = await readFile("popup.css", "utf8");
+    const css = await readFile("extension/popup/popup.css", "utf8");
     const settingsButtonRule = css.match(/\.settings-icon-button\s*{(?<body>[\s\S]*?)}/);
 
     assert.match(css, /\.popup-header\s*{[\s\S]*justify-content: space-between/);

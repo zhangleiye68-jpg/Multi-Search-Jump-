@@ -1,4 +1,4 @@
-import { initOptionsButton, initSearchUi } from "./searchUi.js";
+import { initOptionsButton, initSearchUi } from "../src/searchUi.js";
 
 const form = document.querySelector("#search-form");
 const input = document.querySelector("#search-input");

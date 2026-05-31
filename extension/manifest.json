@@ -5,24 +5,39 @@
   "version": "0.2.0",
   "action": {
     "default_title": "Multi Search Jump",
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
     }
   },
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "src/background.js",
     "type": "module"
   },
   "options_ui": {
-    "page": "options.html",
+    "page": "options/options.html",
     "open_in_tab": true
   },
   "side_panel": {
-    "default_path": "panel.html"
+    "default_path": "side-panel/panel.html"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.tiktok.com/*"
+      ],
+      "css": [
+        "src/tiktokCaptionOverlay.css"
+      ],
+      "js": [
+        "src/tiktokCaptionCore.js",
+        "src/tiktokCaptionContent.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
   "commands": {
     "search-selected-text": {
       "suggested_key": {
@@ -33,9 +48,9 @@
     }
   },
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
   },
   "permissions": [
     "tabs",

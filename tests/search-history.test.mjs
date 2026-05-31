@@ -12,7 +12,7 @@ import {
   getShowPopupSearchHistory,
   removeSearchHistoryRecord,
   saveShowPopupSearchHistory,
-} from "../searchHistory.js";
+} from "../extension/src/searchHistory.js";
 
 function createStorageArea(initialValues = {}) {
   const values = { ...initialValues };

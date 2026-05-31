@@ -1,19 +1,19 @@
-import { SEARCH_TARGETS, getSearchTargetById } from "./searchTargets.js";
+import { SEARCH_TARGETS, getSearchTargetById } from "../src/searchTargets.js";
 import {
   GOOGLE_SEARCH_TYPES,
   getSearchSettings,
   normalizeSearchSettings,
   saveSearchSettings,
-} from "./searchSettings.js";
+} from "../src/searchSettings.js";
 import {
   clearSearchHistory,
   getSearchHistory,
   getShowPopupSearchHistory,
   removeSearchHistoryRecord,
   saveShowPopupSearchHistory,
-} from "./searchHistory.js";
-import { initPinButton, initSearchUi } from "./searchUi.js";
-import { openShortcutSettings } from "./shortcutSettings.js";
+} from "../src/searchHistory.js";
+import { initPinButton, initSearchUi } from "../src/searchUi.js";
+import { openShortcutSettings } from "../src/shortcutSettings.js";
 
 const storageArea = chrome.storage.local;
 const allSearchHistory = document.querySelector("#all-search-history");

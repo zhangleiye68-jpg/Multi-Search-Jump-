@@ -2,28 +2,32 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  EXTENSION_DIR,
   EXTENSION_DISPLAY_NAME,
   EXTENSION_FILES,
-  PACKAGE_FILE_NAME,
   readManifest,
   validateStoreManifest,
   validateStoreSources,
-} from "../scripts/package-extension.mjs";
+} from "../scripts/check-extension-structure.mjs";
 
-describe("Chrome Web Store package", () => {
-  it("uses the extension name for the upload zip filename", () => {
+describe("Chrome extension structure", () => {
+  it("keeps uploadable extension files under a dedicated extension directory", () => {
+    assert.equal(EXTENSION_DIR, "extension");
     assert.equal(EXTENSION_DISPLAY_NAME, "Multi Search Jump");
-    assert.equal(PACKAGE_FILE_NAME, "Multi Search Jump.zip");
+    assert.ok(EXTENSION_FILES.includes("manifest.json"));
+    assert.ok(EXTENSION_FILES.includes("src/background.js"));
+    assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionCore.js"));
+    assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionContent.js"));
+    assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionOverlay.css"));
+    assert.ok(EXTENSION_FILES.includes("assets/icons/icon128.png"));
   });
 
-  it("keeps the upload package limited to extension runtime files", () => {
-    assert.ok(EXTENSION_FILES.includes("manifest.json"));
-    assert.ok(EXTENSION_FILES.includes("background.js"));
-    assert.ok(EXTENSION_FILES.includes("icons/icon128.png"));
+  it("keeps development files out of the extension directory allowlist", () => {
     assert.ok(!EXTENSION_FILES.some((file) => file.startsWith("tests/")));
     assert.ok(!EXTENSION_FILES.some((file) => file.startsWith("scripts/")));
     assert.ok(!EXTENSION_FILES.includes(".DS_Store"));
     assert.ok(!EXTENSION_FILES.includes("package.json"));
+    assert.ok(!EXTENSION_FILES.includes("WEB_STORE_REVIEW_NOTES.md"));
   });
 
   it("includes every manifest-referenced runtime file", async () => {

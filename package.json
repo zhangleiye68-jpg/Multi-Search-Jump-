@@ -4,9 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check:store": "node scripts/package-extension.mjs --check",
+    "check:store": "node scripts/check-extension-structure.mjs",
     "generate-icons": "node scripts/generate-icons.mjs",
-    "package:store": "node scripts/package-extension.mjs",
     "test": "node --test"
   }
 }

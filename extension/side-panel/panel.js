@@ -1,4 +1,4 @@
-import { initOptionsButton, initSearchUi } from "./searchUi.js";
+import { initOptionsButton, initSearchUi } from "../src/searchUi.js";
 
 initSearchUi({
   closeOnSuccess: false,

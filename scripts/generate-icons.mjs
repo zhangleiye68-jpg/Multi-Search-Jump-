@@ -3,9 +3,9 @@ import { dirname } from "node:path";
 import { deflateSync } from "node:zlib";
 
 const ICONS = [
-  ["icons/icon16.png", 16],
-  ["icons/icon48.png", 48],
-  ["icons/icon128.png", 128],
+  ["extension/assets/icons/icon16.png", 16],
+  ["extension/assets/icons/icon48.png", 48],
+  ["extension/assets/icons/icon128.png", 128],
 ];
 
 function crc32(buffer) {

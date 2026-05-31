@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 
 describe("options markup", () => {
   it("contains persistent toggles and target ordering UI", async () => {
-    const html = await readFile("options.html", "utf8");
+    const html = await readFile("extension/options/options.html", "utf8");
 
     assert.match(html, /class="options-layout"/);
     assert.match(html, /<nav[^>]+class="options-sidebar"/);
@@ -72,7 +72,7 @@ describe("options markup", () => {
   });
 
   it("styles options as a single scrolling page with sidebar navigation", async () => {
-    const css = await readFile("options.css", "utf8");
+    const css = await readFile("extension/options/options.css", "utf8");
 
     assert.match(css, /\.options-layout\s*{[\s\S]*grid-template-columns: 168px minmax\(0, 1fr\)/);
     assert.match(css, /\.options-sidebar\s*{[\s\S]*position: sticky/);
@@ -90,7 +90,7 @@ describe("options markup", () => {
   });
 
   it("renders numbered custom pointer-drag rows with compact switches", async () => {
-    const source = await readFile("options.js", "utf8");
+    const source = await readFile("extension/options/options.js", "utf8");
 
     assert.match(source, /class="target-index"/);
     assert.match(source, /initSearchUi/);

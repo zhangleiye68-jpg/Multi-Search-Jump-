@@ -9,7 +9,7 @@ import {
   closeLastSearchGroup,
   openGroupedSearchTabs,
   setAutoClosePrevious,
-} from "../tabLauncher.js";
+} from "../extension/src/tabLauncher.js";
 
 function createStorageArea(initialValues = {}) {
   const values = { ...initialValues };

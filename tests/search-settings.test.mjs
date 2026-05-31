@@ -9,8 +9,8 @@ import {
   TRANSLATE_CHINESE_TO_ENGLISH_KEY,
   getSearchSettings,
   saveSearchSettings,
-} from "../searchSettings.js";
-import { AUTO_CLOSE_PREVIOUS_KEY } from "../tabLauncher.js";
+} from "../extension/src/searchSettings.js";
+import { AUTO_CLOSE_PREVIOUS_KEY } from "../extension/src/tabLauncher.js";
 
 function createStorageArea(initialValues = {}) {
   const values = { ...initialValues };

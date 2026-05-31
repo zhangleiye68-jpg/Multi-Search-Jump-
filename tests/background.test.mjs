@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 
 describe("background worker", () => {
   it("handles popup open-search requests outside popup lifetime", async () => {
-    const source = await readFile("background.js", "utf8");
+    const source = await readFile("extension/src/background.js", "utf8");
 
     assert.match(source, /chrome\.runtime\.onMessage\.addListener/);
     assert.match(source, /openManagedSearchTabs/);
@@ -14,7 +14,7 @@ describe("background worker", () => {
   });
 
   it("handles selected text through context menu and keyboard command", async () => {
-    const source = await readFile("background.js", "utf8");
+    const source = await readFile("extension/src/background.js", "utf8");
 
     assert.match(source, /resetSelectionContextMenu/);
     assert.match(source, /chrome\.contextMenus\.onClicked\.addListener/);
@@ -25,7 +25,7 @@ describe("background worker", () => {
   });
 
   it("does not log expected shortcut failures on restricted Chrome pages", async () => {
-    const source = await readFile("background.js", "utf8");
+    const source = await readFile("extension/src/background.js", "utf8");
 
     assert.match(source, /canReadSelectionFromTab/);
     assert.match(source, /isRestrictedSelectionError/);

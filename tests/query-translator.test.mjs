@@ -6,7 +6,7 @@ import {
   translateChineseQueryToEnglish,
   translateChineseQueryWithGoogle,
   translateQueryForSearch,
-} from "../queryTranslator.js";
+} from "../extension/src/queryTranslator.js";
 
 describe("query translator", () => {
   it("detects Chinese text before translating", () => {

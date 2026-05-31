@@ -7,15 +7,15 @@ import {
   getSelectionFromActiveTab,
   openSearchForText,
   resetSelectionContextMenu,
-} from "../selectionSearch.js";
+} from "../extension/src/selectionSearch.js";
 import {
   ENABLED_TARGET_IDS_KEY,
   GOOGLE_SEARCH_TYPE_KEY,
   TARGET_ORDER_KEY,
   TRANSLATE_CHINESE_TO_ENGLISH_KEY,
-} from "../searchSettings.js";
-import { SEARCH_HISTORY_KEY } from "../searchHistory.js";
-import { AUTO_CLOSE_PREVIOUS_KEY } from "../tabLauncher.js";
+} from "../extension/src/searchSettings.js";
+import { SEARCH_HISTORY_KEY } from "../extension/src/searchHistory.js";
+import { AUTO_CLOSE_PREVIOUS_KEY } from "../extension/src/tabLauncher.js";
 
 function createStorageArea(initialValues = {}) {
   const values = { ...initialValues };

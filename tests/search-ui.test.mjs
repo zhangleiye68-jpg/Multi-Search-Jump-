@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { initPinButton, initSearchUi } from "../searchUi.js";
+import { initPinButton, initSearchUi } from "../extension/src/searchUi.js";
 
 function createClassList() {
   const values = new Set();
