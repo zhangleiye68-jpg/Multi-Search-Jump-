@@ -5,6 +5,8 @@
   const CAPTION_TEXT_SELECTOR = [
     "[data-e2e*='subtitle' i]",
     "[data-e2e*='caption' i]",
+    "[class*='subtitle' i]",
+    "[class*='caption' i]",
     "track[kind='captions']",
     "track[kind='subtitles']",
   ].join(",");
@@ -80,6 +82,82 @@
 
   function isExcludedDomCaptionNode(node) {
     return Boolean(node?.closest?.(DOM_CAPTION_EXCLUDED_SELECTOR));
+  }
+
+  function getNodeRect(node) {
+    const rect = node?.getBoundingClientRect?.();
+
+    if (!rect) {
+      return null;
+    }
+
+    const left = Number(rect.left ?? 0);
+    const top = Number(rect.top ?? 0);
+    const width = Number(rect.width ?? ((rect.right ?? 0) - left));
+    const height = Number(rect.height ?? ((rect.bottom ?? 0) - top));
+
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
+
+    return {
+      bottom: Number(rect.bottom ?? top + height),
+      height,
+      left,
+      right: Number(rect.right ?? left + width),
+      top,
+      width,
+    };
+  }
+
+  function getActiveVideoRect(root) {
+    let activeRect = null;
+    let activeArea = 0;
+
+    for (const video of root?.querySelectorAll?.("video") ?? []) {
+      const rect = getNodeRect(video);
+
+      if (!rect) {
+        continue;
+      }
+
+      const area = rect.width * rect.height;
+
+      if (area > activeArea) {
+        activeArea = area;
+        activeRect = rect;
+      }
+    }
+
+    return activeRect;
+  }
+
+  function isNodeInsideRect(node, containerRect) {
+    const rect = getNodeRect(node);
+
+    if (!rect || !containerRect) {
+      return false;
+    }
+
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    return (
+      centerX >= containerRect.left &&
+      centerX <= containerRect.right &&
+      centerY >= containerRect.top &&
+      centerY <= containerRect.bottom
+    );
+  }
+
+  function hasChildWithSameText(node, text) {
+    for (const child of node?.children ?? []) {
+      if (normalizeCaptionText(child.textContent) === text) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   function isLikelyDomCaptionText(value) {
@@ -267,6 +345,8 @@
   }
 
   function collectDomCaptionEntries(root, entries, seen) {
+    const activeVideoRect = getActiveVideoRect(root);
+
     for (const node of root?.querySelectorAll?.(CAPTION_TEXT_SELECTOR) ?? []) {
       if (
         isHiddenNode(node) ||
@@ -276,12 +356,22 @@
         continue;
       }
 
+      const tagName = String(node?.tagName ?? "").toLocaleLowerCase();
       const sourceUrl = node.getAttribute?.("src");
 
-      if (sourceUrl) {
+      if (tagName === "track" && sourceUrl) {
         appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.url, sourceUrl);
-      } else if (isLikelyDomCaptionText(node.textContent)) {
-        appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.text, node.textContent);
+        continue;
+      }
+
+      const text = normalizeCaptionText(node.textContent);
+
+      if (
+        isLikelyDomCaptionText(text) &&
+        !hasChildWithSameText(node, text) &&
+        isNodeInsideRect(node, activeVideoRect)
+      ) {
+        appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.text, text);
       }
     }
   }

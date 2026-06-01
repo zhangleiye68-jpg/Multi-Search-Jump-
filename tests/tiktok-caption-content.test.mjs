@@ -11,6 +11,7 @@ function createTextNode(textContent) {
   return {
     hidden: false,
     textContent,
+    children: [],
     closest() {
       return null;
     },
@@ -18,6 +19,74 @@ function createTextNode(textContent) {
       return null;
     },
   };
+}
+
+function createRect(left, top, width, height) {
+  return {
+    bottom: top + height,
+    height,
+    left,
+    right: left + width,
+    top,
+    width,
+  };
+}
+
+function createVideoNode(rect) {
+  return {
+    ...createTextNode(""),
+    tagName: "video",
+    getBoundingClientRect() {
+      return rect;
+    },
+  };
+}
+
+function createVisibleCaptionNode(textContent, rect) {
+  return {
+    ...createTextNode(textContent),
+    tagName: "div",
+    getAttribute(name) {
+      return name === "data-e2e" ? "video-caption" : null;
+    },
+    getBoundingClientRect() {
+      return rect;
+    },
+  };
+}
+
+function createTrackNode(src) {
+  return {
+    ...createTextNode(""),
+    tagName: "track",
+    getAttribute(name) {
+      return name === "src" ? src : null;
+    },
+  };
+}
+
+function createFetchCaption(captionsByUrl) {
+  return async (url) => {
+    if (!Object.hasOwn(captionsByUrl, url)) {
+      throw new Error(`Unexpected subtitle URL: ${url}`);
+    }
+
+    return {
+      ok: true,
+      async text() {
+        return captionsByUrl[url];
+      },
+    };
+  };
+}
+
+function createVtt(text) {
+  return [
+    "WEBVTT",
+    "",
+    "00:00:00.000 --> 00:00:01.000",
+    text,
+  ].join("\n");
 }
 
 function createExtensionTextNode(textContent) {
@@ -29,11 +98,15 @@ function createExtensionTextNode(textContent) {
   };
 }
 
-function createRootHarness({ nodes = [], scripts = [] } = {}) {
+function createRootHarness({ nodes = [], scripts = [], videos = [] } = {}) {
   return {
     querySelectorAll(selector) {
       if (selector === "script") {
         return scripts;
+      }
+
+      if (selector === "video") {
+        return videos;
       }
 
       return nodes;
@@ -141,18 +214,57 @@ function createDeferred() {
 }
 
 describe("TikTok caption content", () => {
-  it("extracts visible caption lines and removes duplicates", async () => {
+  it("extracts track caption lines and removes duplicates", async () => {
     const { extractCaptionLines } = await loadCaptionCore();
     const root = createRootHarness({
       nodes: [
-        createTextNode("Hello world"),
-        createTextNode("Hello world"),
-        createTextNode("Second line\nThird line"),
-        createTextNode("   "),
+        createTrackNode("https://example.test/track.vtt"),
       ],
     });
 
-    assert.deepEqual(await extractCaptionLines(root), ["Hello world", "Second line", "Third line"]);
+    assert.deepEqual(await extractCaptionLines(root, {
+      fetchCaption: createFetchCaption({
+        "https://example.test/track.vtt": [
+          "WEBVTT",
+          "",
+          "00:00:00.000 --> 00:00:01.000",
+          "Hello world",
+          "",
+          "00:00:01.000 --> 00:00:02.000",
+          "Hello world",
+          "",
+          "00:00:02.000 --> 00:00:03.000",
+          "Second line",
+        ].join("\n"),
+      }),
+    }), ["Hello world", "Second line"]);
+  });
+
+  it("does not treat ordinary DOM text as captions", async () => {
+    const { extractCaptionLines } = await loadCaptionCore();
+    const root = createRootHarness({
+      nodes: [
+        createTextNode("qianhe01"),
+        createTextNode("Visible subtitle-looking text"),
+      ],
+    });
+
+    assert.deepEqual(await extractCaptionLines(root), []);
+  });
+
+  it("extracts visible caption text from the active video area", async () => {
+    const { extractCaptionLines } = await loadCaptionCore();
+    const root = createRootHarness({
+      nodes: [
+        createVisibleCaptionNode("qianhe01", createRect(850, 360, 120, 40)),
+        createVisibleCaptionNode("and we had a good time together.", createRect(120, 720, 340, 42)),
+      ],
+      videos: [
+        createVideoNode(createRect(0, 0, 640, 900)),
+      ],
+    });
+
+    assert.deepEqual(await extractCaptionLines(root), ["and we had a good time together."]);
   });
 
   it("extracts caption text from page script data", async () => {
@@ -358,7 +470,7 @@ describe("TikTok caption content", () => {
     }), []);
   });
 
-  it("ignores subtitle info labels and falls back to visible subtitle text", async () => {
+  it("ignores subtitle info labels and ordinary DOM text", async () => {
     const { extractCaptionLines } = await loadCaptionCore();
     const root = createRootHarness({
       nodes: [
@@ -375,7 +487,7 @@ describe("TikTok caption content", () => {
       ],
     });
 
-    assert.deepEqual(await extractCaptionLines(root), ["China and the U S A 🇺🇸 Thank you."]);
+    assert.deepEqual(await extractCaptionLines(root), []);
   });
 
   it("ignores subtitle info labels when no readable subtitle text exists", async () => {
@@ -409,6 +521,9 @@ describe("TikTok caption content", () => {
     const overlay = createCaptionOverlay({
       document,
       getRoot: () => createRootHarness({ nodes }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/fresh.vtt": createVtt("Fresh subtitle"),
+      }),
       navigator: {
         clipboard: {
           async writeText(value) {
@@ -427,7 +542,7 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.panel.hidden, false);
     assert.match(overlay.status.textContent, /未检测到可读取字幕/);
 
-    nodes = [createTextNode("Fresh subtitle")];
+    nodes = [createTrackNode("https://example.test/fresh.vtt")];
     await overlay.refreshButton.click();
 
     assert.equal(overlay.captionList.children[0].children[0].textContent, "Fresh subtitle");
@@ -441,13 +556,17 @@ describe("TikTok caption content", () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();
     const intervalHandlers = [];
-    let nodes = [createTextNode("First subtitle")];
+    let nodes = [createTrackNode("https://example.test/first.vtt")];
     let sourceKey = "video-1";
 
     const overlay = createCaptionOverlay({
       document,
       getRoot: () => createRootHarness({ nodes }),
       getSourceKey: () => sourceKey,
+      fetchCaption: createFetchCaption({
+        "https://example.test/first.vtt": createVtt("First subtitle"),
+        "https://example.test/second.vtt": createVtt("Second subtitle"),
+      }),
       navigator: {
         clipboard: {
           async writeText(value) {
@@ -466,7 +585,7 @@ describe("TikTok caption content", () => {
     await overlay.button.click();
     assert.equal(overlay.captionList.children[0].children[0].textContent, "First subtitle");
 
-    nodes = [createTextNode("Second subtitle")];
+    nodes = [createTrackNode("https://example.test/second.vtt")];
     sourceKey = "video-2";
     await intervalHandlers[0]();
 
@@ -479,13 +598,16 @@ describe("TikTok caption content", () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();
     const intervalHandlers = [];
-    let nodes = [createTextNode("First subtitle")];
+    let nodes = [createTrackNode("https://example.test/first.vtt")];
     let sourceKey = "video-1";
 
     const overlay = createCaptionOverlay({
       document,
       getRoot: () => createRootHarness({ nodes }),
       getSourceKey: () => sourceKey,
+      fetchCaption: createFetchCaption({
+        "https://example.test/first.vtt": createVtt("First subtitle"),
+      }),
       translateCaption: async (line) => `${line} 中文`,
       setInterval: (handler) => {
         intervalHandlers.push(handler);
@@ -509,13 +631,17 @@ describe("TikTok caption content", () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();
     const intervalHandlers = [];
-    let nodes = [createTextNode("First subtitle")];
+    let nodes = [createTrackNode("https://example.test/first.vtt")];
     let sourceKey = "video-1";
 
     const overlay = createCaptionOverlay({
       document,
       getRoot: () => createRootHarness({ nodes }),
       getSourceKey: () => sourceKey,
+      fetchCaption: createFetchCaption({
+        "https://example.test/first.vtt": createVtt("First subtitle"),
+        "https://example.test/delayed.vtt": createVtt("Delayed subtitle"),
+      }),
       translateCaption: async (line) => `${line} 中文`,
       setInterval: (handler) => {
         intervalHandlers.push(handler);
@@ -532,7 +658,7 @@ describe("TikTok caption content", () => {
     await intervalHandlers[0]();
     assert.match(overlay.status.textContent, /未检测到可读取字幕/);
 
-    nodes = [createTextNode("Delayed subtitle")];
+    nodes = [createTrackNode("https://example.test/delayed.vtt")];
     await intervalHandlers[0]();
 
     assert.equal(overlay.captionList.children[0].children[0].textContent, "Delayed subtitle");
@@ -559,6 +685,9 @@ describe("TikTok caption content", () => {
       document,
       getRoot: () => createRootHarness({ nodes, scripts }),
       getSourceKey: () => sourceKey,
+      fetchCaption: createFetchCaption({
+        "https://example.test/second-video.vtt": createVtt("Second video visible subtitle"),
+      }),
       translateCaption: async (line) => `${line} 中文`,
       setInterval: (handler) => {
         intervalHandlers.push(handler);
@@ -570,7 +699,7 @@ describe("TikTok caption content", () => {
     await overlay.button.click();
     assert.equal(overlay.captionList.children[0].children[0].textContent, "First video script subtitle");
 
-    nodes = [createTextNode("Second video visible subtitle")];
+    nodes = [createTrackNode("https://example.test/second-video.vtt")];
     sourceKey = "video-2";
     await intervalHandlers[0]();
 
@@ -581,13 +710,17 @@ describe("TikTok caption content", () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();
     const delayedTranslation = createDeferred();
-    let nodes = [createTextNode("First pending subtitle")];
+    let nodes = [createTrackNode("https://example.test/pending-first.vtt")];
     let sourceKey = "video-1";
 
     const overlay = createCaptionOverlay({
       document,
       getRoot: () => createRootHarness({ nodes }),
       getSourceKey: () => sourceKey,
+      fetchCaption: createFetchCaption({
+        "https://example.test/pending-first.vtt": createVtt("First pending subtitle"),
+        "https://example.test/pending-second.vtt": createVtt("Second subtitle"),
+      }),
       translateCaption: async (line) => {
         if (line === "First pending subtitle") {
           return delayedTranslation.promise;
@@ -600,7 +733,7 @@ describe("TikTok caption content", () => {
 
     const firstRefresh = overlay.button.click();
 
-    nodes = [createTextNode("Second subtitle")];
+    nodes = [createTrackNode("https://example.test/pending-second.vtt")];
     sourceKey = "video-2";
     delayedTranslation.resolve("第一条的中文");
     await firstRefresh;
@@ -618,7 +751,7 @@ describe("TikTok caption content", () => {
       document,
       getRoot: () =>
         createRootHarness({
-          nodes: [createTextNode("Current visible subtitle")],
+          nodes: [createTrackNode("https://example.test/current-visible.vtt")],
           scripts: [
             {
               textContent: JSON.stringify({
@@ -629,6 +762,9 @@ describe("TikTok caption content", () => {
             },
           ],
         }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/current-visible.vtt": createVtt("Current visible subtitle"),
+      }),
       translateCaption: async (line) => `${line} 中文`,
       setInterval: null,
     });
