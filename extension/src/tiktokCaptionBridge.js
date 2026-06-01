@@ -8,6 +8,14 @@
     "/api/creator/item_list/",
     "/api/related/item_list/",
     "/api/search/item/full/",
+    "/api/favorite/item_list",
+    "/api/collection/item_list",
+    "/api/user/collect/item_list/",
+    "/api/following/item_list",
+    "/api/friends/item_list",
+    "/api/explore/item_list/",
+    "/api/challenge/item_list/",
+    "/api/music/item_list",
   ];
 
   function getRequestUrl(input) {

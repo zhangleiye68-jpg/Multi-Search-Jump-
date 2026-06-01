@@ -89,6 +89,25 @@ function createVtt(text) {
   ].join("\n");
 }
 
+function createTikTokRehydrationHtml(itemStruct) {
+  return [
+    "<!doctype html>",
+    "<html>",
+    "<body>",
+    `<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__">${JSON.stringify({
+      __DEFAULT_SCOPE__: {
+        "webapp.video-detail": {
+          itemInfo: {
+            itemStruct,
+          },
+        },
+      },
+    })}</script>`,
+    "</body>",
+    "</html>",
+  ].join("");
+}
+
 function createExtensionTextNode(textContent) {
   return {
     ...createTextNode(textContent),
@@ -436,6 +455,99 @@ describe("TikTok caption content", () => {
       currentVideoId: "1234567890",
       fetchCaption,
     }), ["Current API subtitle."]);
+  });
+
+  it("prefers original language WebVTT subtitles from captured TikTok API data", async () => {
+    const {
+      extractCaptionLines,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const root = createRootHarness();
+
+    ingestTikTokApiPayload({
+      itemInfo: {
+        itemStruct: {
+          id: "1234567890",
+          textLanguage: "zh-Hans",
+          video: {
+            claInfo: {
+              originalLanguageInfo: {
+                language: "eng-US",
+              },
+            },
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "zh-Hans",
+                Url: "https://example.test/chinese.vtt",
+              },
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/english.vtt",
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    assert.deepEqual(await extractCaptionLines(root, {
+      currentVideoId: "1234567890",
+      fetchCaption: createFetchCaption({
+        "https://example.test/english.vtt": createVtt("Original English subtitle."),
+      }),
+    }), ["Original English subtitle."]);
+  });
+
+  it("reads current video subtitles from TikTok rehydration detail data", async () => {
+    const { extractCaptionLines } = await loadCaptionCore();
+    const root = createRootHarness();
+
+    const fetchCaption = async (url) => {
+      if (url === "https://www.tiktok.com/@user/video/1234567890") {
+        return {
+          ok: true,
+          async text() {
+            return createTikTokRehydrationHtml({
+              id: "1234567890",
+              textLanguage: "zh-Hans",
+              video: {
+                claInfo: {
+                  originalLanguageInfo: {
+                    language: "eng-US",
+                  },
+                },
+                subtitleInfos: [
+                  {
+                    Format: "webvtt",
+                    LanguageCodeName: "eng-US",
+                    Url: "https://example.test/detail-english.vtt",
+                  },
+                ],
+              },
+            });
+          },
+        };
+      }
+
+      if (url === "https://example.test/detail-english.vtt") {
+        return {
+          ok: true,
+          async text() {
+            return createVtt("Detail English subtitle.");
+          },
+        };
+      }
+
+      throw new Error(`Unexpected URL: ${url}`);
+    };
+
+    assert.deepEqual(await extractCaptionLines(root, {
+      currentPageUrl: "https://www.tiktok.com/@user/video/1234567890",
+      currentVideoId: "1234567890",
+      fetchCaption,
+    }), ["Detail English subtitle."]);
   });
 
   it("does not use captured TikTok API subtitles from a different video", async () => {

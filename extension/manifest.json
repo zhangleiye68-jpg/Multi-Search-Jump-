@@ -75,6 +75,9 @@
     "https://translate.googleapis.com/",
     "https://*.tiktok.com/*",
     "https://*.tiktokcdn.com/*",
+    "https://*.tiktokcdn-us.com/*",
+    "https://*.tiktokcdn-eu.com/*",
+    "https://*.tiktokv.com/*",
     "https://*.byteoversea.com/*",
     "https://*.byteimg.com/*",
     "https://*.ibyteimg.com/*"

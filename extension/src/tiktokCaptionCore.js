@@ -29,6 +29,7 @@
     url: "url",
   });
   const TIKTOK_API_MESSAGE_TYPE = "msj-tiktok-api-response";
+  const TIKTOK_REHYDRATION_SCRIPT_ID = "__UNIVERSAL_DATA_FOR_REHYDRATION__";
   const SUBTITLE_FILE_IGNORED_LINE_PATTERN =
     /^(?:WEBVTT|NOTE\b|STYLE\b|REGION\b|\d+|[\d:,.]+\s+-->\s+[\d:,.]+.*)$/u;
   const DOM_CAPTION_EXCLUDED_SELECTOR = [
@@ -216,6 +217,12 @@
     );
   }
 
+  function isWebVttSubtitleEntry(value) {
+    const format = normalizeCaptionText(value?.Format || value?.format);
+
+    return !format || format.toLocaleLowerCase() === "webvtt";
+  }
+
   function normalizeLanguageKey(value) {
     const language = getEntryLanguage({ languageCode: value })
       .toLocaleLowerCase()
@@ -256,14 +263,40 @@
       return "";
     }
 
-    const targetLanguage = item.textLanguage || item.language || "";
+    const targetLanguages = [
+      item.video.claInfo?.originalLanguageInfo?.language,
+      item.video.claInfo?.originalLanguageInfo?.languageCode,
+      item.textLanguage,
+      item.language,
+    ].filter(Boolean);
     const captionInfos = item.video.claInfo?.captionInfos ?? [];
     const subtitleInfos = item.video.subtitleInfos ?? [];
     const captionInfoList = Array.isArray(captionInfos) ? captionInfos : [];
     const subtitleInfoList = Array.isArray(subtitleInfos) ? subtitleInfos : [];
+    const subtitleLists = [captionInfoList, subtitleInfoList];
 
-    for (const entry of captionInfoList) {
-      if (isMatchingSubtitleLanguage(entry, targetLanguage)) {
+    for (const targetLanguage of targetLanguages) {
+      for (const subtitleList of subtitleLists) {
+        for (const entry of subtitleList) {
+          if (!isWebVttSubtitleEntry(entry) || !isMatchingSubtitleLanguage(entry, targetLanguage)) {
+            continue;
+          }
+
+          const url = getSubtitleEntryUrl(entry);
+
+          if (url) {
+            return url;
+          }
+        }
+      }
+    }
+
+    for (const subtitleList of subtitleLists) {
+      for (const entry of subtitleList) {
+        if (!isWebVttSubtitleEntry(entry) || entry?.variant !== "default") {
+          continue;
+        }
+
         const url = getSubtitleEntryUrl(entry);
 
         if (url) {
@@ -272,8 +305,12 @@
       }
     }
 
-    for (const entry of subtitleInfoList) {
-      if (isMatchingSubtitleLanguage(entry, targetLanguage)) {
+    for (const subtitleList of subtitleLists) {
+      for (const entry of subtitleList) {
+        if (!isWebVttSubtitleEntry(entry)) {
+          continue;
+        }
+
         const url = getSubtitleEntryUrl(entry);
 
         if (url) {
@@ -282,17 +319,7 @@
       }
     }
 
-    for (const entry of captionInfoList) {
-      if (entry?.variant === "default") {
-        const url = getSubtitleEntryUrl(entry);
-
-        if (url) {
-          return url;
-        }
-      }
-    }
-
-    return getSubtitleEntryUrl(captionInfoList[0]) || getSubtitleEntryUrl(subtitleInfoList[0]);
+    return "";
   }
 
   function collectTikTokItems(value, items, seen = new WeakSet()) {
@@ -469,6 +496,76 @@
     }
   }
 
+  function decodeHtmlText(value) {
+    return String(value ?? "")
+      .replace(/&quot;/giu, "\"")
+      .replace(/&#34;/gu, "\"")
+      .replace(/&amp;/giu, "&")
+      .replace(/&lt;/giu, "<")
+      .replace(/&gt;/giu, ">");
+  }
+
+  function getTikTokVideoDetailItem(payload) {
+    return (
+      payload?.__DEFAULT_SCOPE__?.["webapp.video-detail"]?.itemInfo?.itemStruct ||
+      payload?.["webapp.video-detail"]?.itemInfo?.itemStruct ||
+      payload?.itemInfo?.itemStruct ||
+      payload?.itemStruct ||
+      null
+    );
+  }
+
+  function parseTikTokRehydrationItem(text) {
+    const payload = parseScriptJson(text);
+
+    if (payload) {
+      return getTikTokVideoDetailItem(payload);
+    }
+
+    const scriptPattern = new RegExp(
+      `<script\\b(?=[^>]*\\bid=["']${TIKTOK_REHYDRATION_SCRIPT_ID}["'])[^>]*>([\\s\\S]*?)<\\/script>`,
+      "iu",
+    );
+    const scriptMatch = String(text ?? "").match(scriptPattern);
+    const scriptPayload = parseScriptJson(decodeHtmlText(scriptMatch?.[1] ?? ""));
+
+    return getTikTokVideoDetailItem(scriptPayload);
+  }
+
+  async function collectTikTokDetailCaptionEntries(currentPageUrl, currentVideoId, fetchCaption, entries, seen) {
+    if (!currentPageUrl || !currentVideoId || !fetchCaption) {
+      return;
+    }
+
+    try {
+      const response = await fetchCaption(currentPageUrl);
+
+      if (!response?.ok || !response.text) {
+        return;
+      }
+
+      const item = parseTikTokRehydrationItem(await response.text());
+
+      if (!item) {
+        return;
+      }
+
+      const itemId = getTikTokItemId(item);
+
+      if (currentVideoId && itemId && itemId !== currentVideoId) {
+        return;
+      }
+
+      const subtitleUrl = findSubtitleUrlFromTikTokItem(item);
+
+      if (subtitleUrl) {
+        appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.url, subtitleUrl);
+      }
+    } catch {
+      // Detail-page probing is a best-effort official subtitle lookup.
+    }
+  }
+
   function collectScriptCaptionEntries(root, entries, seen) {
     for (const script of root?.querySelectorAll?.("script") ?? []) {
       const payload = parseScriptJson(script.textContent);
@@ -569,6 +666,7 @@
     root = document,
     {
       currentVideoId = "",
+      currentPageUrl = "",
       fetchCaption = getDefaultFetchApi(),
       ignoreScriptCaptions = false,
       preferDomCaptions = false,
@@ -584,6 +682,25 @@
 
       if (apiLines.length > 0) {
         return apiLines;
+      }
+    }
+
+    const detailEntries = [];
+    const detailSeen = new Set();
+
+    await collectTikTokDetailCaptionEntries(
+      currentPageUrl,
+      normalizeCaptionText(currentVideoId),
+      fetchCaption,
+      detailEntries,
+      detailSeen,
+    );
+
+    if (detailEntries.length > 0) {
+      const detailLines = await resolveCaptionEntries(detailEntries, fetchCaption);
+
+      if (detailLines.length > 0) {
+        return detailLines;
       }
     }
 
@@ -681,6 +798,14 @@
     const separatorIndex = normalizedSourceKey.lastIndexOf("|");
 
     return separatorIndex >= 0 && normalizeCaptionText(normalizedSourceKey.slice(separatorIndex + 1)) !== "";
+  }
+
+  function getPageUrlFromSourceKey(sourceKey) {
+    const text = String(sourceKey ?? "");
+    const separatorIndex = text.lastIndexOf("|");
+    const pageUrl = separatorIndex >= 0 ? text.slice(0, separatorIndex) : text;
+
+    return normalizeCaptionText(pageUrl);
   }
 
   function extractTikTokVideoId(value) {
@@ -852,6 +977,7 @@
 
       try {
         const nextLines = await extractCaptionLines(getRoot(), {
+          currentPageUrl: getPageUrlFromSourceKey(nextSourceKey),
           currentVideoId: extractTikTokVideoId(nextSourceKey),
           fetchCaption,
           ignoreScriptCaptions: shouldIgnoreScriptCaptions,
