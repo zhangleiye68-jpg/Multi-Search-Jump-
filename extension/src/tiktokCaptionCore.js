@@ -30,6 +30,7 @@
   });
   const TIKTOK_API_MESSAGE_TYPE = "msj-tiktok-api-response";
   const TIKTOK_REHYDRATION_SCRIPT_ID = "__UNIVERSAL_DATA_FOR_REHYDRATION__";
+  const TIKTOK_API_HINT_ITEM_LIMIT = 16;
   const SUBTITLE_FILE_IGNORED_LINE_PATTERN =
     /^(?:WEBVTT|NOTE\b|STYLE\b|REGION\b|\d+|[\d:,.]+\s+-->\s+[\d:,.]+.*)$/u;
   const DOM_CAPTION_EXCLUDED_SELECTOR = [
@@ -68,6 +69,12 @@
       seen.add(key);
       lines.push(line);
     }
+  }
+
+  function normalizeCaptionMatchKey(value) {
+    return normalizeCaptionText(value)
+      .toLocaleLowerCase()
+      .replace(/[^\p{Letter}\p{Number}]+/gu, "");
   }
 
   function isHiddenNode(node) {
@@ -133,6 +140,38 @@
     return activeRect;
   }
 
+  function getActiveVideoLink(root) {
+    const activeVideoRect = getActiveVideoRect(root);
+    let closestHref = "";
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    if (!activeVideoRect) {
+      return "";
+    }
+
+    for (const link of root?.querySelectorAll?.("a[href*='/video/']") ?? []) {
+      const href = normalizeCaptionText(link?.href || link?.getAttribute?.("href") || "");
+      const rect = getNodeRect(link);
+
+      if (!href || !rect) {
+        continue;
+      }
+
+      if (isNodeInsideRect(link, activeVideoRect)) {
+        return href;
+      }
+
+      const distance = getRectDistance(activeVideoRect, rect);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestHref = href;
+      }
+    }
+
+    return closestHref;
+  }
+
   function isNodeInsideRect(node, containerRect) {
     const rect = getNodeRect(node);
 
@@ -149,6 +188,19 @@
       centerY >= containerRect.top &&
       centerY <= containerRect.bottom
     );
+  }
+
+  function getRectDistance(leftRect, rightRect) {
+    if (!leftRect || !rightRect) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    const leftCenterX = leftRect.left + leftRect.width / 2;
+    const leftCenterY = leftRect.top + leftRect.height / 2;
+    const rightCenterX = rightRect.left + rightRect.width / 2;
+    const rightCenterY = rightRect.top + rightRect.height / 2;
+
+    return Math.hypot(leftCenterX - rightCenterX, leftCenterY - rightCenterY);
   }
 
   function hasChildWithSameText(node, text) {
@@ -322,6 +374,35 @@
     return "";
   }
 
+  function getSubtitleUrlsFromTikTokItem(item) {
+    if (!item?.video) {
+      return [];
+    }
+
+    const urls = [];
+    const seen = new Set();
+    const captionInfos = item.video.claInfo?.captionInfos ?? [];
+    const subtitleInfos = item.video.subtitleInfos ?? [];
+
+    for (const entry of [
+      ...(Array.isArray(captionInfos) ? captionInfos : []),
+      ...(Array.isArray(subtitleInfos) ? subtitleInfos : []),
+    ]) {
+      if (!isWebVttSubtitleEntry(entry)) {
+        continue;
+      }
+
+      const url = getSubtitleEntryUrl(entry);
+
+      if (url && !seen.has(url)) {
+        seen.add(url);
+        urls.push(url);
+      }
+    }
+
+    return urls;
+  }
+
   function collectTikTokItems(value, items, seen = new WeakSet()) {
     if (!value || typeof value !== "object") {
       return;
@@ -371,7 +452,47 @@
     }
   }
 
-  function collectDomCaptionEntries(root, entries, seen) {
+  async function collectTikTokApiCaptionEntriesByHints(root, fetchCaption, entries, seen) {
+    if (!fetchCaption || tikTokApiItemCache.size === 0) {
+      return;
+    }
+
+    const hintKeys = collectDomCaptionHintLines(root)
+      .map(normalizeCaptionMatchKey)
+      .filter(Boolean);
+
+    if (hintKeys.length === 0) {
+      return;
+    }
+
+    const recentItems = Array.from(tikTokApiItemCache.values())
+      .slice(-TIKTOK_API_HINT_ITEM_LIMIT)
+      .reverse();
+
+    for (const item of recentItems) {
+      const preferredSubtitleUrl = findSubtitleUrlFromTikTokItem(item);
+
+      if (!preferredSubtitleUrl) {
+        continue;
+      }
+
+      for (const subtitleUrl of getSubtitleUrlsFromTikTokItem(item)) {
+        const subtitleLines = await fetchSubtitleLines(subtitleUrl, fetchCaption);
+        const hasHintLine = subtitleLines.some((line) => {
+          const lineKey = normalizeCaptionMatchKey(line);
+
+          return lineKey && hintKeys.some((hintKey) => lineKey.includes(hintKey) || hintKey.includes(lineKey));
+        });
+
+        if (hasHintLine) {
+          appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.url, preferredSubtitleUrl);
+          return;
+        }
+      }
+    }
+  }
+
+  function collectDomCaptionEntries(root, entries, seen, { allowText = true } = {}) {
     const activeVideoRect = getActiveVideoRect(root);
 
     for (const node of root?.querySelectorAll?.(CAPTION_TEXT_SELECTOR) ?? []) {
@@ -394,6 +515,7 @@
       const text = normalizeCaptionText(node.textContent);
 
       if (
+        allowText &&
         isLikelyDomCaptionText(text) &&
         !hasChildWithSameText(node, text) &&
         isNodeInsideRect(node, activeVideoRect)
@@ -401,6 +523,23 @@
         appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.text, text);
       }
     }
+  }
+
+  function collectDomCaptionHintLines(root) {
+    const hintEntries = [];
+    const hintSeen = new Set();
+    const lines = [];
+    const lineSeen = new Set();
+
+    collectDomCaptionEntries(root, hintEntries, hintSeen, { allowText: true });
+
+    for (const entry of hintEntries) {
+      if (entry.type === SUBTITLE_ENTRY_TYPES.text) {
+        appendUniqueLine(lines, lineSeen, entry.value);
+      }
+    }
+
+    return lines;
   }
 
   function getStringField(value, keys) {
@@ -644,11 +783,11 @@
     return lines;
   }
 
-  function collectDomCaptionLines(root, fetchCaption) {
+  function collectDomCaptionLines(root, fetchCaption, { allowText = true } = {}) {
     const domEntries = [];
     const domSeen = new Set();
 
-    collectDomCaptionEntries(root, domEntries, domSeen);
+    collectDomCaptionEntries(root, domEntries, domSeen, { allowText });
 
     return resolveCaptionEntries(domEntries, fetchCaption);
   }
@@ -668,6 +807,7 @@
       currentVideoId = "",
       currentPageUrl = "",
       fetchCaption = getDefaultFetchApi(),
+      allowDomTextCaptions = true,
       ignoreScriptCaptions = false,
       preferDomCaptions = false,
     } = {},
@@ -704,8 +844,25 @@
       }
     }
 
+    if (!currentVideoId) {
+      const hintEntries = [];
+      const hintSeen = new Set();
+
+      await collectTikTokApiCaptionEntriesByHints(root, fetchCaption, hintEntries, hintSeen);
+
+      if (hintEntries.length > 0) {
+        const hintLines = await resolveCaptionEntries(hintEntries, fetchCaption);
+
+        if (hintLines.length > 0) {
+          return hintLines;
+        }
+      }
+    }
+
     if (preferDomCaptions) {
-      const domLines = await collectDomCaptionLines(root, fetchCaption);
+      const domLines = await collectDomCaptionLines(root, fetchCaption, {
+        allowText: allowDomTextCaptions,
+      });
 
       if (domLines.length > 0) {
         return domLines;
@@ -720,7 +877,9 @@
       }
     }
 
-    return preferDomCaptions ? [] : collectDomCaptionLines(root, fetchCaption);
+    return preferDomCaptions ? [] : collectDomCaptionLines(root, fetchCaption, {
+      allowText: allowDomTextCaptions,
+    });
   }
 
   async function translateEnglishCaptionToChinese(line, fetchApi = getDefaultFetchApi()) {
@@ -791,6 +950,13 @@
     );
 
     return `${locationHref}|${videoSource}`;
+  }
+
+  function getCaptionSourceKeyFromRoot(root, documentRef) {
+    const baseSourceKey = getCaptionSourceKey(documentRef);
+    const activeVideoLink = getActiveVideoLink(root);
+
+    return activeVideoLink ? `${baseSourceKey}|${activeVideoLink}` : baseSourceKey;
   }
 
   function hasConcreteVideoSourceKey(sourceKey) {
@@ -920,7 +1086,7 @@
   function createCaptionOverlay({
     document: documentRef = document,
     getRoot = () => documentRef,
-    getSourceKey = () => getCaptionSourceKey(documentRef),
+    getSourceKey = () => getCaptionSourceKeyFromRoot(getRoot(), documentRef),
     navigator: navigatorRef = navigator,
     fetchCaption = getDefaultFetchApi(),
     setInterval: setIntervalRef = getDefaultSetInterval(),
@@ -976,10 +1142,12 @@
       setStatus("正在读取字幕。");
 
       try {
+        const currentVideoId = extractTikTokVideoId(nextSourceKey);
         const nextLines = await extractCaptionLines(getRoot(), {
           currentPageUrl: getPageUrlFromSourceKey(nextSourceKey),
-          currentVideoId: extractTikTokVideoId(nextSourceKey),
+          currentVideoId,
           fetchCaption,
+          allowDomTextCaptions: Boolean(currentVideoId),
           ignoreScriptCaptions: shouldIgnoreScriptCaptions,
           preferDomCaptions: true,
         });

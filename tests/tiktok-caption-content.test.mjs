@@ -42,6 +42,20 @@ function createVideoNode(rect) {
   };
 }
 
+function createVideoLinkNode(href, rect) {
+  return {
+    ...createTextNode(""),
+    href,
+    tagName: "a",
+    getAttribute(name) {
+      return name === "href" ? href : null;
+    },
+    getBoundingClientRect() {
+      return rect;
+    },
+  };
+}
+
 function createVisibleCaptionNode(textContent, rect) {
   return {
     ...createTextNode(textContent),
@@ -117,7 +131,7 @@ function createExtensionTextNode(textContent) {
   };
 }
 
-function createRootHarness({ nodes = [], scripts = [], videos = [] } = {}) {
+function createRootHarness({ links = [], nodes = [], scripts = [], videos = [] } = {}) {
   return {
     querySelectorAll(selector) {
       if (selector === "script") {
@@ -126,6 +140,10 @@ function createRootHarness({ nodes = [], scripts = [], videos = [] } = {}) {
 
       if (selector === "video") {
         return videos;
+      }
+
+      if (selector === "a[href*='/video/']") {
+        return links;
       }
 
       return nodes;
@@ -966,6 +984,308 @@ describe("TikTok caption content", () => {
     await overlay.refreshCaptions();
 
     assert.equal(overlay.captionList.children[0].children[0].textContent, "Overlay API subtitle.");
+  });
+
+  it("renders subtitles in the recommendation feed by reading the active video link", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "1234567890",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/recommendation.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          links: [
+            createVideoLinkNode(
+              "https://www.tiktok.com/@creator/video/1234567890",
+              createRect(0, 0, 640, 900),
+            ),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/recommendation.vtt": createVtt("Recommendation feed subtitle."),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Recommendation feed subtitle.");
+    assert.equal(overlay.captionList.children[0].children[1].textContent, "Recommendation feed subtitle. 中文");
+  });
+
+  it("automatically refreshes recommendation feed subtitles when the active video link changes", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const intervalHandlers = [];
+    let activeVideoId = "1234567890";
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "1234567890",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/recommendation-first.vtt",
+              },
+            ],
+          },
+        },
+        {
+          id: "2234567890",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/recommendation-second.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          links: [
+            createVideoLinkNode(
+              `https://www.tiktok.com/@creator/video/${activeVideoId}`,
+              createRect(0, 0, 640, 900),
+            ),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/recommendation-first.vtt": createVtt("First recommendation subtitle."),
+        "https://example.test/recommendation-second.vtt": createVtt("Second recommendation subtitle."),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: (handler) => {
+        intervalHandlers.push(handler);
+        return intervalHandlers.length;
+      },
+      clearInterval: () => {},
+    });
+
+    await overlay.button.click();
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "First recommendation subtitle.");
+
+    activeVideoId = "2234567890";
+    await intervalHandlers[0]();
+
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Second recommendation subtitle.");
+    assert.equal(overlay.captionList.children[0].children[1].textContent, "Second recommendation subtitle. 中文");
+  });
+
+  it("renders recommendation subtitles when the current video link is next to the video", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "3234567890",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/recommendation-side-link.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          links: [
+            createVideoLinkNode(
+              "https://www.tiktok.com/@creator/video/3234567890",
+              createRect(680, 120, 260, 80),
+            ),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/recommendation-side-link.vtt": createVtt("Side link recommendation subtitle."),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Side link recommendation subtitle.");
+  });
+
+  it("uses visible recommendation captions as a hint to find the full cached WebVTT subtitles", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "4234567890",
+          textLanguage: "zh-Hans",
+          video: {
+            claInfo: {
+              originalLanguageInfo: {
+                language: "eng-US",
+              },
+            },
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/recommendation-original.vtt",
+              },
+              {
+                Format: "webvtt",
+                LanguageCodeName: "zh-Hans",
+                Url: "https://example.test/recommendation-translated.vtt",
+              },
+            ],
+          },
+        },
+        {
+          id: "5234567890",
+          textLanguage: "zh-Hans",
+          video: {
+            claInfo: {
+              originalLanguageInfo: {
+                language: "eng-US",
+              },
+            },
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/other-original.vtt",
+              },
+              {
+                Format: "webvtt",
+                LanguageCodeName: "zh-Hans",
+                Url: "https://example.test/other-translated.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes: [
+            createVisibleCaptionNode("他们想要不叫的双运球", createRect(100, 780, 360, 42)),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/recommendation-original.vtt": [
+          "WEBVTT",
+          "",
+          "00:00:00.000 --> 00:00:01.000",
+          "They wanted the double dribble.",
+          "",
+          "00:00:01.000 --> 00:00:02.000",
+          "The block wins the game.",
+        ].join("\n"),
+        "https://example.test/recommendation-translated.vtt": [
+          "WEBVTT",
+          "",
+          "00:00:00.000 --> 00:00:01.000",
+          "他们想要不叫的双运球",
+        ].join("\n"),
+        "https://example.test/other-original.vtt": createVtt("Other original subtitle."),
+        "https://example.test/other-translated.vtt": createVtt("其他中文字幕"),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children.length, 2);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "They wanted the double dribble.");
+    assert.equal(overlay.captionList.children[1].children[0].textContent, "The block wins the game.");
+  });
+
+  it("does not render a single visible recommendation caption as a complete subtitle list", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes: [
+            createVisibleCaptionNode("Only the visible cue", createRect(100, 780, 360, 42)),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children.length, 0);
+    assert.match(overlay.status.textContent, /未检测到可读取字幕/);
   });
 
   it("renders each subtitle followed by its Chinese translation", async () => {
