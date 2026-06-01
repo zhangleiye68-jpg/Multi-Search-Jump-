@@ -25,7 +25,13 @@ describe("extension manifest", () => {
         matches: ["https://www.tiktok.com/*"],
         css: ["src/tiktokCaptionOverlay.css"],
         js: ["src/tiktokCaptionCore.js", "src/tiktokCaptionContent.js"],
-        run_at: "document_idle",
+        run_at: "document_start",
+      },
+      {
+        matches: ["https://www.tiktok.com/*"],
+        js: ["src/tiktokCaptionBridge.js"],
+        run_at: "document_start",
+        world: "MAIN",
       },
     ]);
     assert.deepEqual(manifest.permissions, [
@@ -37,7 +43,14 @@ describe("extension manifest", () => {
       "activeTab",
       "scripting",
     ]);
-    assert.deepEqual(manifest.host_permissions, ["https://translate.googleapis.com/"]);
+    assert.deepEqual(manifest.host_permissions, [
+      "https://translate.googleapis.com/",
+      "https://*.tiktok.com/*",
+      "https://*.tiktokcdn.com/*",
+      "https://*.byteoversea.com/*",
+      "https://*.byteimg.com/*",
+      "https://*.ibyteimg.com/*",
+    ]);
     assert.deepEqual(manifest.commands["search-selected-text"], {
       suggested_key: {
         default: "Alt+Shift+S",

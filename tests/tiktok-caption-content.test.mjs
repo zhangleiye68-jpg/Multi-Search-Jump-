@@ -280,6 +280,84 @@ describe("TikTok caption content", () => {
     ]);
   });
 
+  it("reads current video subtitles from captured TikTok API data", async () => {
+    const {
+      extractCaptionLines,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const root = createRootHarness();
+
+    ingestTikTokApiPayload({
+      itemInfo: {
+        itemStruct: {
+          id: "1234567890",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [
+              {
+                languageCode: "eng-US",
+                Url: "https://example.test/current-video.vtt",
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const fetchCaption = async (url) => {
+      assert.equal(url, "https://example.test/current-video.vtt");
+
+      return {
+        ok: true,
+        async text() {
+          return [
+            "WEBVTT",
+            "",
+            "00:00:00.000 --> 00:00:01.000",
+            "Current API subtitle.",
+          ].join("\n");
+        },
+      };
+    };
+
+    assert.deepEqual(await extractCaptionLines(root, {
+      currentVideoId: "1234567890",
+      fetchCaption,
+    }), ["Current API subtitle."]);
+  });
+
+  it("does not use captured TikTok API subtitles from a different video", async () => {
+    const {
+      extractCaptionLines,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const root = createRootHarness();
+
+    ingestTikTokApiPayload({
+      itemInfo: {
+        itemStruct: {
+          id: "9999999999",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [
+              {
+                languageCode: "eng-US",
+                Url: "https://example.test/wrong-video.vtt",
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    assert.deepEqual(await extractCaptionLines(root, {
+      currentVideoId: "1234567890",
+      fetchCaption: async () => {
+        throw new Error("Should not fetch subtitles for another video");
+      },
+    }), []);
+  });
+
   it("ignores subtitle info labels and falls back to visible subtitle text", async () => {
     const { extractCaptionLines } = await loadCaptionCore();
     const root = createRootHarness({
@@ -586,6 +664,60 @@ describe("TikTok caption content", () => {
 
     assert.equal(overlay.captionList.children.length, 0);
     assert.match(overlay.status.textContent, /未检测到可读取字幕/);
+  });
+
+  it("renders subtitles from captured TikTok API data for the current video", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemInfo: {
+        itemStruct: {
+          id: "1234567890",
+          textLanguage: "eng-US",
+          video: {
+            claInfo: {
+              captionInfos: [
+                {
+                  languageCode: "eng-US",
+                  url: "https://example.test/current-overlay.vtt",
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => "https://www.tiktok.com/@user/video/1234567890|blob:https://www.tiktok.com/current",
+      fetchCaption: async (url) => {
+        assert.equal(url, "https://example.test/current-overlay.vtt");
+
+        return {
+          ok: true,
+          async text() {
+            return [
+              "WEBVTT",
+              "",
+              "00:00:00.000 --> 00:00:01.000",
+              "Overlay API subtitle.",
+            ].join("\n");
+          },
+        };
+      },
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Overlay API subtitle.");
   });
 
   it("renders each subtitle followed by its Chinese translation", async () => {

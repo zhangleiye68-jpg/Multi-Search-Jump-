@@ -26,6 +26,7 @@
     text: "text",
     url: "url",
   });
+  const TIKTOK_API_MESSAGE_TYPE = "msj-tiktok-api-response";
   const SUBTITLE_FILE_IGNORED_LINE_PATTERN =
     /^(?:WEBVTT|NOTE\b|STYLE\b|REGION\b|\d+|[\d:,.]+\s+-->\s+[\d:,.]+.*)$/u;
   const DOM_CAPTION_EXCLUDED_SELECTOR = [
@@ -38,6 +39,7 @@
     "[data-e2e*='video-desc' i]",
     "[data-e2e*='music' i]",
   ].join(",");
+  const tikTokApiItemCache = new Map();
 
   function normalizeCaptionText(value) {
     return String(value ?? "")
@@ -97,6 +99,171 @@
 
     seen.add(key);
     entries.push({ type, value: entryValue });
+  }
+
+  function getSubtitleEntryUrl(value) {
+    if (!value || typeof value !== "object") {
+      return "";
+    }
+
+    return (
+      value.url ||
+      value.Url ||
+      value.src ||
+      value.urlList?.[0] ||
+      value.UrlList?.[0] ||
+      ""
+    );
+  }
+
+  function getTikTokItemId(item) {
+    return normalizeCaptionText(
+      item?.id ||
+        item?.itemId ||
+        item?.item_id ||
+        item?.awemeId ||
+        item?.aweme_id ||
+        item?.video?.id ||
+        "",
+    );
+  }
+
+  function getEntryLanguage(value) {
+    return normalizeCaptionText(
+      value?.languageCode ||
+        value?.language ||
+        value?.LanguageCodeName ||
+        value?.lang ||
+        "",
+    );
+  }
+
+  function normalizeLanguageKey(value) {
+    const language = getEntryLanguage({ languageCode: value })
+      .toLocaleLowerCase()
+      .replace(/_/gu, "-");
+
+    if (language.startsWith("eng")) {
+      return "en";
+    }
+
+    if (language.startsWith("cmn") || language.startsWith("zho")) {
+      return "zh";
+    }
+
+    return language.split("-")[0] || language;
+  }
+
+  function isMatchingSubtitleLanguage(entry, targetLanguage) {
+    const entryLanguage = getEntryLanguage(entry);
+    const target = normalizeCaptionText(targetLanguage);
+
+    if (!entryLanguage || !target) {
+      return false;
+    }
+
+    const normalizedEntry = entryLanguage.toLocaleLowerCase();
+    const normalizedTarget = target.toLocaleLowerCase();
+
+    return (
+      normalizedEntry === normalizedTarget ||
+      normalizedEntry.startsWith(normalizedTarget) ||
+      normalizedTarget.startsWith(normalizedEntry) ||
+      normalizeLanguageKey(normalizedEntry) === normalizeLanguageKey(normalizedTarget)
+    );
+  }
+
+  function findSubtitleUrlFromTikTokItem(item) {
+    if (!item?.video) {
+      return "";
+    }
+
+    const targetLanguage = item.textLanguage || item.language || "";
+    const captionInfos = item.video.claInfo?.captionInfos ?? [];
+    const subtitleInfos = item.video.subtitleInfos ?? [];
+    const captionInfoList = Array.isArray(captionInfos) ? captionInfos : [];
+    const subtitleInfoList = Array.isArray(subtitleInfos) ? subtitleInfos : [];
+
+    for (const entry of captionInfoList) {
+      if (isMatchingSubtitleLanguage(entry, targetLanguage)) {
+        const url = getSubtitleEntryUrl(entry);
+
+        if (url) {
+          return url;
+        }
+      }
+    }
+
+    for (const entry of subtitleInfoList) {
+      if (isMatchingSubtitleLanguage(entry, targetLanguage)) {
+        const url = getSubtitleEntryUrl(entry);
+
+        if (url) {
+          return url;
+        }
+      }
+    }
+
+    for (const entry of captionInfoList) {
+      if (entry?.variant === "default") {
+        const url = getSubtitleEntryUrl(entry);
+
+        if (url) {
+          return url;
+        }
+      }
+    }
+
+    return getSubtitleEntryUrl(captionInfoList[0]) || getSubtitleEntryUrl(subtitleInfoList[0]);
+  }
+
+  function collectTikTokItems(value, items, seen = new WeakSet()) {
+    if (!value || typeof value !== "object") {
+      return;
+    }
+
+    if (seen.has(value)) {
+      return;
+    }
+
+    seen.add(value);
+
+    if (!Array.isArray(value) && value.video && getTikTokItemId(value)) {
+      items.push(value);
+    }
+
+    if (value.itemStruct && typeof value.itemStruct === "object") {
+      collectTikTokItems(value.itemStruct, items, seen);
+    }
+
+    for (const nextValue of Array.isArray(value) ? value : Object.values(value)) {
+      collectTikTokItems(nextValue, items, seen);
+    }
+  }
+
+  function ingestTikTokApiPayload(payload) {
+    const items = [];
+
+    collectTikTokItems(payload, items);
+
+    for (const item of items) {
+      const itemId = getTikTokItemId(item);
+
+      if (itemId) {
+        tikTokApiItemCache.set(itemId, item);
+      }
+    }
+
+    return items.length;
+  }
+
+  function collectTikTokApiCaptionEntries(currentVideoId, entries, seen) {
+    const item = tikTokApiItemCache.get(normalizeCaptionText(currentVideoId));
+    const subtitleUrl = findSubtitleUrlFromTikTokItem(item);
+
+    if (subtitleUrl) {
+      appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.url, subtitleUrl);
+    }
   }
 
   function collectDomCaptionEntries(root, entries, seen) {
@@ -311,11 +478,25 @@
   async function extractCaptionLines(
     root = document,
     {
+      currentVideoId = "",
       fetchCaption = getDefaultFetchApi(),
       ignoreScriptCaptions = false,
       preferDomCaptions = false,
     } = {},
   ) {
+    const apiEntries = [];
+    const apiSeen = new Set();
+
+    collectTikTokApiCaptionEntries(currentVideoId, apiEntries, apiSeen);
+
+    if (apiEntries.length > 0) {
+      const apiLines = await resolveCaptionEntries(apiEntries, fetchCaption);
+
+      if (apiLines.length > 0) {
+        return apiLines;
+      }
+    }
+
     if (preferDomCaptions) {
       const domLines = await collectDomCaptionLines(root, fetchCaption);
 
@@ -412,6 +593,33 @@
     return separatorIndex >= 0 && normalizeCaptionText(normalizedSourceKey.slice(separatorIndex + 1)) !== "";
   }
 
+  function extractTikTokVideoId(value) {
+    const text = String(value ?? "");
+    const pathMatch = text.match(/\/video\/(\d{5,})/u);
+
+    if (pathMatch) {
+      return pathMatch[1];
+    }
+
+    const queryMatch = text.match(/[?&](?:item_id|itemId|aweme_id|awemeId|video_id)=([0-9]{5,})/u);
+
+    return queryMatch?.[1] ?? "";
+  }
+
+  function handleTikTokApiMessage(event) {
+    if (event?.origin && !/https:\/\/(?:[^/]+\.)?tiktok\.com$/u.test(event.origin)) {
+      return;
+    }
+
+    if (event?.data?.type !== TIKTOK_API_MESSAGE_TYPE) {
+      return;
+    }
+
+    ingestTikTokApiPayload(event.data.payload);
+  }
+
+  globalThis.window?.addEventListener?.("message", handleTikTokApiMessage);
+
   function createButton(documentRef) {
     const button = documentRef.createElement("button");
     button.className = "msj-tiktok-caption-button";
@@ -499,6 +707,7 @@
     getRoot = () => documentRef,
     getSourceKey = () => getCaptionSourceKey(documentRef),
     navigator: navigatorRef = navigator,
+    fetchCaption = getDefaultFetchApi(),
     setInterval: setIntervalRef = getDefaultSetInterval(),
     clearInterval: clearIntervalRef = getDefaultClearInterval(),
     autoRefreshIntervalMs = 800,
@@ -553,6 +762,8 @@
 
       try {
         const nextLines = await extractCaptionLines(getRoot(), {
+          currentVideoId: extractTikTokVideoId(nextSourceKey),
+          fetchCaption,
           ignoreScriptCaptions: shouldIgnoreScriptCaptions,
           preferDomCaptions: true,
         });
@@ -701,7 +912,9 @@
   globalThis.MultiSearchJumpTikTokCaptions = {
     createCaptionOverlay,
     extractCaptionLines,
+    extractTikTokVideoId,
     getCaptionSourceKey,
+    ingestTikTokApiPayload,
     normalizeCaptionText,
     translateEnglishCaptionToChinese,
   };

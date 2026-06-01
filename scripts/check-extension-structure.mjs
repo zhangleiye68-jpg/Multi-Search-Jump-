@@ -16,6 +16,7 @@ export const EXTENSION_FILES = Object.freeze([
   "src/selectionSearch.js",
   "src/shortcutSettings.js",
   "src/tabLauncher.js",
+  "src/tiktokCaptionBridge.js",
   "src/tiktokCaptionContent.js",
   "src/tiktokCaptionCore.js",
   "src/tiktokCaptionOverlay.css",

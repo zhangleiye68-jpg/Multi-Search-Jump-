@@ -18,6 +18,7 @@ describe("Chrome extension structure", () => {
     assert.ok(EXTENSION_FILES.includes("src/background.js"));
     assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionCore.js"));
     assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionContent.js"));
+    assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionBridge.js"));
     assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionOverlay.css"));
     assert.ok(EXTENSION_FILES.includes("assets/icons/icon128.png"));
   });

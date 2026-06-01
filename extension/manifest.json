@@ -35,7 +35,17 @@
         "src/tiktokCaptionCore.js",
         "src/tiktokCaptionContent.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://www.tiktok.com/*"
+      ],
+      "js": [
+        "src/tiktokCaptionBridge.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
   "commands": {
@@ -62,6 +72,11 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://translate.googleapis.com/"
+    "https://translate.googleapis.com/",
+    "https://*.tiktok.com/*",
+    "https://*.tiktokcdn.com/*",
+    "https://*.byteoversea.com/*",
+    "https://*.byteimg.com/*",
+    "https://*.ibyteimg.com/*"
   ]
 }
