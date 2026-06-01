@@ -200,7 +200,17 @@ function createElementHarness(tagName) {
       handlers.set(type, handler);
     },
     click() {
-      return handlers.get("click")?.();
+      if (this.tagName === "input" && this.type === "checkbox") {
+        this.checked = !this.checked;
+      }
+
+      const result = handlers.get("click")?.();
+
+      if (this.tagName === "input" && this.type === "checkbox") {
+        return handlers.get("change")?.() ?? result;
+      }
+
+      return result;
     },
     querySelector(selector) {
       return this.children.find((child) => child.matches?.(selector)) ?? null;
@@ -1323,6 +1333,49 @@ describe("TikTok caption content", () => {
 
     await overlay.copyButton.click();
     assert.equal(overlay.navigator.clipboard.value, "Fresh subtitle\nFresh subtitle 的中文翻译");
+  });
+
+  it("toggles Chinese translations from the caption board", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          scripts: [
+            {
+              textContent: JSON.stringify({
+                item: {
+                  subtitles: [{ text: "Fresh subtitle" }],
+                },
+              }),
+            },
+          ],
+        }),
+      navigator: {
+        clipboard: {
+          async writeText(value) {
+            this.value = value;
+          },
+        },
+      },
+      translateCaption: async (line) => `${line} 的中文翻译`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.bilingualToggle.checked, true);
+    assert.equal(overlay.captionList.children[0].children[1].textContent, "Fresh subtitle 的中文翻译");
+
+    await overlay.bilingualToggle.click();
+
+    assert.equal(overlay.bilingualToggle.checked, false);
+    assert.equal(overlay.captionList.children[0].textContent, "Fresh subtitle");
+    assert.equal(overlay.captionList.children[0].children.length, 0);
+
+    await overlay.copyButton.click();
+    assert.equal(overlay.navigator.clipboard.value, "Fresh subtitle");
   });
 
   it("does not render or copy subtitles whose translation fails", async () => {

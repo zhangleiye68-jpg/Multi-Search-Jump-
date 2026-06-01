@@ -1015,6 +1015,11 @@
     const panel = documentRef.createElement("section");
     const header = documentRef.createElement("div");
     const title = documentRef.createElement("h2");
+    const headerActions = documentRef.createElement("div");
+    const bilingualLabel = documentRef.createElement("label");
+    const bilingualText = documentRef.createElement("span");
+    const bilingualToggle = documentRef.createElement("input");
+    const bilingualTrack = documentRef.createElement("span");
     const closeButton = documentRef.createElement("button");
     const status = documentRef.createElement("p");
     const captionList = documentRef.createElement("div");
@@ -1027,6 +1032,14 @@
     panel.setAttribute("aria-label", "TikTok 字幕看板");
     header.className = "msj-tiktok-caption-header";
     title.textContent = "TikTok 字幕";
+    headerActions.className = "msj-tiktok-caption-header-actions";
+    bilingualLabel.className = "msj-tiktok-caption-bilingual";
+    bilingualText.textContent = "双语";
+    bilingualToggle.className = "msj-tiktok-caption-bilingual-input";
+    bilingualToggle.type = "checkbox";
+    bilingualToggle.checked = true;
+    bilingualToggle.setAttribute("aria-label", "开启中文字幕");
+    bilingualTrack.className = "msj-tiktok-caption-bilingual-track";
     closeButton.className = "msj-tiktok-caption-close";
     closeButton.type = "button";
     closeButton.textContent = "×";
@@ -1040,11 +1053,14 @@
     copyButton.type = "button";
     copyButton.textContent = "复制全部";
 
-    header.append(title, closeButton);
+    bilingualLabel.append(bilingualText, bilingualToggle, bilingualTrack);
+    headerActions.append(bilingualLabel, closeButton);
+    header.append(title, headerActions);
     actions.append(refreshButton, copyButton);
     panel.append(header, status, captionList, actions);
 
     return {
+      bilingualToggle,
       captionList,
       closeButton,
       copyButton,
@@ -1104,6 +1120,7 @@
     const root = documentRef.createElement("div");
     const button = createButton(documentRef);
     const panelParts = createPanel(documentRef);
+    let bilingualEnabled = panelParts.bilingualToggle.checked;
     let currentLines = [];
     let currentDisplayLines = [];
     let lastSourceKey = getSourceKey();
@@ -1130,6 +1147,10 @@
       setStatus(message);
     }
 
+    async function createDisplayLines(lines) {
+      return bilingualEnabled ? await translateCaptionLines(lines, translateCaption) : lines;
+    }
+
     async function refreshCaptions({ ignoreScriptCaptions = false } = {}) {
       const requestId = ++refreshRequestId;
       const nextSourceKey = getSourceKey();
@@ -1151,7 +1172,7 @@
           ignoreScriptCaptions: shouldIgnoreScriptCaptions,
           preferDomCaptions: true,
         });
-        const displayLines = await translateCaptionLines(nextLines, translateCaption);
+        const displayLines = await createDisplayLines(nextLines);
 
         if (requestId !== refreshRequestId || getSourceKey() !== nextSourceKey) {
           return;
@@ -1255,7 +1276,11 @@
 
       try {
         const copyText = currentDisplayLines
-          .flatMap((line) => [line.original, line.translation].filter(Boolean))
+          .flatMap((line) =>
+            typeof line === "string"
+              ? [line]
+              : [line.original, line.translation].filter(Boolean),
+          )
           .join("\n");
 
         await navigatorRef.clipboard.writeText(copyText);
@@ -1266,12 +1291,36 @@
       }
     }
 
+    async function updateBilingualMode() {
+      const requestId = ++refreshRequestId;
+
+      bilingualEnabled = panelParts.bilingualToggle.checked;
+      currentDisplayLines = await createDisplayLines(currentLines);
+
+      if (requestId !== refreshRequestId) {
+        return;
+      }
+
+      renderCaptionLines({
+        captionList: panelParts.captionList,
+        documentRef,
+        lines: currentDisplayLines,
+      });
+      setStatus(
+        currentDisplayLines.length > 0
+          ? `已读取 ${currentDisplayLines.length} 条字幕。`
+          : "未检测到可读取字幕。",
+      );
+    }
+
     button.addEventListener("click", () => setOpen(panelParts.panel.hidden));
+    panelParts.bilingualToggle.addEventListener("change", updateBilingualMode);
     panelParts.closeButton.addEventListener("click", () => setOpen(false));
     panelParts.refreshButton.addEventListener("click", refreshCaptions);
     panelParts.copyButton.addEventListener("click", copyCaptions);
 
     const overlay = {
+      bilingualToggle: panelParts.bilingualToggle,
       button,
       captionList: panelParts.captionList,
       closeButton: panelParts.closeButton,
