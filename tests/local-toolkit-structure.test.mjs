@@ -96,6 +96,21 @@ describe("local toolkit structure", () => {
     assert.ok(
       mainWorldScripts.some((script) => script.js.includes("src/tiktokCaptionBridge.js")),
     );
+    const mainFreeModeIndex = manifest.content_scripts.findIndex((script) =>
+      script.world === "MAIN" &&
+      script.run_at === "document_start" &&
+      script.js?.includes("src/localToolkit/localToolkitFreeMode.js"),
+    );
+    const firstMainPlatformIndex = manifest.content_scripts.findIndex((script) =>
+      script.world === "MAIN" &&
+      script.js?.some((file) => file.startsWith("src/localToolkit/platforms/")),
+    );
+
+    assert.ok(mainFreeModeIndex >= 0, "local free mode should run in the main world");
+    assert.ok(
+      mainFreeModeIndex < firstMainPlatformIndex,
+      "local free mode should run before platform toolkit scripts",
+    );
   });
 
   it("keeps the packed local toolkit background out of the core service worker", async () => {
@@ -174,5 +189,18 @@ describe("local toolkit structure", () => {
         assert.doesNotMatch(source, new RegExp(oldName.replaceAll(".", "\\.")), `${file} references ${oldName}`);
       }
     }
+  });
+
+  it("keeps local toolkit settings in the unified options page", async () => {
+    const css = await readFile("extension/local-toolkit/local-toolkit.css", "utf8");
+
+    assert.match(css, /\.popup-wrapper\s+\.setting-section\s*{[\s\S]*display:\s*none/);
+  });
+
+  it("removes cloud-only speech-to-text buttons from the local toolkit surface", async () => {
+    const css = await readFile("extension/src/localToolkit/localToolkitContentElements.css", "utf8");
+
+    assert.match(css, /\.dt-subtitle-btn\s*{[\s\S]*display:\s*none\s*!important/);
+    assert.match(css, /\.dt-subtitle-btn\s*{[\s\S]*visibility:\s*hidden\s*!important/);
   });
 });

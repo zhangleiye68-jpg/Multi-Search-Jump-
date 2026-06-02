@@ -56,6 +56,8 @@ describe("options markup", () => {
     assert.match(html, /非英语警示/);
     assert.match(html, /非英内容/);
     assert.match(html, /id="local-toolkit-page-button"/);
+    assert.match(html, /id="local-toolkit-floating-icon-toggle"/);
+    assert.match(html, /本地工具图标/);
     assert.match(html, /本地工具/);
     assert.doesNotMatch(html, />固定</);
     assert.match(html, /id="shortcut-settings-button"/);
@@ -126,6 +128,9 @@ describe("options markup", () => {
     assert.match(source, /saveShowPopupSearchHistory/);
     assert.match(source, /#side-panel-button/);
     assert.match(source, /#local-toolkit-page-button/);
+    assert.match(source, /#local-toolkit-floating-icon-toggle/);
+    assert.match(source, /getLocalToolkitFloatingIconEnabled/);
+    assert.match(source, /saveLocalToolkitFloatingIconEnabled/);
     assert.match(source, /#tiktok-non-english-warning-toggle/);
     assert.match(source, /initLocalToolkitButton/);
     assert.match(source, /tiktokCaptionNonEnglishWarningEnabled/);

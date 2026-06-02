@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  getLocalToolkitFloatingIconEnabled,
   getLocalToolkitPageUrl,
   initLocalToolkitButton,
   openLocalToolkitPage,
+  saveLocalToolkitFloatingIconEnabled,
 } from "../extension/src/localToolkitUi.js";
 
 function createButtonHarness() {
@@ -82,5 +84,26 @@ describe("local toolkit UI", () => {
         url: "chrome-extension://abc/local-toolkit/local-toolkit.html",
       },
     ]);
+  });
+
+  it("stores the floating toolkit icon switch in the DataTool-compatible key", async () => {
+    const values = {};
+    const storageArea = {
+      async get(key) {
+        return { [key]: values[key] };
+      },
+      async set(nextValues) {
+        Object.assign(values, nextValues);
+      },
+    };
+
+    assert.equal(await getLocalToolkitFloatingIconEnabled(storageArea), true);
+
+    assert.equal(await saveLocalToolkitFloatingIconEnabled(storageArea, false), false);
+    assert.deepEqual(values, { dt_show_floating_icon: 0 });
+    assert.equal(await getLocalToolkitFloatingIconEnabled(storageArea), false);
+
+    assert.equal(await saveLocalToolkitFloatingIconEnabled(storageArea, true), true);
+    assert.deepEqual(values, { dt_show_floating_icon: 1 });
   });
 });

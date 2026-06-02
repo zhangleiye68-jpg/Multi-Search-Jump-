@@ -135,6 +135,53 @@
     },
     {
       "matches": [
+        "https://www.tiktok.com/*",
+        "https://ads.tiktok.com/*",
+        "https://www.instagram.com/*",
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://www.xiaohongshu.com/*",
+        "https://www.douyin.com/*",
+        "https://creatormarketplace.tiktok.com/*",
+        "https://www.youtube.com/*",
+        "https://www.facebook.com/*",
+        "https://www.bilibili.com/*",
+        "https://space.bilibili.com/*",
+        "https://search.bilibili.com/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://www.doubao.com/*",
+        "https://chat.deepseek.com/*",
+        "https://www.kimi.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://claude.ai/*",
+        "https://chat.x.ai/*",
+        "https://grok.com/*",
+        "https://gemini.google.com/*",
+        "https://www.kwai.com/*",
+        "https://www.kuaishou.com/*",
+        "https://kuaishou.com/*",
+        "https://vimeo.com/*",
+        "https://www.xinpianchang.com/*",
+        "https://www.taobao.com/*",
+        "https://item.taobao.com/*",
+        "https://detail.tmall.com/*",
+        "https://www.tmall.com/*",
+        "https://s.taobao.com/*",
+        "https://chaoshi.detail.tmall.com/*",
+        "https://chaoshi.tmall.com/*",
+        "https://pages-fast.m.taobao.com/*",
+        "https://huodong.taobao.com/*",
+        "https://b.taobao.com/*"
+      ],
+      "js": [
+        "src/localToolkit/localToolkitFreeMode.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
         "https://www.instagram.com/*"
       ],
       "js": [

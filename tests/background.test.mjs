@@ -36,4 +36,12 @@ describe("background worker", () => {
     assert.match(source, /handleCommandSearch\(\)\.catch\(handleCommandSearchError\)/);
     assert.doesNotMatch(source, /openSearchForActiveSelection\(\{[^}]*\}\)\.catch/);
   });
+
+  it("handles local toolkit relay messages in the service worker", async () => {
+    const source = await readFile("extension/src/background.js", "utf8");
+
+    assert.match(source, /handleLocalToolkitMessage/);
+    assert.match(source, /isLocalToolkitMessage/);
+    assert.match(source, /sendResponse\(result\)/);
+  });
 });

@@ -14,7 +14,11 @@ import {
 } from "../src/searchHistory.js";
 import { initPinButton, initSearchUi } from "../src/searchUi.js";
 import { initCloseLastSearchGroupButton } from "../src/searchSessionUi.js";
-import { initLocalToolkitButton } from "../src/localToolkitUi.js";
+import {
+  getLocalToolkitFloatingIconEnabled,
+  initLocalToolkitButton,
+  saveLocalToolkitFloatingIconEnabled,
+} from "../src/localToolkitUi.js";
 import { openShortcutSettings } from "../src/shortcutSettings.js";
 
 const TIKTOK_NON_ENGLISH_WARNING_KEY = "tiktokCaptionNonEnglishWarningEnabled";
@@ -38,6 +42,7 @@ const shortcutSettingsButton = document.querySelector("#shortcut-settings-button
 const showPopupHistoryToggle = document.querySelector("#show-popup-history-toggle");
 const sidePanelButton = document.querySelector("#side-panel-button");
 const localToolkitPageButton = document.querySelector("#local-toolkit-page-button");
+const localToolkitFloatingIconToggle = document.querySelector("#local-toolkit-floating-icon-toggle");
 const targetOrderList = document.querySelector("#target-order-list");
 const tiktokNonEnglishWarningToggle = document.querySelector("#tiktok-non-english-warning-toggle");
 const translateChineseToggle = document.querySelector("#translate-chinese-toggle");
@@ -53,6 +58,7 @@ let optionsSearchUi = null;
 let allHistoryRecords = [];
 let showPopupSearchHistory = true;
 let tiktokCaptionNonEnglishWarningEnabled = true;
+let localToolkitFloatingIconEnabled = true;
 
 function setStatus(message, state = "idle") {
   statusMessage.textContent = message;
@@ -456,6 +462,7 @@ function render() {
   autoCloseToggle.checked = settings.autoClosePrevious;
   googleImageToggle.checked = settings.googleSearchType === GOOGLE_SEARCH_TYPES.IMAGES;
   googleRecent24hToggle.checked = settings.googleRecent24Hours;
+  localToolkitFloatingIconToggle.checked = localToolkitFloatingIconEnabled;
   showPopupHistoryToggle.checked = showPopupSearchHistory;
   tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
   translateChineseToggle.checked = settings.translateChineseToEnglish;
@@ -507,6 +514,21 @@ tiktokNonEnglishWarningToggle.addEventListener("change", async () => {
   } catch (error) {
     console.error(error);
     tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
+    setStatus("设置保存失败，请重新尝试。", "error");
+  }
+});
+
+localToolkitFloatingIconToggle.addEventListener("change", async () => {
+  try {
+    localToolkitFloatingIconEnabled = await saveLocalToolkitFloatingIconEnabled(
+      storageArea,
+      localToolkitFloatingIconToggle.checked,
+    );
+    localToolkitFloatingIconToggle.checked = localToolkitFloatingIconEnabled;
+    setStatus("设置已保存。");
+  } catch (error) {
+    console.error(error);
+    localToolkitFloatingIconToggle.checked = localToolkitFloatingIconEnabled;
     setStatus("设置保存失败，请重新尝试。", "error");
   }
 });
@@ -644,6 +666,7 @@ initOptionsNavigation();
 
 showPopupSearchHistory = await getShowPopupSearchHistory(storageArea);
 tiktokCaptionNonEnglishWarningEnabled = await getTikTokNonEnglishWarningEnabled();
+localToolkitFloatingIconEnabled = await getLocalToolkitFloatingIconEnabled(storageArea);
 settings = await getSearchSettings(storageArea);
 settings.targetOrder = settings.targetOrder.filter((id) =>
   SEARCH_TARGETS.some((target) => target.id === id),
