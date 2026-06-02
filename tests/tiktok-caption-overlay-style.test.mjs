@@ -17,8 +17,10 @@ describe("TikTok caption overlay style", () => {
     assert.match(css, /\.msj-tiktok-caption-resize-handle\.is-right\s*{/);
     assert.match(css, /\.msj-tiktok-caption-resize-handle\.is-bottom\s*{/);
     assert.match(css, /\.msj-tiktok-caption-resize-handle\.is-left\s*{/);
-    assert.match(css, /\.msj-tiktok-caption-actions\s*{[\s\S]*flex-wrap:\s*wrap/);
-    assert.match(source, /⚠ 非英内容/);
+    assert.match(css, /\.msj-tiktok-caption-actions\s*{[\s\S]*flex-wrap:\s*nowrap/);
+    assert.match(css, /\.msj-tiktok-caption-actions \.msj-tiktok-caption-status\s*{[\s\S]*text-overflow:\s*ellipsis/);
+    assert.match(css, /\.msj-tiktok-caption-action-button\s*{[\s\S]*flex:\s*0 0 auto/);
+    assert.match(source, /⚠ 非因内容/);
     assert.match(source, /tiktokCaptionDisplayMode/);
     assert.match(source, /tiktokCaptionPanelFrame/);
     assert.match(source, /tiktokCaptionButtonPosition/);

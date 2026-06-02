@@ -1929,18 +1929,19 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.modeButtons.chinese.textContent, "中文");
     assert.equal(
       overlay.videoInfo.textContent,
-      "High - ▶ 5W - ⏱ 12h - ⚡ 4.2K/h - ♥ 0.4K/h",
+      "4.2K/h - 50K - 12h - 0.4K like/h - High",
     );
     assert.equal(overlay.potentialBadge.textContent, "High");
     assert.equal(overlay.potentialBadge.classList.contains("is-high"), true);
-    assert.equal(overlay.languageWarning.textContent, "⚠ 非英内容");
+    assert.equal(overlay.languageWarning.textContent, "⚠ 非因内容");
     assert.equal(overlay.languageWarning.classList.contains("is-visible"), true);
     assert.doesNotMatch(overlay.videoDetails.textContent, /标题|详情/);
     assert.match(overlay.videoDetails.textContent, /A practical breakdown/);
     assert.match(overlay.videoDetails.textContent, /A practical breakdown of a travel product\. 中文/);
     assert.equal(overlay.detailsTranslation.classList.contains("msj-tiktok-caption-translation"), true);
     assert.equal(overlay.actions.children.includes(overlay.status), true);
-    assert.equal(overlay.actions.children.includes(overlay.modeGroup), true);
+    assert.equal(overlay.actions.children.includes(overlay.modeGroup), false);
+    assert.equal(overlay.panelHeader.children.includes(overlay.modeGroup), true);
   });
 
   it("switches between original, bilingual, and Chinese-only captions", async () => {
@@ -2031,13 +2032,13 @@ describe("TikTok caption content", () => {
     await overlay.ready;
     await overlay.refreshCaptions();
 
-    assert.match(overlay.videoInfo.textContent, /^Mid/);
+    assert.match(overlay.videoInfo.textContent, / - Mid$/);
     assert.equal(overlay.potentialBadge.classList.contains("is-mid"), true);
 
     activeVideoId = "3234567890";
     await overlay.refreshCaptions({ ignoreScriptCaptions: true });
 
-    assert.match(overlay.videoInfo.textContent, /^Low/);
+    assert.match(overlay.videoInfo.textContent, / - Low$/);
     assert.equal(overlay.potentialBadge.classList.contains("is-low"), true);
   });
 
@@ -2270,7 +2271,7 @@ describe("TikTok caption content", () => {
     await overlay.ready;
     await overlay.refreshCaptions();
 
-    assert.match(overlay.videoInfo.textContent, /▶ 1\.2M/);
+    assert.match(overlay.videoInfo.textContent, /1\.2M\/h - 1\.2M/);
     assert.match(overlay.captionList.children[0].children[0].textContent, /Photo launch notes/);
     assert.match(overlay.captionList.children[0].children[1].textContent, /中文/);
   });

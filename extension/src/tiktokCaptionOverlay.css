@@ -235,25 +235,31 @@
 
 .msj-tiktok-caption-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  min-height: 32px;
 }
 
 .msj-tiktok-caption-actions .msj-tiktok-caption-status {
-  flex: 1 0 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .msj-tiktok-caption-action-button {
-  min-width: 72px;
-  height: 32px;
+  flex: 0 0 auto;
+  min-width: 64px;
+  height: 28px;
   border: 1px solid #cfd8d3;
   border-radius: 7px;
   background: #ffffff;
   color: #263331;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 750;
 }
 

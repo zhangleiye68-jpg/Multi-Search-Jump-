@@ -63,12 +63,6 @@
   const DRAG_THRESHOLD_PX = 6;
   const HIGH_POTENTIAL_K_PER_HOUR = 50 / 12;
   const MID_POTENTIAL_K_PER_HOUR = 2.5;
-  const VIDEO_INFO_ICONS = Object.freeze({
-    likeRate: "♥",
-    playCount: "▶",
-    playRate: "⚡",
-    time: "⏱",
-  });
   const SUBTITLE_FILE_IGNORED_LINE_PATTERN =
     /^(?:WEBVTT|NOTE\b|STYLE\b|REGION\b|\d+|[\d:,.]+\s+-->\s+[\d:,.]+.*)$/u;
   const DOM_CAPTION_EXCLUDED_SELECTOR = [
@@ -1196,10 +1190,6 @@
       return `${formatMetricNumber(numericValue / 1000000)}M`;
     }
 
-    if (numericValue >= 10000) {
-      return `${formatMetricNumber(numericValue / 10000)}W`;
-    }
-
     return `${formatMetricNumber(numericValue / 1000)}K`;
   }
 
@@ -1246,7 +1236,7 @@
       description: getTikTokItemDescription(item),
       durationLabel: formatDurationShort(elapsedHours),
       language: getTikTokItemLanguage(item),
-      likeRateLabel: `${formatMetric(likePerHour)}/h`,
+      likeRateLabel: `${formatMetric(likePerHour)} like/h`,
       playCountLabel: formatMetric(playCount),
       playRateLabel: `${formatMetric(playCount / rateHours)}/h`,
       potential,
@@ -1795,10 +1785,10 @@
     }
 
     modeGroup.append(originalModeButton, bilingualModeButton, chineseModeButton);
-    header.append(headerDragArea, closeButton);
-    videoInfo.append(potentialBadge, metricText);
+    header.append(modeGroup, headerDragArea, closeButton);
+    videoInfo.append(metricText, potentialBadge);
     videoDetails.append(detailsOriginal, detailsTranslation);
-    actions.append(status, modeGroup, refreshButton, copyButton);
+    actions.append(status, refreshButton, copyButton);
     panel.append(
       header,
       videoInfo,
@@ -1978,16 +1968,16 @@
 
     function renderVideoInfo(metrics, detailsTranslation) {
       const metricText = [
-        `${VIDEO_INFO_ICONS.playCount} ${metrics.playCountLabel}`,
-        `${VIDEO_INFO_ICONS.time} ${metrics.durationLabel}`,
-        `${VIDEO_INFO_ICONS.playRate} ${metrics.playRateLabel}`,
-        `${VIDEO_INFO_ICONS.likeRate} ${metrics.likeRateLabel}`,
+        metrics.playRateLabel,
+        metrics.playCountLabel,
+        metrics.durationLabel,
+        metrics.likeRateLabel,
       ].join(" - ");
 
       panelParts.potentialBadge.textContent = metrics.potential.label;
       panelParts.potentialBadge.classList.remove("is-high", "is-mid", "is-low");
       panelParts.potentialBadge.classList.add(metrics.potential.className);
-      panelParts.metricText.textContent = ` - ${metricText}`;
+      panelParts.metricText.textContent = `${metricText} - `;
       panelParts.detailsOriginal.textContent = metrics.description || "暂无视频详情。";
       panelParts.detailsTranslation.textContent = detailsTranslation || "";
 
@@ -1996,7 +1986,7 @@
         metrics.language &&
         normalizeLanguageKey(metrics.language) !== "en"
       ) {
-        panelParts.languageWarning.textContent = "⚠ 非英内容";
+        panelParts.languageWarning.textContent = "⚠ 非因内容";
         panelParts.languageWarning.classList.add("is-visible");
       } else {
         panelParts.languageWarning.textContent = "";
