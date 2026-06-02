@@ -13,6 +13,7 @@ describe("popup markup", () => {
     assert.match(html, /<header[^>]+class="popup-header"[\s\S]*id="options-button"[\s\S]*<\/header>/);
     assert.doesNotMatch(html, /<div[^>]+class="search-input-shell"[\s\S]*id="options-button"[\s\S]*<\/div>/);
     assert.match(html, /<button[^>]+id="side-panel-button"[^>]+aria-label="打开侧边栏"/);
+    assert.match(html, /<button[^>]+id="local-toolkit-button"[^>]+aria-label="打开本地工具"/);
     assert.match(html, /<button[^>]+id="options-button"[^>]+aria-label="打开设置"/);
     assert.match(html, /⚙/);
     assert.doesNotMatch(html, /id="show-history-toggle"/);
@@ -32,7 +33,9 @@ describe("popup markup", () => {
 
     assert.match(popupScript, /initSearchUi/);
     assert.match(popupScript, /initPinButton/);
+    assert.match(popupScript, /initLocalToolkitButton/);
     assert.match(popupScript, /#side-panel-button/);
+    assert.match(popupScript, /#local-toolkit-button/);
     assert.match(popupScript, /#search-history/);
     assert.match(popupScript, /useHistoryVisibilityPreference: true/);
     assert.doesNotMatch(popupScript, /#show-history-toggle/);

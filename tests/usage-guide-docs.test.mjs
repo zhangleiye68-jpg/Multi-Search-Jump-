@@ -31,9 +31,15 @@ describe("usage guide docs", () => {
     assert.match(readme, /## 中文/);
     assert.match(readme, /## English/);
     assert.match(readme, /extension\//);
+    assert.match(readme, /Local Toolkit/);
+    assert.match(readme, /downloads\.open/);
     assert.match(readme, /npm test/);
     assert.match(readme, /npm run check:store/);
     assert.match(readme, /not currently licensed as open source/i);
     assert.doesNotMatch(readme, /MIT License/i);
+
+    const privacy = await readFile("PRIVACY.md", "utf8");
+    assert.match(privacy, /Multi Search Jump Local Toolkit/);
+    assert.match(privacy, /declarativeNetRequest/);
   });
 });

@@ -37,6 +37,8 @@ describe("options markup", () => {
     assert.match(html, /id="options-search-history"/);
     assert.match(html, /id="options-search-status"/);
     assert.match(html, /id="auto-close-toggle"/);
+    assert.match(html, /id="close-last-search-group-button"/);
+    assert.match(html, /关闭上次结果/);
     assert.match(html, /id="google-image-toggle"/);
     assert.match(html, /id="google-recent-24h-toggle"/);
     assert.match(html, /过去 24 小时/);
@@ -53,6 +55,8 @@ describe("options markup", () => {
     assert.match(html, /id="tiktok-non-english-warning-toggle"/);
     assert.match(html, /非英语警示/);
     assert.match(html, /非英内容/);
+    assert.match(html, /id="local-toolkit-page-button"/);
+    assert.match(html, /本地工具/);
     assert.doesNotMatch(html, />固定</);
     assert.match(html, /id="shortcut-settings-button"/);
     assert.match(html, /id="target-order-list"/);
@@ -70,6 +74,7 @@ describe("options markup", () => {
     assert.match(html, /网站开关与排序/);
     assert.match(html, /历史管理/);
     assert.match(html, /新安装后，默认只启用 Google 普通网页搜索/);
+    assert.match(html, /手动关闭上一次由插件打开的搜索结果标签组/);
     assert.match(html, /小窗口只显示最近 5 条/);
     assert.match(html, /设置页底部会显示全部历史记录/);
     assert.match(html, /浏览器内部页面/);
@@ -120,7 +125,9 @@ describe("options markup", () => {
     assert.match(source, /getShowPopupSearchHistory/);
     assert.match(source, /saveShowPopupSearchHistory/);
     assert.match(source, /#side-panel-button/);
+    assert.match(source, /#local-toolkit-page-button/);
     assert.match(source, /#tiktok-non-english-warning-toggle/);
+    assert.match(source, /initLocalToolkitButton/);
     assert.match(source, /tiktokCaptionNonEnglishWarningEnabled/);
     assert.match(source, /initPinButton/);
     assert.match(source, /closeOnSuccess: false/);
@@ -145,6 +152,8 @@ describe("options markup", () => {
     assert.match(source, /style\.transform/);
     assert.match(source, /isTargetEnabled/);
     assert.match(source, /normalizeSearchSettings/);
+    assert.match(source, /initCloseLastSearchGroupButton/);
+    assert.match(source, /#close-last-search-group-button/);
     assert.match(source, /persistToken/);
     assert.match(source, /设置已更新/);
     assert.match(source, /class="target-toggle/);

@@ -1,4 +1,5 @@
 import { addSearchHistoryRecord } from "./searchHistory.js";
+import { installLocalToolkitDownloadNaming } from "./localToolkitDownloadNames.js";
 import { openManagedSearchTabs } from "./tabLauncher.js";
 import {
   CONTEXT_MENU_ID,
@@ -9,6 +10,8 @@ import {
   openSearchForText,
   resetSelectionContextMenu,
 } from "./selectionSearch.js";
+
+installLocalToolkitDownloadNaming(chrome.downloads);
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel

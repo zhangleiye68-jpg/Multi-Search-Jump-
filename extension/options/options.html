@@ -112,6 +112,21 @@
                 </span>
               </label>
 
+              <div class="settings-action-row">
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">上次搜索结果</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：立即关闭上一次由插件打开的搜索标签组。"
+                      data-tooltip="立即关闭上一次由插件打开的搜索标签组。"
+                    >!</span>
+                  </span>
+                </span>
+                <button id="close-last-search-group-button" type="button">关闭上次结果</button>
+              </div>
+
               <label class="switch-setting" for="translate-chinese-toggle">
                 <span class="setting-label">
                   <span class="setting-title-row">
@@ -273,6 +288,27 @@
                 </span>
               </label>
             </section>
+
+            <section class="settings-subsection" aria-labelledby="local-toolkit-heading">
+              <div class="subsection-heading">
+                <span class="subsection-index">2.4</span>
+                <h3 id="local-toolkit-heading">本地工具</h3>
+              </div>
+              <div class="settings-action-row">
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">Local Toolkit</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：打开本地工具套件页面，用于本地下载媒体、评论、表格和字幕。"
+                      data-tooltip="打开本地工具套件页面，用于本地下载媒体、评论、表格和字幕。"
+                    >!</span>
+                  </span>
+                </span>
+                <button id="local-toolkit-page-button" type="button">打开本地工具</button>
+              </div>
+            </section>
           </section>
 
           <section
@@ -420,6 +456,7 @@
                   <h4 id="usage-display-heading">侧边栏与搜索网站</h4>
                   <ul>
                     <li>弹窗右上角的侧边栏图标可以打开右侧搜索面板。</li>
+                    <li>「搜索行为」里可以手动关闭上一次由插件打开的搜索结果标签组。</li>
                     <li>「搜索网站」里可以开启或关闭平台，并拖动调整打开顺序。</li>
                     <li>「Google 搜索类型」里可以切换图片搜索和过去 24 小时搜索。</li>
                   </ul>

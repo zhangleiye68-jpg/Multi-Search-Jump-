@@ -5,9 +5,11 @@ import { pathToFileURL } from "node:url";
 export const EXTENSION_DISPLAY_NAME = "Multi Search Jump";
 export const EXTENSION_DIR = "extension";
 
-export const EXTENSION_FILES = Object.freeze([
+const BASE_EXTENSION_FILES = Object.freeze([
   "manifest.json",
   "src/background.js",
+  "src/localToolkitDownloadNames.js",
+  "src/localToolkitUi.js",
   "src/queryTranslator.js",
   "src/searchHistory.js",
   "src/searchSettings.js",
@@ -34,6 +36,52 @@ export const EXTENSION_FILES = Object.freeze([
   "assets/icons/icon128.png",
 ]);
 
+const LOCAL_TOOLKIT_FILES = Object.freeze([
+  "local-toolkit/local-toolkit.html",
+  "local-toolkit/local-toolkit.css",
+  "local-toolkit/local-toolkit.js",
+  "rules/localToolkitBackendBlock.json",
+  "src/localToolkit/localToolkitBackground.js",
+  "src/localToolkit/localToolkitContent.js",
+  "src/localToolkit/localToolkitContent.css",
+  "src/localToolkit/localToolkitContentElements.css",
+  "src/localToolkit/localToolkitFreeMode.js",
+  "src/localToolkit/localToolkitPageBridge.js",
+  "src/localToolkit/localToolkitRelay.js",
+  "src/localToolkit/platforms/platformAiChat.js",
+  "src/localToolkit/platforms/platformBilibili.js",
+  "src/localToolkit/platforms/platformCommon.js",
+  "src/localToolkit/platforms/platformDouyin.js",
+  "src/localToolkit/platforms/platformFacebook.js",
+  "src/localToolkit/platforms/platformInstagram.js",
+  "src/localToolkit/platforms/platformKuaishou.js",
+  "src/localToolkit/platforms/platformKwai.js",
+  "src/localToolkit/platforms/platformSharedButtons.js",
+  "src/localToolkit/platforms/platformTaobao.js",
+  "src/localToolkit/platforms/platformTikTok.js",
+  "src/localToolkit/platforms/platformVimeo.js",
+  "src/localToolkit/platforms/platformX.js",
+  "src/localToolkit/platforms/platformXiaohongshu.js",
+  "src/localToolkit/platforms/platformXinpianchang.js",
+  "src/localToolkit/platforms/platformYouTube.js",
+  "assets/localToolkit/ffmpeg/814.ffmpeg.js",
+  "assets/localToolkit/ffmpeg/ffmpeg-core.js",
+  "assets/localToolkit/ffmpeg/ffmpeg-core.wasm",
+  "assets/localToolkit/ffmpeg/ffmpeg-worker.js",
+  "assets/localToolkit/image/audio.png",
+  "assets/localToolkit/image/datatool.png",
+  "assets/localToolkit/image/dt.png",
+  "assets/localToolkit/image/googleIcon.png",
+  "assets/localToolkit/image/mute.png",
+  "assets/localToolkit/image/tiktok.png",
+  "assets/localToolkit/js/ext.js",
+]);
+
+export const EXTENSION_FILES = Object.freeze([
+  ...BASE_EXTENSION_FILES,
+  ...LOCAL_TOOLKIT_FILES,
+]);
+
 const REMOTE_CODE_PATTERNS = Object.freeze([
   {
     pattern: /<script\b[^>]+src=["']https?:\/\//iu,
@@ -58,6 +106,17 @@ function extensionRoot(rootDir) {
 }
 
 function collectManifestFiles(manifest) {
+  const contentScriptFiles = (manifest.content_scripts ?? [])
+    .flatMap((script) => [
+      ...(script.js ?? []),
+      ...(script.css ?? []),
+    ]);
+  const ruleResourceFiles = (manifest.declarative_net_request?.rule_resources ?? [])
+    .map((rule) => rule.path);
+  const webAccessibleFiles = (manifest.web_accessible_resources ?? [])
+    .flatMap((entry) => entry.resources ?? [])
+    .filter((resource) => !resource.includes("*"));
+
   return [
     manifest.background?.service_worker,
     manifest.action?.default_popup,
@@ -65,6 +124,9 @@ function collectManifestFiles(manifest) {
     manifest.side_panel?.default_path,
     ...Object.values(manifest.icons ?? {}),
     ...Object.values(manifest.action?.default_icon ?? {}),
+    ...contentScriptFiles,
+    ...ruleResourceFiles,
+    ...webAccessibleFiles,
   ].filter(Boolean);
 }
 

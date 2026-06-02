@@ -13,6 +13,8 @@ import {
   saveShowPopupSearchHistory,
 } from "../src/searchHistory.js";
 import { initPinButton, initSearchUi } from "../src/searchUi.js";
+import { initCloseLastSearchGroupButton } from "../src/searchSessionUi.js";
+import { initLocalToolkitButton } from "../src/localToolkitUi.js";
 import { openShortcutSettings } from "../src/shortcutSettings.js";
 
 const TIKTOK_NON_ENGLISH_WARNING_KEY = "tiktokCaptionNonEnglishWarningEnabled";
@@ -21,6 +23,7 @@ const allSearchHistory = document.querySelector("#all-search-history");
 const allSearchHistoryEmpty = document.querySelector("#all-search-history-empty");
 const autoCloseToggle = document.querySelector("#auto-close-toggle");
 const clearHistoryButton = document.querySelector("#clear-history-button");
+const closeLastSearchGroupButton = document.querySelector("#close-last-search-group-button");
 const googleImageToggle = document.querySelector("#google-image-toggle");
 const googleRecent24hToggle = document.querySelector("#google-recent-24h-toggle");
 const historyFilterInput = document.querySelector("#history-filter-input");
@@ -34,6 +37,7 @@ const optionsNavLinks = [...document.querySelectorAll("[data-options-nav]")];
 const shortcutSettingsButton = document.querySelector("#shortcut-settings-button");
 const showPopupHistoryToggle = document.querySelector("#show-popup-history-toggle");
 const sidePanelButton = document.querySelector("#side-panel-button");
+const localToolkitPageButton = document.querySelector("#local-toolkit-page-button");
 const targetOrderList = document.querySelector("#target-order-list");
 const tiktokNonEnglishWarningToggle = document.querySelector("#tiktok-non-english-warning-toggle");
 const translateChineseToggle = document.querySelector("#translate-chinese-toggle");
@@ -634,6 +638,8 @@ shortcutSettingsButton.addEventListener("click", async () => {
 });
 
 initPinButton(sidePanelButton, statusMessage, { closeOnSuccess: false });
+initCloseLastSearchGroupButton(closeLastSearchGroupButton, statusMessage);
+initLocalToolkitButton(localToolkitPageButton);
 initOptionsNavigation();
 
 showPopupSearchHistory = await getShowPopupSearchHistory(storageArea);

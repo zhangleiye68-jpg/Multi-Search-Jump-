@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { initPinButton, initSearchUi } from "../extension/src/searchUi.js";
+import {
+  initOptionsButton,
+  initPinButton,
+  initSearchUi,
+} from "../extension/src/searchUi.js";
 
 function createClassList() {
   const values = new Set();
@@ -78,16 +82,39 @@ function createFormHarness() {
 
 function createHistoryListHarness() {
   const children = [];
+  let clickHandler = null;
+  let textContent = "";
 
-  return {
+  const harness = {
     children,
     hidden: false,
-    textContent: "",
-    addEventListener() {},
+    addEventListener(type, handler) {
+      if (type === "click") {
+        clickHandler = handler;
+      }
+    },
     append(child) {
       children.push(child);
     },
+    async click(target) {
+      await clickHandler?.({ target });
+    },
   };
+
+  Object.defineProperty(harness, "textContent", {
+    get() {
+      return textContent;
+    },
+    set(value) {
+      textContent = value;
+
+      if (value === "") {
+        children.length = 0;
+      }
+    },
+  });
+
+  return harness;
 }
 
 function createHistoryToggleHarness() {
@@ -113,6 +140,17 @@ function createElementHarness() {
     setAttribute() {},
     append(...children) {
       this.children = children;
+    },
+    closest(selector) {
+      if (selector === "[data-history-query]" && this.dataset.historyQuery) {
+        return this;
+      }
+
+      if (selector === "[data-history-remove]" && this.dataset.historyRemove) {
+        return this;
+      }
+
+      return null;
     },
   };
 }
@@ -173,6 +211,9 @@ describe("search UI", () => {
       },
       async set(nextValues) {
         Object.assign(values, nextValues);
+      },
+      async remove(key) {
+        delete values[key];
       },
     };
   }
@@ -483,6 +524,122 @@ describe("search UI", () => {
     }
   });
 
+  it("reopens a search from a history chip", async () => {
+    const harness = createFormHarness();
+    const historyList = createHistoryListHarness();
+    const originalDocument = globalThis.document;
+    const storageArea = createStorageArea({
+      searchHistory: [
+        { id: "one", query: "alpha", searchedAt: 2 },
+      ],
+    });
+    const messages = [];
+
+    globalThis.chrome = {
+      runtime: {
+        async sendMessage(message) {
+          messages.push(message);
+          return { ok: true };
+        },
+      },
+      storage: {
+        local: storageArea,
+      },
+    };
+    globalThis.document = {
+      createElement: createElementHarness,
+    };
+
+    try {
+      initSearchUi({
+        closeOnSuccess: false,
+        form: harness.form,
+        historyList,
+        input: harness.input,
+        searchButton: harness.searchButton,
+        statusMessage: harness.statusMessage,
+      });
+      await flushAsyncWork();
+
+      const [openButton] = historyList.children[0].children;
+      await historyList.click(openButton);
+
+      assert.equal(harness.input.value, "alpha");
+      assert.equal(messages[0].query, "alpha");
+    } finally {
+      globalThis.document = originalDocument;
+    }
+  });
+
+  it("removes one search history chip without opening a search", async () => {
+    const harness = createFormHarness();
+    const historyList = createHistoryListHarness();
+    const originalDocument = globalThis.document;
+    const storageArea = createStorageArea({
+      searchHistory: [
+        { id: "one", query: "alpha", searchedAt: 2 },
+        { id: "two", query: "beta", searchedAt: 1 },
+      ],
+    });
+    const messages = [];
+
+    globalThis.chrome = {
+      runtime: {
+        async sendMessage(message) {
+          messages.push(message);
+          return { ok: true };
+        },
+      },
+      storage: {
+        local: storageArea,
+      },
+    };
+    globalThis.document = {
+      createElement: createElementHarness,
+    };
+
+    try {
+      initSearchUi({
+        closeOnSuccess: false,
+        form: harness.form,
+        historyList,
+        input: harness.input,
+        searchButton: harness.searchButton,
+        statusMessage: harness.statusMessage,
+      });
+      await flushAsyncWork();
+
+      const [, removeButton] = historyList.children[0].children;
+      await historyList.click(removeButton);
+
+      assert.deepEqual(
+        storageArea.values.searchHistory.map((record) => record.query),
+        ["beta"],
+      );
+      assert.equal(messages.length, 0);
+    } finally {
+      globalThis.document = originalDocument;
+    }
+  });
+
+  it("opens the single options page from a settings button", async () => {
+    const optionsButton = createButtonHarness();
+    let openCount = 0;
+
+    globalThis.chrome = {
+      runtime: {
+        openOptionsPage() {
+          openCount += 1;
+        },
+      },
+    };
+
+    initOptionsButton(optionsButton);
+    await optionsButton.click();
+
+    assert.equal(openCount, 1);
+  });
+
   it("opens the side panel from a switch only when switched on", async () => {
     const sidePanelSwitch = createSwitchHarness();
     const openedWindows = [];
@@ -551,4 +708,5 @@ describe("search UI", () => {
       globalThis.window = originalWindow;
     }
   });
+
 });
