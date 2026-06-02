@@ -26,7 +26,21 @@ body {
 .popup-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
+}
+
+.popup-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.popup-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .mark {
@@ -78,25 +92,56 @@ p {
 .search-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 8px;
 }
 
-input {
-  width: 100%;
+.search-input-shell {
+  position: relative;
   min-width: 0;
-  height: 38px;
-  border: 1px solid #cfd8d3;
-  border-radius: 7px;
-  padding: 0 11px;
-  background: #ffffff;
-  color: #15201f;
-  font-size: 14px;
-  outline: none;
 }
 
-input:focus {
+.search-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  max-height: 120px;
+  border: 1px solid #cfd8d3;
+  border-radius: 7px;
+  padding: 9px 11px;
+  background: #ffffff;
+  color: #15201f;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  outline: none;
+  overflow-y: auto;
+  resize: none;
+}
+
+.search-form textarea:focus {
   border-color: #176b63;
   box-shadow: 0 0 0 3px rgba(23, 107, 99, 0.16);
+}
+
+.header-icon-button {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  background: transparent;
+  color: #5f6d68;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.header-icon-button:hover {
+  background: #edf3f0;
+  color: #176b63;
 }
 
 .search-history {
@@ -171,12 +216,6 @@ button:hover {
 button:disabled {
   cursor: wait;
   opacity: 0.72;
-}
-
-.popup-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
 }
 
 .ghost-button {

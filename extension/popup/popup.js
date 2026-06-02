@@ -1,14 +1,10 @@
-import {
-  initOptionsButton,
-  initPinButton,
-  initSearchUi,
-} from "./searchUi.js";
+import { initOptionsButton, initPinButton, initSearchUi } from "../src/searchUi.js";
 
 const form = document.querySelector("#search-form");
 const input = document.querySelector("#search-input");
 const searchButton = document.querySelector("#search-button");
 const searchHistory = document.querySelector("#search-history");
-const pinPanelButton = document.querySelector("#pin-panel-button");
+const sidePanelButton = document.querySelector("#side-panel-button");
 const optionsButton = document.querySelector("#options-button");
 const statusMessage = document.querySelector("#status-message");
 
@@ -19,6 +15,7 @@ initSearchUi({
   input,
   searchButton,
   statusMessage,
+  useHistoryVisibilityPreference: true,
 });
-initPinButton(pinPanelButton, statusMessage);
+initPinButton(sidePanelButton, statusMessage);
 initOptionsButton(optionsButton);

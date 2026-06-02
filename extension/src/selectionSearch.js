@@ -1,4 +1,5 @@
 import { buildSearchUrls, normalizeQuery } from "./searchTargets.js";
+import { containsChinese, translateQueryForSearch } from "./queryTranslator.js";
 import { addSearchHistoryRecord } from "./searchHistory.js";
 import { getSearchSettings } from "./searchSettings.js";
 import { buildGroupTitle, openManagedSearchTabs } from "./tabLauncher.js";
@@ -75,11 +76,28 @@ export async function getSelectionFromActiveTab({ activeTab, scriptingApi, tabsA
   return normalizeQuery(injectionResult?.result);
 }
 
+async function getFinalQueryForSearch({
+  query,
+  settings,
+  translateQuery,
+}) {
+  if (!settings.translateChineseToEnglish || !containsChinese(query)) {
+    return query;
+  }
+
+  try {
+    return normalizeQuery(await translateQuery(query, { enabled: true })) || query;
+  } catch {
+    return query;
+  }
+}
+
 export async function openSearchForText({
   query,
   storageArea,
   tabGroupsApi,
   tabsApi,
+  translateQuery = translateQueryForSearch,
 }) {
   const selectedText = normalizeQuery(query);
 
@@ -91,7 +109,12 @@ export async function openSearchForText({
   }
 
   const settings = await getSearchSettings(storageArea);
-  const urls = buildSearchUrls(selectedText, settings);
+  const finalQuery = await getFinalQueryForSearch({
+    query: selectedText,
+    settings,
+    translateQuery,
+  });
+  const urls = buildSearchUrls(finalQuery, settings);
 
   if (urls.length === 0) {
     return {
@@ -100,7 +123,7 @@ export async function openSearchForText({
     };
   }
 
-  const title = buildGroupTitle(selectedText);
+  const title = buildGroupTitle(finalQuery);
   await openManagedSearchTabs({
     autoClosePrevious: settings.autoClosePrevious,
     storageArea,
@@ -109,7 +132,7 @@ export async function openSearchForText({
     title,
     urls,
   });
-  await addSearchHistoryRecord(storageArea, selectedText);
+  await addSearchHistoryRecord(storageArea, finalQuery);
 
   return {
     count: urls.length,

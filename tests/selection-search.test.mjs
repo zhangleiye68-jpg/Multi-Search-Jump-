@@ -7,14 +7,15 @@ import {
   getSelectionFromActiveTab,
   openSearchForText,
   resetSelectionContextMenu,
-} from "../selectionSearch.js";
+} from "../extension/src/selectionSearch.js";
 import {
   ENABLED_TARGET_IDS_KEY,
   GOOGLE_SEARCH_TYPE_KEY,
   TARGET_ORDER_KEY,
-} from "../searchSettings.js";
-import { SEARCH_HISTORY_KEY } from "../searchHistory.js";
-import { AUTO_CLOSE_PREVIOUS_KEY } from "../tabLauncher.js";
+  TRANSLATE_CHINESE_TO_ENGLISH_KEY,
+} from "../extension/src/searchSettings.js";
+import { SEARCH_HISTORY_KEY } from "../extension/src/searchHistory.js";
+import { AUTO_CLOSE_PREVIOUS_KEY } from "../extension/src/tabLauncher.js";
 
 function createStorageArea(initialValues = {}) {
   const values = { ...initialValues };
@@ -171,6 +172,137 @@ describe("selection search", () => {
       ["update", 301, { active: true }],
     ]);
     assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "maga");
+  });
+
+  it("uses the translated query for selected Chinese text when enabled", async () => {
+    const calls = [];
+    const storageArea = createStorageArea({
+      [ENABLED_TARGET_IDS_KEY]: ["google"],
+      [GOOGLE_SEARCH_TYPE_KEY]: "web",
+      [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
+    });
+    const tabsApi = {
+      async create(options) {
+        calls.push(["create", options]);
+        return { id: 301 };
+      },
+      async group(options) {
+        calls.push(["group", options]);
+        return 88;
+      },
+      async update(id, options) {
+        calls.push(["update", id, options]);
+      },
+    };
+    const tabGroupsApi = {
+      async update(id, options) {
+        calls.push(["updateGroup", id, options]);
+      },
+    };
+
+    const result = await openSearchForText({
+      query: "红色连衣裙",
+      storageArea,
+      tabGroupsApi,
+      tabsApi,
+      translateQuery: async () => "red dress",
+    });
+
+    assert.deepEqual(result, {
+      count: 1,
+      opened: true,
+      title: "Search: red dress",
+    });
+    assert.deepEqual(calls[0], [
+      "create",
+      { url: "https://www.google.com/search?q=red%20dress", active: false },
+    ]);
+    assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "red dress");
+  });
+
+  it("uses the default web translation fallback for selected Chinese text", async () => {
+    const originalFetch = globalThis.fetch;
+    const calls = [];
+    globalThis.fetch = async () => ({
+      ok: true,
+      async json() {
+        return [[[ "red dress", "红色连衣裙" ]]];
+      },
+    });
+
+    try {
+      const storageArea = createStorageArea({
+        [ENABLED_TARGET_IDS_KEY]: ["google"],
+        [GOOGLE_SEARCH_TYPE_KEY]: "web",
+        [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
+      });
+      const tabsApi = {
+        async create(options) {
+          calls.push(["create", options]);
+          return { id: 301 };
+        },
+        async group() {
+          return 88;
+        },
+        async update() {},
+      };
+      const tabGroupsApi = {
+        async update() {},
+      };
+
+      await openSearchForText({
+        query: "红色连衣裙",
+        storageArea,
+        tabGroupsApi,
+        tabsApi,
+      });
+
+      assert.deepEqual(calls[0], [
+        "create",
+        { url: "https://www.google.com/search?q=red%20dress", active: false },
+      ]);
+      assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "red dress");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("falls back to selected Chinese text when translation fails", async () => {
+    const calls = [];
+    const storageArea = createStorageArea({
+      [ENABLED_TARGET_IDS_KEY]: ["google"],
+      [GOOGLE_SEARCH_TYPE_KEY]: "web",
+      [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
+    });
+    const tabsApi = {
+      async create(options) {
+        calls.push(["create", options]);
+        return { id: 301 };
+      },
+      async group() {
+        return 88;
+      },
+      async update() {},
+    };
+    const tabGroupsApi = {
+      async update() {},
+    };
+
+    await openSearchForText({
+      query: "红色连衣裙",
+      storageArea,
+      tabGroupsApi,
+      tabsApi,
+      translateQuery: async () => {
+        throw new Error("translation failed");
+      },
+    });
+
+    assert.deepEqual(calls[0], [
+      "create",
+      { url: "https://www.google.com/search?q=%E7%BA%A2%E8%89%B2%E8%BF%9E%E8%A1%A3%E8%A3%99", active: false },
+    ]);
+    assert.equal(storageArea.values[SEARCH_HISTORY_KEY][0].query, "红色连衣裙");
   });
 
   it("ignores blank selected text", async () => {

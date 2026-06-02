@@ -1,24 +1,66 @@
 import { buildSearchUrls, normalizeQuery } from "./searchTargets.js";
+import { translateQueryForSearch } from "./queryTranslator.js";
 import {
   getRecentSearchHistory,
+  getShowPopupSearchHistory,
   removeSearchHistoryRecord,
+  saveShowPopupSearchHistory,
 } from "./searchHistory.js";
 import { getSearchSettings } from "./searchSettings.js";
 import { buildGroupTitle } from "./tabLauncher.js";
+
+const SEARCH_INPUT_MAX_HEIGHT = 120;
+
+function resizeSearchInput(input) {
+  if (!input.style) {
+    return;
+  }
+
+  input.style.height = "auto";
+
+  if (input.scrollHeight > 0) {
+    input.style.height = `${Math.min(input.scrollHeight, SEARCH_INPUT_MAX_HEIGHT)}px`;
+  }
+}
 
 export function initSearchUi({
   closeOnSuccess,
   form,
   historyList = null,
+  historyToggle = null,
   input,
   onHistoryChange = null,
   searchButton,
   statusMessage,
+  translateQuery = translateQueryForSearch,
+  useHistoryVisibilityPreference = false,
 }) {
+  let shouldShowHistory = true;
+
+  if ((historyToggle || useHistoryVisibilityPreference) && historyList) {
+    historyList.hidden = true;
+  }
+
   function setStatus(message, state = "idle") {
     statusMessage.textContent = message;
     statusMessage.classList.toggle("is-error", state === "error");
     statusMessage.classList.toggle("is-busy", state === "busy");
+  }
+
+  function initMultilineInput() {
+    input.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey || event.isComposing) {
+        return;
+      }
+
+      event.preventDefault();
+      form.requestSubmit();
+    });
+
+    input.addEventListener("input", () => {
+      resizeSearchInput(input);
+    });
+    resizeSearchInput(input);
   }
 
   function renderHistory(records) {
@@ -27,7 +69,11 @@ export function initSearchUi({
     }
 
     historyList.textContent = "";
-    historyList.hidden = records.length === 0;
+    historyList.hidden = !shouldShowHistory || records.length === 0;
+
+    if (!shouldShowHistory) {
+      return;
+    }
 
     for (const record of records) {
       const chip = document.createElement("span");
@@ -60,6 +106,16 @@ export function initSearchUi({
     await onHistoryChange?.();
   }
 
+  async function initHistoryVisibility() {
+    shouldShowHistory = await getShowPopupSearchHistory(chrome.storage.local);
+
+    if (historyToggle) {
+      historyToggle.checked = shouldShowHistory;
+    }
+
+    await refreshHistory();
+  }
+
   async function openQuery(value) {
     const query = normalizeQuery(value);
 
@@ -73,7 +129,10 @@ export function initSearchUi({
     setStatus("正在整理搜索页。", "busy");
 
     const settings = await getSearchSettings(chrome.storage.local);
-    const urls = buildSearchUrls(query, settings);
+    const finalQuery = await translateQuery(query, {
+      enabled: settings.translateChineseToEnglish,
+    });
+    const urls = buildSearchUrls(finalQuery, settings);
 
     if (urls.length === 0) {
       searchButton.disabled = false;
@@ -85,9 +144,9 @@ export function initSearchUi({
     try {
       const response = await chrome.runtime.sendMessage({
         type: "OPEN_SEARCH_GROUP",
-        query,
+        query: finalQuery,
         urls,
-        title: buildGroupTitle(query),
+        title: buildGroupTitle(finalQuery),
         autoClosePrevious: settings.autoClosePrevious,
       });
 
@@ -137,10 +196,26 @@ export function initSearchUi({
     }
 
     input.value = openButton.dataset.historyQuery;
+    resizeSearchInput(input);
     await openQuery(input.value);
   });
 
-  refreshHistory();
+  historyToggle?.addEventListener("change", async () => {
+    shouldShowHistory = await saveShowPopupSearchHistory(
+      chrome.storage.local,
+      historyToggle.checked,
+    );
+    historyToggle.checked = shouldShowHistory;
+    await refreshHistory();
+    input.focus();
+  });
+
+  if (historyToggle || useHistoryVisibilityPreference) {
+    initHistoryVisibility();
+  } else {
+    refreshHistory();
+  }
+  initMultilineInput();
   input.focus();
 
   return {
@@ -154,21 +229,33 @@ export function initOptionsButton(button) {
   });
 }
 
-export function initPinButton(button, statusMessage) {
+export function initPinButton(button, statusMessage, { closeOnSuccess = true } = {}) {
   if (!chrome.sidePanel?.open) {
     button.disabled = true;
-    button.title = "当前浏览器不支持固定侧边栏";
+    button.title = "当前浏览器不支持侧边栏显示";
     return;
   }
 
-  button.addEventListener("click", async () => {
+  const isSwitchControl = button.type === "checkbox";
+
+  button.addEventListener(isSwitchControl ? "change" : "click", async () => {
+    if (isSwitchControl && !button.checked) {
+      return;
+    }
+
     try {
       const currentWindow = await chrome.windows.getCurrent();
       await chrome.sidePanel.open({ windowId: currentWindow.id });
-      window.close();
+
+      if (closeOnSuccess) {
+        window.close();
+      }
     } catch (error) {
       console.error(error);
-      statusMessage.textContent = "无法打开固定面板，请确认浏览器支持 Side Panel。";
+      if (isSwitchControl) {
+        button.checked = false;
+      }
+      statusMessage.textContent = "无法打开侧边栏，请确认浏览器支持 Side Panel。";
       statusMessage.classList.add("is-error");
     }
   });

@@ -1,40 +1,117 @@
-import { SEARCH_TARGETS, getSearchTargetById } from "./searchTargets.js";
+import { SEARCH_TARGETS, getSearchTargetById } from "../src/searchTargets.js";
 import {
   GOOGLE_SEARCH_TYPES,
   getSearchSettings,
   normalizeSearchSettings,
   saveSearchSettings,
-} from "./searchSettings.js";
+} from "../src/searchSettings.js";
 import {
+  clearSearchHistory,
   getSearchHistory,
+  getShowPopupSearchHistory,
   removeSearchHistoryRecord,
-} from "./searchHistory.js";
-import { initSearchUi } from "./searchUi.js";
-import { openShortcutSettings } from "./shortcutSettings.js";
+  saveShowPopupSearchHistory,
+} from "../src/searchHistory.js";
+import { initPinButton, initSearchUi } from "../src/searchUi.js";
+import { openShortcutSettings } from "../src/shortcutSettings.js";
 
+const TIKTOK_NON_ENGLISH_WARNING_KEY = "tiktokCaptionNonEnglishWarningEnabled";
 const storageArea = chrome.storage.local;
 const allSearchHistory = document.querySelector("#all-search-history");
 const allSearchHistoryEmpty = document.querySelector("#all-search-history-empty");
 const autoCloseToggle = document.querySelector("#auto-close-toggle");
+const clearHistoryButton = document.querySelector("#clear-history-button");
 const googleImageToggle = document.querySelector("#google-image-toggle");
-const googleModeState = document.querySelector("#google-mode-state");
+const googleRecent24hToggle = document.querySelector("#google-recent-24h-toggle");
+const historyFilterInput = document.querySelector("#history-filter-input");
+const historyTableBody = document.querySelector("#history-table-body");
 const optionsSearchButton = document.querySelector("#options-search-button");
 const optionsSearchForm = document.querySelector("#options-search-form");
 const optionsSearchHistory = document.querySelector("#options-search-history");
 const optionsSearchInput = document.querySelector("#options-search-input");
 const optionsSearchStatus = document.querySelector("#options-search-status");
+const optionsNavLinks = [...document.querySelectorAll("[data-options-nav]")];
 const shortcutSettingsButton = document.querySelector("#shortcut-settings-button");
+const showPopupHistoryToggle = document.querySelector("#show-popup-history-toggle");
+const sidePanelButton = document.querySelector("#side-panel-button");
 const targetOrderList = document.querySelector("#target-order-list");
+const tiktokNonEnglishWarningToggle = document.querySelector("#tiktok-non-english-warning-toggle");
+const translateChineseToggle = document.querySelector("#translate-chinese-toggle");
 const statusMessage = document.querySelector("#status-message");
+const settingsSections = optionsNavLinks
+  .map((link) => document.getElementById(link.dataset.optionsNav))
+  .filter(Boolean);
 
 let settings = null;
 let dragState = null;
 let persistToken = 0;
 let optionsSearchUi = null;
+let allHistoryRecords = [];
+let showPopupSearchHistory = true;
+let tiktokCaptionNonEnglishWarningEnabled = true;
 
 function setStatus(message, state = "idle") {
   statusMessage.textContent = message;
   statusMessage.classList.toggle("is-error", state === "error");
+}
+
+function setActiveOptionsNav(sectionId) {
+  for (const link of optionsNavLinks) {
+    const isActive = link.dataset.optionsNav === sectionId;
+
+    link.classList.toggle("is-active", isActive);
+
+    if (isActive) {
+      link.setAttribute("aria-current", "true");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  }
+}
+
+function initOptionsNavigation() {
+  if (optionsNavLinks.length === 0 || settingsSections.length === 0) {
+    return;
+  }
+
+  for (const link of optionsNavLinks) {
+    link.addEventListener("click", (event) => {
+      const section = document.getElementById(link.dataset.optionsNav);
+
+      if (!section) {
+        return;
+      }
+
+      event.preventDefault();
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveOptionsNav(section.id);
+    });
+  }
+
+  if (!("IntersectionObserver" in window)) {
+    setActiveOptionsNav(settingsSections[0].id);
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const visibleEntry = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+      if (visibleEntry) {
+        setActiveOptionsNav(visibleEntry.target.id);
+      }
+    },
+    {
+      rootMargin: "-20% 0px -60% 0px",
+      threshold: [0.1, 0.5],
+    },
+  );
+
+  for (const section of settingsSections) {
+    observer.observe(section);
+  }
 }
 
 async function persist(nextSettings = settings) {
@@ -62,6 +139,22 @@ async function persist(nextSettings = settings) {
       setStatus("设置保存失败，请重新尝试。", "error");
     }
   }
+}
+
+async function getTikTokNonEnglishWarningEnabled() {
+  const result = await storageArea.get(TIKTOK_NON_ENGLISH_WARNING_KEY);
+
+  return result[TIKTOK_NON_ENGLISH_WARNING_KEY] !== false;
+}
+
+async function saveTikTokNonEnglishWarningEnabled(enabled) {
+  const normalizedEnabled = Boolean(enabled);
+
+  await storageArea.set({
+    [TIKTOK_NON_ENGLISH_WARNING_KEY]: normalizedEnabled,
+  });
+
+  return normalizedEnabled;
 }
 
 function isTargetEnabled(id) {
@@ -286,44 +379,82 @@ function renderTargetList() {
   ].join("");
 }
 
-function createHistoryChip(record) {
-  const chip = document.createElement("span");
+function formatHistoryTime(searchedAt) {
+  if (!Number.isFinite(searchedAt) || searchedAt <= 0) {
+    return "未知时间";
+  }
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(searchedAt));
+}
+
+function getFilteredHistoryRecords() {
+  const filterText = historyFilterInput.value.trim().toLowerCase();
+
+  if (!filterText) {
+    return allHistoryRecords;
+  }
+
+  return allHistoryRecords.filter((record) =>
+    record.query.toLowerCase().includes(filterText),
+  );
+}
+
+function createHistoryTableRow(record) {
+  const row = document.createElement("tr");
+  const timeCell = document.createElement("td");
+  const queryCell = document.createElement("td");
+  const actionCell = document.createElement("td");
   const openButton = document.createElement("button");
   const removeButton = document.createElement("button");
-  const { id, query } = record;
 
-  chip.className = "search-history-chip";
-  openButton.className = "search-history-open";
+  timeCell.className = "history-time-cell";
+  timeCell.textContent = formatHistoryTime(record.searchedAt);
+  queryCell.className = "history-query-cell";
+  queryCell.textContent = record.query;
   openButton.type = "button";
-  openButton.textContent = query;
-  openButton.dataset.historyQuery = query;
-  openButton.title = `重新搜索 ${query}`;
-  removeButton.className = "search-history-remove";
+  openButton.textContent = "重新搜索";
+  openButton.dataset.historyQuery = record.query;
   removeButton.type = "button";
-  removeButton.textContent = "×";
-  removeButton.dataset.historyRemove = id;
-  removeButton.setAttribute("aria-label", `删除搜索记录 ${query}`);
+  removeButton.textContent = "删除";
+  removeButton.dataset.historyRemove = record.id;
+  removeButton.setAttribute("aria-label", `删除搜索记录 ${record.query}`);
+  actionCell.className = "history-action-cell";
+  actionCell.append(openButton, removeButton);
+  row.append(timeCell, queryCell, actionCell);
 
-  chip.append(openButton, removeButton);
-  return chip;
+  return row;
+}
+
+function renderHistoryTable() {
+  const records = getFilteredHistoryRecords();
+
+  historyTableBody.textContent = "";
+  allSearchHistoryEmpty.hidden = allHistoryRecords.length > 0;
+  clearHistoryButton.disabled = allHistoryRecords.length === 0;
+
+  for (const record of records) {
+    historyTableBody.append(createHistoryTableRow(record));
+  }
 }
 
 async function renderAllSearchHistory() {
-  const records = await getSearchHistory(storageArea);
-
-  allSearchHistory.textContent = "";
-  allSearchHistory.hidden = records.length === 0;
-  allSearchHistoryEmpty.hidden = records.length > 0;
-
-  for (const record of records) {
-    allSearchHistory.append(createHistoryChip(record));
-  }
+  allHistoryRecords = await getSearchHistory(storageArea);
+  renderHistoryTable();
 }
 
 function render() {
   autoCloseToggle.checked = settings.autoClosePrevious;
   googleImageToggle.checked = settings.googleSearchType === GOOGLE_SEARCH_TYPES.IMAGES;
-  googleModeState.textContent = googleImageToggle.checked ? "图片搜索" : "普通搜索";
+  googleRecent24hToggle.checked = settings.googleRecent24Hours;
+  showPopupHistoryToggle.checked = showPopupSearchHistory;
+  tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
+  translateChineseToggle.checked = settings.translateChineseToEnglish;
   renderTargetList();
 }
 
@@ -338,6 +469,42 @@ googleImageToggle.addEventListener("change", () => {
       ? GOOGLE_SEARCH_TYPES.IMAGES
       : GOOGLE_SEARCH_TYPES.WEB,
   });
+});
+
+googleRecent24hToggle.addEventListener("change", () => {
+  persist({ ...settings, googleRecent24Hours: googleRecent24hToggle.checked });
+});
+
+translateChineseToggle.addEventListener("change", () => {
+  persist({ ...settings, translateChineseToEnglish: translateChineseToggle.checked });
+});
+
+showPopupHistoryToggle.addEventListener("change", async () => {
+  try {
+    showPopupSearchHistory = await saveShowPopupSearchHistory(
+      storageArea,
+      showPopupHistoryToggle.checked,
+    );
+    showPopupHistoryToggle.checked = showPopupSearchHistory;
+    setStatus("设置已保存。");
+  } catch (error) {
+    console.error(error);
+    showPopupHistoryToggle.checked = showPopupSearchHistory;
+    setStatus("设置保存失败，请重新尝试。", "error");
+  }
+});
+
+tiktokNonEnglishWarningToggle.addEventListener("change", async () => {
+  try {
+    tiktokCaptionNonEnglishWarningEnabled =
+      await saveTikTokNonEnglishWarningEnabled(tiktokNonEnglishWarningToggle.checked);
+    tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
+    setStatus("设置已保存。");
+  } catch (error) {
+    console.error(error);
+    tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
+    setStatus("设置保存失败，请重新尝试。", "error");
+  }
 });
 
 targetOrderList.addEventListener("click", (event) => {
@@ -438,6 +605,25 @@ allSearchHistory.addEventListener("click", async (event) => {
   optionsSearchForm.requestSubmit();
 });
 
+historyFilterInput.addEventListener("input", renderHistoryTable);
+
+clearHistoryButton.addEventListener("click", async () => {
+  if (allHistoryRecords.length === 0) {
+    return;
+  }
+
+  const confirmed = window.confirm("确定要清空全部历史记录吗？");
+
+  if (!confirmed) {
+    return;
+  }
+
+  await clearSearchHistory(storageArea);
+  await renderAllSearchHistory();
+  await optionsSearchUi?.refreshHistory();
+  optionsSearchInput.focus();
+});
+
 shortcutSettingsButton.addEventListener("click", async () => {
   try {
     await openShortcutSettings(chrome.tabs);
@@ -447,6 +633,11 @@ shortcutSettingsButton.addEventListener("click", async () => {
   }
 });
 
+initPinButton(sidePanelButton, statusMessage, { closeOnSuccess: false });
+initOptionsNavigation();
+
+showPopupSearchHistory = await getShowPopupSearchHistory(storageArea);
+tiktokCaptionNonEnglishWarningEnabled = await getTikTokNonEnglishWarningEnabled();
 settings = await getSearchSettings(storageArea);
 settings.targetOrder = settings.targetOrder.filter((id) =>
   SEARCH_TARGETS.some((target) => target.id === id),

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Multi Search Jump</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="popup-header">
+        <div class="popup-title">
+          <div class="mark" aria-hidden="true"></div>
+          <div>
+            <h1>Multi Search Jump</h1>
+          </div>
+        </div>
+        <div class="popup-actions">
+          <button
+            id="side-panel-button"
+            class="header-icon-button"
+            type="button"
+            aria-label="打开侧边栏"
+            title="打开侧边栏"
+          >◧</button>
+          <button
+            id="options-button"
+            class="header-icon-button"
+            type="button"
+            aria-label="打开设置"
+            title="打开设置"
+          >⚙</button>
+        </div>
+      </header>
+
+      <form id="search-form" class="search-form">
+        <label class="visually-hidden" for="search-input">搜索关键词</label>
+        <div class="search-input-shell">
+          <textarea
+            id="search-input"
+            name="query"
+            rows="1"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="输入关键词"
+          ></textarea>
+        </div>
+        <button id="search-button" type="submit">搜索</button>
+      </form>
+      <div
+        id="search-history"
+        class="search-history"
+        aria-label="最近搜索记录"
+        hidden
+      ></div>
+
+      <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

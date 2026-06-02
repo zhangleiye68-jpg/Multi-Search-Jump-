@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import {
   SHORTCUT_SETTINGS_URL,
   openShortcutSettings,
-} from "../shortcutSettings.js";
+} from "../extension/src/shortcutSettings.js";
 
 describe("shortcut settings", () => {
   it("opens Chrome's extension shortcut settings page", async () => {

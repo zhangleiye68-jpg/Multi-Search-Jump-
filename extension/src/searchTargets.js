@@ -3,11 +3,21 @@ export const SEARCH_TARGETS = Object.freeze([
     id: "google",
     name: "Google",
     buildUrl: (query, settings = {}) => {
-      if (settings.googleSearchType === "web") {
+      const recent24Hours = settings.googleRecent24Hours === true;
+
+      if (settings.googleSearchType !== "images") {
+        if (recent24Hours) {
+          return `https://www.google.com/search?tbs=qdr:d&q=${query}`;
+        }
+
         return `https://www.google.com/search?q=${query}`;
       }
 
-      return `https://www.google.com/search?tbm=isch&q=${query}`;
+      if (!recent24Hours) {
+        return `https://www.google.com/search?tbm=isch&q=${query}`;
+      }
+
+      return `https://www.google.com/search?tbm=isch&tbs=qdr:d&q=${query}`;
     },
   }),
   Object.freeze({
@@ -24,6 +34,16 @@ export const SEARCH_TARGETS = Object.freeze([
     id: "tiktok",
     name: "TikTok",
     buildUrl: (query) => `https://www.tiktok.com/search?q=${query}`,
+  }),
+  Object.freeze({
+    id: "instagram",
+    name: "Instagram",
+    buildUrl: (query) => `https://www.instagram.com/explore/search/keyword/?q=${query}`,
+  }),
+  Object.freeze({
+    id: "reddit",
+    name: "Reddit",
+    buildUrl: (query) => `https://www.reddit.com/search/?q=${query}`,
   }),
   Object.freeze({
     id: "xiaohongshu",
@@ -54,6 +74,7 @@ export const SEARCH_TARGETS = Object.freeze([
 
 const TARGETS_BY_ID = new Map(SEARCH_TARGETS.map((target) => [target.id, target]));
 const DEFAULT_TARGET_ORDER = SEARCH_TARGETS.map((target) => target.id);
+const DEFAULT_ENABLED_TARGET_IDS = ["google"];
 
 export function normalizeQuery(value) {
   return String(value ?? "").trim();
@@ -74,7 +95,7 @@ export function getOrderedSearchTargets(settings = {}) {
   const enabledIds = new Set(
     Array.isArray(settings.enabledTargetIds)
       ? settings.enabledTargetIds
-      : DEFAULT_TARGET_ORDER,
+      : DEFAULT_ENABLED_TARGET_IDS,
   );
 
   return orderedIds
