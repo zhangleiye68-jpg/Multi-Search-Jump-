@@ -58,6 +58,20 @@
     }
   }
 
+  function postCachedRecommendationFeed() {
+    try {
+      const cachedFeed = window.localStorage?.getItem?.("fyp-feed-cache");
+
+      if (!cachedFeed) {
+        return;
+      }
+
+      postTikTokApiPayload("localStorage:fyp-feed-cache", JSON.parse(cachedFeed));
+    } catch {
+      // TikTok may change cache shape or deny storage access; live API hooks still cover new requests.
+    }
+  }
+
   function installFetchBridge() {
     const originalFetch = window.fetch;
 
@@ -114,4 +128,5 @@
 
   installFetchBridge();
   installXhrBridge();
+  queueMicrotask(postCachedRecommendationFeed);
 })();

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-async function loadBridge({ responseText = "{}" } = {}) {
+async function loadBridge({ localStorageValues = {}, responseText = "{}" } = {}) {
   const messages = [];
   const originalWindow = globalThis.window;
   const originalRequest = globalThis.Request;
@@ -25,6 +25,11 @@ async function loadBridge({ responseText = "{}" } = {}) {
   };
   globalThis.window = {
     fetch: async () => ResponseHarness(responseText),
+    localStorage: {
+      getItem(key) {
+        return localStorageValues[key] ?? null;
+      },
+    },
     postMessage(message) {
       messages.push(message);
     },
@@ -47,6 +52,36 @@ async function loadBridge({ responseText = "{}" } = {}) {
 }
 
 describe("TikTok caption bridge", () => {
+  it("forwards cached recommendation feed payloads on install", async () => {
+    const bridge = await loadBridge({
+      localStorageValues: {
+        "fyp-feed-cache": JSON.stringify({
+          itemList: [
+            {
+              id: "1234567890",
+              video: {
+                subtitleInfos: [
+                  { Url: "https://example.test/cached-recommendation.vtt" },
+                ],
+              },
+            },
+          ],
+        }),
+      },
+    });
+
+    try {
+      await Promise.resolve();
+    } finally {
+      bridge.restore();
+    }
+
+    assert.equal(bridge.messages.length, 1);
+    assert.equal(bridge.messages[0].type, "msj-tiktok-api-response");
+    assert.equal(bridge.messages[0].url, "localStorage:fyp-feed-cache");
+    assert.equal(bridge.messages[0].payload.itemList[0].id, "1234567890");
+  });
+
   it("forwards favorite and collection TikTok API payloads", async () => {
     const bridge = await loadBridge({
       responseText: JSON.stringify({

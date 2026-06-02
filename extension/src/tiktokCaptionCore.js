@@ -28,6 +28,14 @@
     text: "text",
     url: "url",
   });
+  const CAPTION_RESULT_SOURCES = Object.freeze({
+    api: "api",
+    detail: "detail",
+    dom: "dom",
+    hint: "hint",
+    none: "none",
+    script: "script",
+  });
   const TIKTOK_API_MESSAGE_TYPE = "msj-tiktok-api-response";
   const TIKTOK_REHYDRATION_SCRIPT_ID = "__UNIVERSAL_DATA_FOR_REHYDRATION__";
   const TIKTOK_API_HINT_ITEM_LIMIT = 16;
@@ -118,9 +126,74 @@
     };
   }
 
-  function getActiveVideoRect(root) {
-    let activeRect = null;
+  function getViewportRect(root) {
+    const windowRef =
+      root?.defaultView ||
+      root?.ownerDocument?.defaultView ||
+      globalThis.window;
+    const width = Number(windowRef?.innerWidth ?? 0);
+    const height = Number(windowRef?.innerHeight ?? 0);
+
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
+
+    return {
+      bottom: height,
+      height,
+      left: 0,
+      right: width,
+      top: 0,
+      width,
+    };
+  }
+
+  function getRectIntersectionArea(rect, viewportRect) {
+    if (!rect || !viewportRect) {
+      return 0;
+    }
+
+    const width = Math.max(0, Math.min(rect.right, viewportRect.right) - Math.max(rect.left, viewportRect.left));
+    const height = Math.max(0, Math.min(rect.bottom, viewportRect.bottom) - Math.max(rect.top, viewportRect.top));
+
+    return width * height;
+  }
+
+  function getRectCenterDistance(rect, viewportRect) {
+    if (!rect || !viewportRect) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    const rectCenterX = rect.left + rect.width / 2;
+    const rectCenterY = rect.top + rect.height / 2;
+    const viewportCenterX = viewportRect.left + viewportRect.width / 2;
+    const viewportCenterY = viewportRect.top + viewportRect.height / 2;
+
+    return Math.hypot(rectCenterX - viewportCenterX, rectCenterY - viewportCenterY);
+  }
+
+  function isRectCenterInsideRect(rect, containerRect) {
+    if (!rect || !containerRect) {
+      return false;
+    }
+
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    return (
+      centerX >= containerRect.left &&
+      centerX <= containerRect.right &&
+      centerY >= containerRect.top &&
+      centerY <= containerRect.bottom
+    );
+  }
+
+  function getActiveVideo(root) {
+    let activeVideo = null;
+    let activeVisibleArea = 0;
     let activeArea = 0;
+    let activeDistance = Number.POSITIVE_INFINITY;
+    const viewportRect = getViewportRect(root);
 
     for (const video of root?.querySelectorAll?.("video") ?? []) {
       const rect = getNodeRect(video);
@@ -130,14 +203,43 @@
       }
 
       const area = rect.width * rect.height;
+      const visibleArea = viewportRect ? getRectIntersectionArea(rect, viewportRect) : area;
+      const distance = getRectCenterDistance(rect, viewportRect);
 
-      if (area > activeArea) {
+      if (viewportRect && (visibleArea <= 0 || !isRectCenterInsideRect(rect, viewportRect))) {
+        continue;
+      }
+
+      if (
+        visibleArea > activeVisibleArea ||
+        (visibleArea === activeVisibleArea && distance < activeDistance) ||
+        (visibleArea === activeVisibleArea && distance === activeDistance && area > activeArea)
+      ) {
+        activeVisibleArea = visibleArea;
         activeArea = area;
-        activeRect = rect;
+        activeDistance = distance;
+        activeVideo = video;
       }
     }
 
-    return activeRect;
+    return activeVideo;
+  }
+
+  function getActiveVideoRect(root) {
+    return getNodeRect(getActiveVideo(root));
+  }
+
+  function getVideoSource(video) {
+    const source = video?.querySelector?.("source");
+
+    return normalizeCaptionText(
+      video?.currentSrc ||
+        video?.src ||
+        video?.getAttribute?.("src") ||
+        source?.src ||
+        source?.getAttribute?.("src") ||
+        "",
+    );
   }
 
   function getActiveVideoLink(root) {
@@ -170,6 +272,56 @@
     }
 
     return closestHref;
+  }
+
+  function normalizeTikTokAuthorId(value) {
+    const authorId = normalizeCaptionText(value).replace(/^@/u, "");
+
+    try {
+      return decodeURIComponent(authorId).toLocaleLowerCase();
+    } catch {
+      return authorId.toLocaleLowerCase();
+    }
+  }
+
+  function extractTikTokAuthorId(value) {
+    const text = String(value ?? "");
+    const match = text.match(/\/@([^/?#]+)/u);
+
+    return normalizeTikTokAuthorId(match?.[1] ?? text);
+  }
+
+  function getActiveVideoAuthorId(root) {
+    const activeVideoRect = getActiveVideoRect(root);
+    let closestAuthorId = "";
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    if (!activeVideoRect) {
+      return "";
+    }
+
+    for (const link of root?.querySelectorAll?.("a[href*='/@']") ?? []) {
+      const href = normalizeCaptionText(link?.href || link?.getAttribute?.("href") || "");
+      const authorId = extractTikTokAuthorId(href);
+      const rect = getNodeRect(link);
+
+      if (!authorId || !rect) {
+        continue;
+      }
+
+      if (isNodeInsideRect(link, activeVideoRect)) {
+        return authorId;
+      }
+
+      const distance = getRectDistance(activeVideoRect, rect);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestAuthorId = authorId;
+      }
+    }
+
+    return closestAuthorId;
   }
 
   function isNodeInsideRect(node, containerRect) {
@@ -255,6 +407,17 @@
         item?.awemeId ||
         item?.aweme_id ||
         item?.video?.id ||
+        "",
+    );
+  }
+
+  function getTikTokItemAuthorId(item) {
+    return normalizeTikTokAuthorId(
+      item?.author?.uniqueId ||
+        item?.author?.unique_id ||
+        item?.author?.unique_id_str ||
+        item?.authorInfo?.uniqueId ||
+        item?.authorInfo?.unique_id ||
         "",
     );
   }
@@ -492,6 +655,33 @@
     }
   }
 
+  function collectTikTokApiCaptionEntriesByActiveContext(root, entries, seen) {
+    if (tikTokApiItemCache.size === 0) {
+      return;
+    }
+
+    const activeAuthorId = getActiveVideoAuthorId(root);
+
+    if (!activeAuthorId) {
+      return;
+    }
+
+    const matchingItems = Array.from(tikTokApiItemCache.values())
+      .slice(-TIKTOK_API_HINT_ITEM_LIMIT)
+      .reverse()
+      .filter((item) => getTikTokItemAuthorId(item) === activeAuthorId);
+
+    if (matchingItems.length !== 1) {
+      return;
+    }
+
+    const subtitleUrl = findSubtitleUrlFromTikTokItem(matchingItems[0]);
+
+    if (subtitleUrl) {
+      appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.url, subtitleUrl);
+    }
+  }
+
   function collectDomCaptionEntries(root, entries, seen, { allowText = true } = {}) {
     const activeVideoRect = getActiveVideoRect(root);
 
@@ -540,6 +730,13 @@
     }
 
     return lines;
+  }
+
+  function getCaptionHintKeyFromRoot(root) {
+    return collectDomCaptionHintLines(root)
+      .map(normalizeCaptionMatchKey)
+      .filter(Boolean)
+      .join(",");
   }
 
   function getStringField(value, keys) {
@@ -801,13 +998,14 @@
     return resolveCaptionEntries(scriptEntries, fetchCaption);
   }
 
-  async function extractCaptionLines(
+  async function extractCaptionResult(
     root = document,
     {
       currentVideoId = "",
       currentPageUrl = "",
       fetchCaption = getDefaultFetchApi(),
       allowDomTextCaptions = true,
+      allowDomFallback = true,
       ignoreScriptCaptions = false,
       preferDomCaptions = false,
     } = {},
@@ -821,7 +1019,7 @@
       const apiLines = await resolveCaptionEntries(apiEntries, fetchCaption);
 
       if (apiLines.length > 0) {
-        return apiLines;
+        return { lines: apiLines, source: CAPTION_RESULT_SOURCES.api };
       }
     }
 
@@ -840,11 +1038,12 @@
       const detailLines = await resolveCaptionEntries(detailEntries, fetchCaption);
 
       if (detailLines.length > 0) {
-        return detailLines;
+        return { lines: detailLines, source: CAPTION_RESULT_SOURCES.detail };
       }
     }
 
     if (!currentVideoId) {
+      const hintKey = getCaptionHintKeyFromRoot(root);
       const hintEntries = [];
       const hintSeen = new Set();
 
@@ -854,18 +1053,33 @@
         const hintLines = await resolveCaptionEntries(hintEntries, fetchCaption);
 
         if (hintLines.length > 0) {
-          return hintLines;
+          return { lines: hintLines, source: CAPTION_RESULT_SOURCES.hint };
+        }
+      }
+
+      if (!hintKey) {
+        const contextEntries = [];
+        const contextSeen = new Set();
+
+        collectTikTokApiCaptionEntriesByActiveContext(root, contextEntries, contextSeen);
+
+        if (contextEntries.length > 0) {
+          const contextLines = await resolveCaptionEntries(contextEntries, fetchCaption);
+
+          if (contextLines.length > 0) {
+            return { lines: contextLines, source: CAPTION_RESULT_SOURCES.api };
+          }
         }
       }
     }
 
-    if (preferDomCaptions) {
+    if (allowDomFallback && preferDomCaptions) {
       const domLines = await collectDomCaptionLines(root, fetchCaption, {
         allowText: allowDomTextCaptions,
       });
 
       if (domLines.length > 0) {
-        return domLines;
+        return { lines: domLines, source: CAPTION_RESULT_SOURCES.dom };
       }
     }
 
@@ -873,13 +1087,26 @@
       const scriptLines = await collectScriptCaptionLines(root, fetchCaption);
 
       if (scriptLines.length > 0) {
-        return scriptLines;
+        return { lines: scriptLines, source: CAPTION_RESULT_SOURCES.script };
       }
     }
 
-    return preferDomCaptions ? [] : collectDomCaptionLines(root, fetchCaption, {
+    if (preferDomCaptions || !allowDomFallback) {
+      return { lines: [], source: CAPTION_RESULT_SOURCES.none };
+    }
+
+    const domLines = await collectDomCaptionLines(root, fetchCaption, {
       allowText: allowDomTextCaptions,
     });
+
+    return {
+      lines: domLines,
+      source: domLines.length > 0 ? CAPTION_RESULT_SOURCES.dom : CAPTION_RESULT_SOURCES.none,
+    };
+  }
+
+  async function extractCaptionLines(root = document, options = {}) {
+    return (await extractCaptionResult(root, options)).lines;
   }
 
   async function translateEnglishCaptionToChinese(line, fetchApi = getDefaultFetchApi()) {
@@ -936,15 +1163,7 @@
 
   function getCaptionSourceKey(documentRef) {
     const video = documentRef?.querySelector?.("video");
-    const source = video?.querySelector?.("source");
-    const videoSource = normalizeCaptionText(
-      video?.currentSrc ||
-        video?.src ||
-        video?.getAttribute?.("src") ||
-        source?.src ||
-        source?.getAttribute?.("src") ||
-        "",
-    );
+    const videoSource = getVideoSource(video);
     const locationHref = normalizeCaptionText(
       documentRef?.location?.href || globalThis.location?.href || "",
     );
@@ -954,22 +1173,29 @@
 
   function getCaptionSourceKeyFromRoot(root, documentRef) {
     const baseSourceKey = getCaptionSourceKey(documentRef);
+    const activeVideoSource = getVideoSource(getActiveVideo(root));
     const activeVideoLink = getActiveVideoLink(root);
+    const activeAuthorId = getActiveVideoAuthorId(root);
 
-    return activeVideoLink ? `${baseSourceKey}|${activeVideoLink}` : baseSourceKey;
+    return `${baseSourceKey}|${activeVideoSource}|${activeVideoLink}|${activeAuthorId}`;
   }
 
   function hasConcreteVideoSourceKey(sourceKey) {
-    const normalizedSourceKey = String(sourceKey ?? "");
-    const separatorIndex = normalizedSourceKey.lastIndexOf("|");
+    const parts = String(sourceKey ?? "")
+      .split("|")
+      .map(normalizeCaptionText)
+      .filter(Boolean);
 
-    return separatorIndex >= 0 && normalizeCaptionText(normalizedSourceKey.slice(separatorIndex + 1)) !== "";
+    return parts.length > 1 || parts.some((part) => /\/video\/\d{5,}/u.test(part));
   }
 
   function getPageUrlFromSourceKey(sourceKey) {
-    const text = String(sourceKey ?? "");
-    const separatorIndex = text.lastIndexOf("|");
-    const pageUrl = separatorIndex >= 0 ? text.slice(0, separatorIndex) : text;
+    const parts = String(sourceKey ?? "")
+      .split("|")
+      .map(normalizeCaptionText)
+      .filter(Boolean);
+    const videoPageUrl = parts.find((part) => /\/video\/\d{5,}/u.test(part));
+    const pageUrl = videoPageUrl || parts[0] || "";
 
     return normalizeCaptionText(pageUrl);
   }
@@ -1103,6 +1329,7 @@
     document: documentRef = document,
     getRoot = () => documentRef,
     getSourceKey = () => getCaptionSourceKeyFromRoot(getRoot(), documentRef),
+    getHintKey = () => getCaptionHintKeyFromRoot(getRoot()),
     navigator: navigatorRef = navigator,
     fetchCaption = getDefaultFetchApi(),
     setInterval: setIntervalRef = getDefaultSetInterval(),
@@ -1124,6 +1351,7 @@
     let currentLines = [];
     let currentDisplayLines = [];
     let lastSourceKey = getSourceKey();
+    let lastHintKey = getHintKey();
     let refreshRequestId = 0;
     let autoRefreshTimer = null;
     let pendingAutoRefreshAttempts = 0;
@@ -1154,24 +1382,28 @@
     async function refreshCaptions({ ignoreScriptCaptions = false } = {}) {
       const requestId = ++refreshRequestId;
       const nextSourceKey = getSourceKey();
+      const nextHintKey = getHintKey();
       const shouldIgnoreScriptCaptions =
         ignoreScriptCaptions ||
         nextSourceKey !== lastSourceKey ||
         hasConcreteVideoSourceKey(nextSourceKey);
 
       lastSourceKey = nextSourceKey;
+      lastHintKey = nextHintKey;
       setStatus("正在读取字幕。");
 
       try {
         const currentVideoId = extractTikTokVideoId(nextSourceKey);
-        const nextLines = await extractCaptionLines(getRoot(), {
+        const captionResult = await extractCaptionResult(getRoot(), {
           currentPageUrl: getPageUrlFromSourceKey(nextSourceKey),
           currentVideoId,
           fetchCaption,
-          allowDomTextCaptions: Boolean(currentVideoId),
+          allowDomTextCaptions: false,
+          allowDomFallback: true,
           ignoreScriptCaptions: shouldIgnoreScriptCaptions,
           preferDomCaptions: true,
         });
+        const nextLines = captionResult.lines;
         const displayLines = await createDisplayLines(nextLines);
 
         if (requestId !== refreshRequestId || getSourceKey() !== nextSourceKey) {
@@ -1213,8 +1445,23 @@
       }
 
       const nextSourceKey = getSourceKey();
+      const nextHintKey = getHintKey();
 
       if (nextSourceKey === lastSourceKey) {
+        if (currentDisplayLines.length > 0) {
+          lastHintKey = nextHintKey;
+          return Promise.resolve();
+        }
+
+        if (nextHintKey && nextHintKey !== lastHintKey) {
+          lastHintKey = nextHintKey;
+          pendingAutoRefreshAttempts = Math.max(
+            pendingAutoRefreshAttempts,
+            autoRefreshRetryAttempts,
+          );
+          return refreshCaptions({ ignoreScriptCaptions: true });
+        }
+
         if (pendingAutoRefreshAttempts > 0 && currentDisplayLines.length === 0) {
           pendingAutoRefreshAttempts -= 1;
           return refreshCaptions({ ignoreScriptCaptions: true });
@@ -1223,10 +1470,11 @@
         return Promise.resolve();
       }
 
-      lastSourceKey = nextSourceKey;
-      refreshRequestId += 1;
       pendingAutoRefreshAttempts = autoRefreshRetryAttempts;
+      lastHintKey = nextHintKey;
+      refreshRequestId += 1;
       clearCaptions("正在读取字幕。");
+
       return refreshCaptions({ ignoreScriptCaptions: true });
     }
 
@@ -1256,7 +1504,7 @@
 
       if (isOpen) {
         startAutoRefresh();
-        return refreshCaptions();
+        return refreshCaptionsWithRetryWindow();
       }
 
       stopAutoRefresh();
@@ -1291,6 +1539,15 @@
       }
     }
 
+    function refreshCaptionsWithRetryWindow() {
+      pendingAutoRefreshAttempts = Math.max(
+        pendingAutoRefreshAttempts,
+        autoRefreshRetryAttempts,
+      );
+
+      return refreshCaptions();
+    }
+
     async function updateBilingualMode() {
       const requestId = ++refreshRequestId;
 
@@ -1316,7 +1573,7 @@
     button.addEventListener("click", () => setOpen(panelParts.panel.hidden));
     panelParts.bilingualToggle.addEventListener("change", updateBilingualMode);
     panelParts.closeButton.addEventListener("click", () => setOpen(false));
-    panelParts.refreshButton.addEventListener("click", refreshCaptions);
+    panelParts.refreshButton.addEventListener("click", refreshCaptionsWithRetryWindow);
     panelParts.copyButton.addEventListener("click", copyCaptions);
 
     const overlay = {

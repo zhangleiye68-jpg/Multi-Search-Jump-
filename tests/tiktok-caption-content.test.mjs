@@ -131,8 +131,15 @@ function createExtensionTextNode(textContent) {
   };
 }
 
-function createRootHarness({ links = [], nodes = [], scripts = [], videos = [] } = {}) {
+function createRootHarness({
+  links = [],
+  nodes = [],
+  scripts = [],
+  videos = [],
+  viewport = { innerHeight: 900, innerWidth: 1280 },
+} = {}) {
   return {
+    defaultView: viewport,
     querySelectorAll(selector) {
       if (selector === "script") {
         return scripts;
@@ -143,7 +150,11 @@ function createRootHarness({ links = [], nodes = [], scripts = [], videos = [] }
       }
 
       if (selector === "a[href*='/video/']") {
-        return links;
+        return links.filter((link) => String(link.href ?? "").includes("/video/"));
+      }
+
+      if (selector === "a[href*='/@']") {
+        return links.filter((link) => String(link.href ?? "").includes("/@"));
       }
 
       return nodes;
@@ -884,7 +895,7 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.captionList.children[0].children[0].textContent, "Second subtitle");
   });
 
-  it("prefers current visible captions over preloaded script captions in the overlay", async () => {
+  it("prefers current DOM track captions over preloaded script captions in the overlay", async () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();
     const overlay = createCaptionOverlay({
@@ -912,6 +923,43 @@ describe("TikTok caption content", () => {
     await overlay.refreshCaptions();
 
     assert.equal(overlay.captionList.children[0].children[0].textContent, "Current visible subtitle");
+  });
+
+  it("prefers complete script captions over a single visible caption in the overlay", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes: [
+            createVisibleCaptionNode("Only the current cue", createRect(100, 780, 360, 42)),
+          ],
+          scripts: [
+            {
+              textContent: JSON.stringify({
+                item: {
+                  subtitles: [
+                    { text: "First full subtitle" },
+                    { text: "Second full subtitle" },
+                  ],
+                },
+              }),
+            },
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children.length, 2);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "First full subtitle");
+    assert.equal(overlay.captionList.children[1].children[0].textContent, "Second full subtitle");
   });
 
   it("does not use script captions when a concrete video source is active", async () => {
@@ -1124,6 +1172,64 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.captionList.children[0].children[1].textContent, "Second recommendation subtitle. 中文");
   });
 
+  it("keeps retrying recommendation subtitles when API data arrives after opening", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const intervalHandlers = [];
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          links: [
+            createVideoLinkNode(
+              "https://www.tiktok.com/@creator/video/7234567890",
+              createRect(0, 0, 640, 900),
+            ),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/delayed-recommendation.vtt": createVtt("Delayed recommendation subtitle."),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: (handler) => {
+        intervalHandlers.push(handler);
+        return intervalHandlers.length;
+      },
+      clearInterval: () => {},
+    });
+
+    await overlay.button.click();
+    assert.match(overlay.status.textContent, /未检测到可读取字幕/);
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "7234567890",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/delayed-recommendation.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+    await intervalHandlers[0]();
+
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Delayed recommendation subtitle.");
+  });
+
   it("renders recommendation subtitles when the current video link is next to the video", async () => {
     const {
       createCaptionOverlay,
@@ -1173,6 +1279,50 @@ describe("TikTok caption content", () => {
     await overlay.refreshCaptions();
 
     assert.equal(overlay.captionList.children[0].children[0].textContent, "Side link recommendation subtitle.");
+  });
+
+  it("uses the active recommendation video link when probing the detail page", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    document.location = { href: "https://www.tiktok.com/foryou" };
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          links: [
+            createVideoLinkNode(
+              "https://www.tiktok.com/@creator/video/8234567890",
+              createRect(680, 120, 260, 80),
+            ),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://www.tiktok.com/@creator/video/8234567890": createTikTokRehydrationHtml({
+          id: "8234567890",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/detail-recommendation.vtt",
+              },
+            ],
+          },
+        }),
+        "https://example.test/detail-recommendation.vtt": createVtt("Detail recommendation subtitle."),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Detail recommendation subtitle.");
   });
 
   it("uses visible recommendation captions as a hint to find the full cached WebVTT subtitles", async () => {
@@ -1274,7 +1424,249 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.captionList.children[1].children[0].textContent, "The block wins the game.");
   });
 
-  it("does not render a single visible recommendation caption as a complete subtitle list", async () => {
+  it("uses the active recommendation author to find cached subtitles when the video link is unavailable", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "6234567892",
+          author: {
+            uniqueId: "othercreator",
+          },
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/other-author.vtt",
+              },
+            ],
+          },
+        },
+        {
+          id: "6234567893",
+          author: {
+            uniqueId: "joshpeck",
+          },
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/active-author.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          links: [
+            createVideoLinkNode("https://www.tiktok.com/@joshpeck", createRect(120, 760, 180, 36)),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/other-author.vtt": createVtt("Wrong author subtitle."),
+        "https://example.test/active-author.vtt": createVtt("Active author complete subtitle."),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children.length, 1);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Active author complete subtitle.");
+  });
+
+  it("uses the visible recommendation author instead of an offscreen rendered video", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "7234567892",
+          author: {
+            uniqueId: "offscreencreator",
+          },
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/offscreen-author.vtt",
+              },
+            ],
+          },
+        },
+        {
+          id: "7234567893",
+          author: {
+            uniqueId: "visiblecreator",
+          },
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/visible-author.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          links: [
+            createVideoLinkNode("https://www.tiktok.com/@offscreencreator", createRect(120, -820, 180, 36)),
+            createVideoLinkNode("https://www.tiktok.com/@visiblecreator", createRect(120, 760, 180, 36)),
+          ],
+          videos: [
+            createVideoNode(createRect(0, -900, 640, 900)),
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/offscreen-author.vtt": createVtt("Offscreen subtitle."),
+        "https://example.test/visible-author.vtt": createVtt("Visible subtitle."),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children.length, 1);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Visible subtitle.");
+  });
+
+  it("does not use subtitles from a preloaded video when the current visible card has no video", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "8234567892",
+          author: {
+            uniqueId: "dancekae",
+          },
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/preloaded-next-video.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          links: [
+            createVideoLinkNode("https://www.tiktok.com/@cloutify_ai", createRect(500, 650, 180, 36)),
+            createVideoLinkNode("https://www.tiktok.com/@dancekae", createRect(500, 950, 180, 36)),
+          ],
+          videos: [
+            createVideoNode(createRect(440, 900, 360, 700)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/preloaded-next-video.vtt": createVtt("Next preloaded subtitle."),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children.length, 0);
+    assert.match(overlay.status.textContent, /未检测到可读取字幕/);
+  });
+
+  it("does not use same-author cached subtitles when visible cues do not match", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "9234567892",
+          author: {
+            uniqueId: "primevideo",
+          },
+          video: {
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/same-author-wrong-video.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          links: [
+            createVideoLinkNode("https://www.tiktok.com/@primevideo", createRect(120, 760, 180, 36)),
+          ],
+          nodes: [
+            createVisibleCaptionNode("I didn't see a badge.", createRect(100, 720, 360, 42)),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/same-author-wrong-video.vtt": createVtt("bro shawarma ramen am I living in the matrix"),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: null,
+    });
+
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children.length, 0);
+    assert.match(overlay.status.textContent, /未检测到可读取字幕/);
+  });
+
+  it("does not render a visible recommendation caption when no full subtitle source is available", async () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();
     const overlay = createCaptionOverlay({
@@ -1293,6 +1685,236 @@ describe("TikTok caption content", () => {
     });
 
     await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children.length, 0);
+    assert.match(overlay.status.textContent, /未检测到可读取字幕/);
+  });
+
+  it("does not accumulate visible recommendation captions when the video link is unavailable", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const intervalHandlers = [];
+    let visibleCaption = "First visible cue";
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes: [
+            createVisibleCaptionNode(visibleCaption, createRect(100, 780, 360, 42)),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: (handler) => {
+        intervalHandlers.push(handler);
+        return intervalHandlers.length;
+      },
+      clearInterval: () => {},
+    });
+
+    await overlay.button.click();
+    assert.equal(overlay.captionList.children.length, 0);
+    assert.match(overlay.status.textContent, /未检测到可读取字幕/);
+
+    visibleCaption = "Second visible cue";
+    await intervalHandlers[0]();
+
+    assert.equal(overlay.captionList.children.length, 0);
+    assert.match(overlay.status.textContent, /未检测到可读取字幕/);
+  });
+
+  it("keeps complete captions while visible cues change during playback", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const intervalHandlers = [];
+    let visibleCaption = "The matching visible cue.";
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "6234567890",
+          textLanguage: "zh-Hans",
+          video: {
+            claInfo: {
+              originalLanguageInfo: {
+                language: "eng-US",
+              },
+            },
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/stable-original.vtt",
+              },
+              {
+                Format: "webvtt",
+                LanguageCodeName: "zh-Hans",
+                Url: "https://example.test/stable-translated.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes: [
+            createVisibleCaptionNode(visibleCaption, createRect(100, 780, 360, 42)),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/stable-original.vtt": [
+          "WEBVTT",
+          "",
+          "00:00:00.000 --> 00:00:01.000",
+          "The first complete line.",
+          "",
+          "00:00:01.000 --> 00:00:02.000",
+          "The second complete line.",
+        ].join("\n"),
+        "https://example.test/stable-translated.vtt": [
+          "WEBVTT",
+          "",
+          "00:00:00.000 --> 00:00:01.000",
+          "The matching visible cue.",
+        ].join("\n"),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: (handler) => {
+        intervalHandlers.push(handler);
+        return intervalHandlers.length;
+      },
+      clearInterval: () => {},
+    });
+
+    await overlay.button.click();
+    assert.equal(overlay.captionList.children.length, 2);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "The first complete line.");
+
+    visibleCaption = "A later cue that is not in the cached subtitle file.";
+    await intervalHandlers[0]();
+
+    assert.equal(overlay.captionList.children.length, 2);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "The first complete line.");
+    assert.equal(overlay.status.textContent, "已读取 2 条字幕。");
+  });
+
+  it("retries hint matching when a visible cue appears after an empty read", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const intervalHandlers = [];
+    let visibleCaption = "Unmatched visible cue.";
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "7234567891",
+          textLanguage: "zh-Hans",
+          video: {
+            claInfo: {
+              originalLanguageInfo: {
+                language: "eng-US",
+              },
+            },
+            subtitleInfos: [
+              {
+                Format: "webvtt",
+                LanguageCodeName: "eng-US",
+                Url: "https://example.test/later-original.vtt",
+              },
+              {
+                Format: "webvtt",
+                LanguageCodeName: "zh-Hans",
+                Url: "https://example.test/later-translated.vtt",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes: [
+            createVisibleCaptionNode(visibleCaption, createRect(100, 780, 360, 42)),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/later-original.vtt": createVtt("Complete subtitle after hint."),
+        "https://example.test/later-translated.vtt": createVtt("稍后出现的可见字幕"),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: (handler) => {
+        intervalHandlers.push(handler);
+        return intervalHandlers.length;
+      },
+      clearInterval: () => {},
+    });
+
+    await overlay.button.click();
+    assert.equal(overlay.captionList.children.length, 0);
+
+    visibleCaption = "稍后出现的可见字幕";
+    await intervalHandlers[0]();
+
+    assert.equal(overlay.captionList.children.length, 1);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Complete subtitle after hint.");
+  });
+
+  it("clears previous complete captions when the stable source changes", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const intervalHandlers = [];
+    let nodes = [createTrackNode("https://example.test/first.vtt")];
+    let sourceKey = "https://www.tiktok.com/foryou|first-video";
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes,
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      getSourceKey: () => sourceKey,
+      fetchCaption: createFetchCaption({
+        "https://example.test/first.vtt": createVtt("First complete subtitle."),
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+      setInterval: (handler) => {
+        intervalHandlers.push(handler);
+        return intervalHandlers.length;
+      },
+      clearInterval: () => {},
+    });
+
+    await overlay.button.click();
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "First complete subtitle.");
+
+    nodes = [
+      createVisibleCaptionNode("Only the next visible cue", createRect(100, 780, 360, 42)),
+    ];
+    sourceKey = "https://www.tiktok.com/foryou|second-video";
+    await intervalHandlers[0]();
 
     assert.equal(overlay.captionList.children.length, 0);
     assert.match(overlay.status.textContent, /未检测到可读取字幕/);
