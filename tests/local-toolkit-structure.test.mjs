@@ -6,6 +6,7 @@ const LOCAL_TOOLKIT_FILES = Object.freeze([
   "extension/local-toolkit/local-toolkit.html",
   "extension/local-toolkit/local-toolkit.css",
   "extension/local-toolkit/local-toolkit.js",
+  "extension/local-toolkit/local-toolkit-brand.js",
   "extension/src/localToolkitDownloadNames.js",
   "extension/src/localToolkitUi.js",
   "extension/src/localToolkit/localToolkitBackground.js",
@@ -113,6 +114,16 @@ describe("local toolkit structure", () => {
     );
   });
 
+  it("keeps the local toolkit relay entry focused on message relay only", async () => {
+    const manifest = JSON.parse(await readFile("extension/manifest.json", "utf8"));
+    const relayEntry = manifest.content_scripts.find((script) =>
+      script.js?.includes("src/localToolkit/localToolkitRelay.js"),
+    );
+
+    assert.ok(relayEntry, "local toolkit relay entry missing");
+    assert.deepEqual(relayEntry.js, ["src/localToolkit/localToolkitRelay.js"]);
+  });
+
   it("keeps the packed local toolkit background out of the core service worker", async () => {
     const source = await readFile("extension/src/background.js", "utf8");
 
@@ -191,10 +202,34 @@ describe("local toolkit structure", () => {
     }
   });
 
+  it("keeps visible shell files free of the old DataTool brand", async () => {
+    const filesToCheck = [
+      "extension/popup/popup.html",
+      "extension/options/options.html",
+      "extension/side-panel/panel.html",
+      "extension/local-toolkit/local-toolkit.html",
+      "extension/local-toolkit/local-toolkit.css",
+      "extension/local-toolkit/local-toolkit-brand.js",
+    ];
+
+    for (const file of filesToCheck) {
+      const source = await readFile(file, "utf8");
+
+      assert.doesNotMatch(source, /DataTool|DATATOOL|datatool/, `${file} exposes the old brand`);
+    }
+  });
+
   it("keeps local toolkit settings in the unified options page", async () => {
+    const html = await readFile("extension/local-toolkit/local-toolkit.html", "utf8");
     const css = await readFile("extension/local-toolkit/local-toolkit.css", "utf8");
 
+    assert.match(html, /<title>Multi Search Jump 绿色工具箱<\/title>/);
+    assert.match(html, /src="local-toolkit-brand\.js"/);
+    assert.doesNotMatch(html, /DataTool/);
     assert.match(css, /\.popup-wrapper\s+\.setting-section\s*{[\s\S]*display:\s*none/);
+    assert.match(css, /\.popup-wrapper\s+\.footer-section\s*{[\s\S]*display:\s*none/);
+    assert.match(css, /\.popup-wrapper\s+\.header-title::after\s*{[\s\S]*绿色工具箱/);
+    assert.match(css, /\.popup-wrapper\s+\.header-bar\s*{[\s\S]*#176b63/);
   });
 
   it("removes cloud-only speech-to-text buttons from the local toolkit surface", async () => {

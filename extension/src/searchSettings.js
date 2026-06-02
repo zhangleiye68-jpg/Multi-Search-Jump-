@@ -100,9 +100,11 @@ export function normalizeSearchSettings(value = {}) {
   );
   targetOrder = groupTargetOrderByEnabled(targetOrder, enabledTargetIds);
   enabledTargetIds = normalizeEnabledTargetIds(enabledTargetIds, targetOrder);
+  const savedGoogleSearchType = value[GOOGLE_SEARCH_TYPE_KEY] ?? value.googleSearchType;
   const googleSearchType =
-    (value[GOOGLE_SEARCH_TYPE_KEY] ?? value.googleSearchType) === GOOGLE_SEARCH_TYPES.WEB
-      ? GOOGLE_SEARCH_TYPES.WEB
+    savedGoogleSearchType === GOOGLE_SEARCH_TYPES.IMAGES ||
+    savedGoogleSearchType === GOOGLE_SEARCH_TYPES.WEB
+      ? savedGoogleSearchType
       : DEFAULT_GOOGLE_SEARCH_TYPE;
   const savedGoogleRecent24Hours =
     value[GOOGLE_RECENT_24H_KEY]

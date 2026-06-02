@@ -79,7 +79,6 @@
         "https://www.xinpianchang.com/*"
       ],
       "js": [
-        "src/localToolkit/localToolkitFreeMode.js",
         "src/localToolkit/localToolkitRelay.js"
       ]
     },

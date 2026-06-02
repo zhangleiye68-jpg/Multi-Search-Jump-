@@ -111,6 +111,19 @@ describe("search settings", () => {
     });
   });
 
+  it("persists Google image search type", async () => {
+    const storageArea = createStorageArea();
+
+    const savedSettings = await saveSearchSettings(storageArea, {
+      googleSearchType: "images",
+    });
+    const loadedSettings = await getSearchSettings(storageArea);
+
+    assert.equal(savedSettings.googleSearchType, "images");
+    assert.equal(storageArea.values[GOOGLE_SEARCH_TYPE_KEY], "images");
+    assert.equal(loadedSettings.googleSearchType, "images");
+  });
+
   it("migrates the older image-only Google 24 hours setting", async () => {
     const storageArea = createStorageArea({
       googleImageRecent24Hours: false,

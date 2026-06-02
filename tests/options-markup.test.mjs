@@ -57,8 +57,9 @@ describe("options markup", () => {
     assert.match(html, /非英内容/);
     assert.match(html, /id="local-toolkit-page-button"/);
     assert.match(html, /id="local-toolkit-floating-icon-toggle"/);
-    assert.match(html, /本地工具图标/);
-    assert.match(html, /本地工具/);
+    assert.match(html, /工具箱图标/);
+    assert.match(html, /绿色工具箱/);
+    assert.doesNotMatch(html, />Local Toolkit</);
     assert.doesNotMatch(html, />固定</);
     assert.match(html, /id="shortcut-settings-button"/);
     assert.match(html, /id="target-order-list"/);
