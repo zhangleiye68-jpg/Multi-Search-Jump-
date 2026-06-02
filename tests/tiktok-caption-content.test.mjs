@@ -1927,11 +1927,16 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.modeButtons.original.textContent, "原版");
     assert.equal(overlay.modeButtons.bilingual.textContent, "原+中");
     assert.equal(overlay.modeButtons.chinese.textContent, "中文");
-    assert.equal(
-      overlay.videoInfo.textContent,
-      "4.2K/h - 50K - 12h - 0.4K like/h - High",
-    );
-    assert.equal(overlay.potentialBadge.textContent, "High");
+    const videoInfoText = overlay.videoInfo.textContent;
+
+    assert.equal(videoInfoText.startsWith("高"), true);
+    assert.equal(videoInfoText.includes("♥ 4.8K"), true);
+    assert.equal(videoInfoText.includes("↗ 4.2K/h"), true);
+    assert.equal(videoInfoText.includes("▶ 50K"), true);
+    assert.equal(videoInfoText.includes("⏱ 12h"), true);
+    assert.equal(videoInfoText.indexOf("♥ 4.8K") < videoInfoText.indexOf("↗ 4.2K/h"), true);
+    assert.equal(videoInfoText.indexOf("↗ 4.2K/h") < videoInfoText.indexOf("▶ 50K"), true);
+    assert.equal(overlay.potentialBadge.textContent, "高");
     assert.equal(overlay.potentialBadge.classList.contains("is-high"), true);
     assert.equal(overlay.languageWarning.textContent, "⚠ 非因内容");
     assert.equal(overlay.languageWarning.classList.contains("is-visible"), true);
@@ -1940,8 +1945,10 @@ describe("TikTok caption content", () => {
     assert.match(overlay.videoDetails.textContent, /A practical breakdown of a travel product\. 中文/);
     assert.equal(overlay.detailsTranslation.classList.contains("msj-tiktok-caption-translation"), true);
     assert.equal(overlay.actions.children.includes(overlay.status), true);
-    assert.equal(overlay.actions.children.includes(overlay.modeGroup), false);
-    assert.equal(overlay.panelHeader.children.includes(overlay.modeGroup), true);
+    assert.equal(overlay.actions.children.includes(overlay.modeGroup), true);
+    assert.equal(overlay.panelHeader.children.includes(overlay.modeGroup), false);
+    assert.equal(overlay.actions.children.indexOf(overlay.modeGroup) > overlay.actions.children.indexOf(overlay.status), true);
+    assert.equal(overlay.actions.children.indexOf(overlay.modeGroup) < overlay.actions.children.indexOf(overlay.refreshButton), true);
   });
 
   it("switches between original, bilingual, and Chinese-only captions", async () => {
@@ -2032,13 +2039,13 @@ describe("TikTok caption content", () => {
     await overlay.ready;
     await overlay.refreshCaptions();
 
-    assert.match(overlay.videoInfo.textContent, / - Mid$/);
+    assert.equal(overlay.videoInfo.textContent.startsWith("中"), true);
     assert.equal(overlay.potentialBadge.classList.contains("is-mid"), true);
 
     activeVideoId = "3234567890";
     await overlay.refreshCaptions({ ignoreScriptCaptions: true });
 
-    assert.match(overlay.videoInfo.textContent, / - Low$/);
+    assert.equal(overlay.videoInfo.textContent.startsWith("低"), true);
     assert.equal(overlay.potentialBadge.classList.contains("is-low"), true);
   });
 
@@ -2183,6 +2190,90 @@ describe("TikTok caption content", () => {
     assert.equal(typeof storageArea.values.tiktokCaptionPanelFrame.height, "number");
   });
 
+  it("lets the user resize the video details area independently", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const storageArea = createStorageArea();
+    const overlay = createCaptionOverlay({
+      document,
+      setInterval: null,
+      storageArea,
+    });
+
+    await overlay.ready;
+
+    assert.equal(overlay.videoDetails.style.maxHeight, "84px");
+
+    overlay.detailsResizeHandle.dispatch("pointerdown", {
+      clientX: 320,
+      clientY: 220,
+    });
+    overlay.detailsResizeHandle.dispatch("pointermove", {
+      clientX: 320,
+      clientY: 300,
+    });
+    await overlay.detailsResizeHandle.dispatch("pointerup", {
+      clientX: 320,
+      clientY: 300,
+    });
+
+    assert.equal(overlay.videoDetails.style.maxHeight, "164px");
+    assert.equal(storageArea.values.tiktokCaptionDetailsHeight, 164);
+  });
+
+  it("uses the last details height for long subtitles and falls back for short subtitles", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const storageArea = createStorageArea({
+      tiktokCaptionDetailsHeight: 160,
+    });
+    let nodes = [createTrackNode("https://example.test/long.vtt")];
+    let sourceKey = "video-long";
+
+    const overlay = createCaptionOverlay({
+      document,
+      fetchCaption: createFetchCaption({
+        "https://example.test/long.vtt": [
+          "WEBVTT",
+          "",
+          "00:00:00.000 --> 00:00:01.000",
+          "First subtitle",
+          "",
+          "00:00:01.000 --> 00:00:02.000",
+          "Second subtitle",
+          "",
+          "00:00:02.000 --> 00:00:03.000",
+          "Third subtitle",
+          "",
+          "00:00:03.000 --> 00:00:04.000",
+          "Fourth subtitle",
+          "",
+          "00:00:04.000 --> 00:00:05.000",
+          "Fifth subtitle",
+        ].join("\n"),
+        "https://example.test/short.vtt": createVtt("Only subtitle"),
+      }),
+      getRoot: () => createRootHarness({ nodes }),
+      getSourceKey: () => sourceKey,
+      setInterval: null,
+      storageArea,
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children.length, 5);
+    assert.equal(overlay.videoDetails.style.maxHeight, "160px");
+
+    nodes = [createTrackNode("https://example.test/short.vtt")];
+    sourceKey = "video-short";
+    await overlay.refreshCaptions({ ignoreScriptCaptions: true });
+
+    assert.equal(overlay.captionList.children.length, 1);
+    assert.equal(overlay.videoDetails.style.maxHeight, "84px");
+  });
+
   it("resets caption scroll when the active item changes", async () => {
     const {
       createCaptionOverlay,
@@ -2271,7 +2362,7 @@ describe("TikTok caption content", () => {
     await overlay.ready;
     await overlay.refreshCaptions();
 
-    assert.match(overlay.videoInfo.textContent, /1\.2M\/h - 1\.2M/);
+    assert.match(overlay.videoInfo.textContent, /1\.2M\/h.*1\.2M/);
     assert.match(overlay.captionList.children[0].children[0].textContent, /Photo launch notes/);
     assert.match(overlay.captionList.children[0].children[1].textContent, /中文/);
   });

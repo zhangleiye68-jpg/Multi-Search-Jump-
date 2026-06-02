@@ -53,12 +53,17 @@
   const NON_ENGLISH_WARNING_STORAGE_KEY = "tiktokCaptionNonEnglishWarningEnabled";
   const BUTTON_POSITION_STORAGE_KEY = "tiktokCaptionButtonPosition";
   const PANEL_FRAME_STORAGE_KEY = "tiktokCaptionPanelFrame";
+  const DETAILS_HEIGHT_STORAGE_KEY = "tiktokCaptionDetailsHeight";
   const DEFAULT_DISPLAY_MODE = DISPLAY_MODES.bilingual;
   const DEFAULT_NON_ENGLISH_WARNING_ENABLED = true;
   const MIN_PANEL_WIDTH = 280;
   const MIN_PANEL_HEIGHT = 260;
   const DEFAULT_PANEL_WIDTH = 360;
   const DEFAULT_PANEL_HEIGHT = 560;
+  const DEFAULT_DETAILS_HEIGHT = 84;
+  const MIN_DETAILS_HEIGHT = 56;
+  const MAX_DETAILS_HEIGHT = 220;
+  const LONG_CAPTION_DETAILS_LINE_THRESHOLD = 4;
   const BUTTON_SIZE = 44;
   const DRAG_THRESHOLD_PX = 6;
   const HIGH_POTENTIAL_K_PER_HOUR = 50 / 12;
@@ -1211,14 +1216,14 @@
 
   function getPotential(rateKPerHour) {
     if (rateKPerHour >= HIGH_POTENTIAL_K_PER_HOUR) {
-      return { className: "is-high", label: "High" };
+      return { className: "is-high", label: "高" };
     }
 
     if (rateKPerHour >= MID_POTENTIAL_K_PER_HOUR) {
-      return { className: "is-mid", label: "Mid" };
+      return { className: "is-mid", label: "中" };
     }
 
-    return { className: "is-low", label: "Low" };
+    return { className: "is-low", label: "低" };
   }
 
   function getVideoMetrics(item, nowMs) {
@@ -1229,14 +1234,13 @@
     const elapsedHours = elapsedMs > 0 ? elapsedMs / 3600000 : 0;
     const rateHours = Math.max(1, elapsedHours);
     const playKPerHour = playCount / rateHours / 1000;
-    const likePerHour = likeCount / rateHours;
     const potential = getPotential(playKPerHour);
 
     return {
       description: getTikTokItemDescription(item),
       durationLabel: formatDurationShort(elapsedHours),
       language: getTikTokItemLanguage(item),
-      likeRateLabel: `${formatMetric(likePerHour)} like/h`,
+      likeCountLabel: formatMetric(likeCount),
       playCountLabel: formatMetric(playCount),
       playRateLabel: `${formatMetric(playCount / rateHours)}/h`,
       potential,
@@ -1528,6 +1532,7 @@
     if (!storageArea?.get) {
       return {
         buttonPosition: null,
+        detailsHeight: DEFAULT_DETAILS_HEIGHT,
         displayMode: DEFAULT_DISPLAY_MODE,
         nonEnglishWarningEnabled: DEFAULT_NON_ENGLISH_WARNING_ENABLED,
         panelFrame: null,
@@ -1536,6 +1541,7 @@
 
     const values = await storageArea.get([
       BUTTON_POSITION_STORAGE_KEY,
+      DETAILS_HEIGHT_STORAGE_KEY,
       DISPLAY_MODE_STORAGE_KEY,
       NON_ENGLISH_WARNING_STORAGE_KEY,
       PANEL_FRAME_STORAGE_KEY,
@@ -1543,6 +1549,7 @@
 
     return {
       buttonPosition: values?.[BUTTON_POSITION_STORAGE_KEY] ?? null,
+      detailsHeight: normalizeDetailsHeight(values?.[DETAILS_HEIGHT_STORAGE_KEY]),
       displayMode: normalizeDisplayMode(values?.[DISPLAY_MODE_STORAGE_KEY]),
       nonEnglishWarningEnabled: normalizeBooleanSetting(
         values?.[NON_ENGLISH_WARNING_STORAGE_KEY],
@@ -1627,6 +1634,10 @@
       x: Math.round(clampNumber(frame?.x ?? fallback.x, 8, viewport.width - width - 8)),
       y: Math.round(clampNumber(frame?.y ?? fallback.y, 8, viewport.height - height - 8)),
     };
+  }
+
+  function normalizeDetailsHeight(value) {
+    return Math.round(clampNumber(value ?? DEFAULT_DETAILS_HEIGHT, MIN_DETAILS_HEIGHT, MAX_DETAILS_HEIGHT));
   }
 
   function getCaptionSourceKey(documentRef) {
@@ -1717,6 +1728,23 @@
     return button;
   }
 
+  function createVideoMetric(documentRef, { icon, label, value }) {
+    const item = documentRef.createElement("span");
+    const iconElement = documentRef.createElement("span");
+    const valueElement = documentRef.createElement("span");
+
+    item.className = "msj-tiktok-video-metric";
+    item.title = label;
+    iconElement.className = "msj-tiktok-video-metric-icon";
+    iconElement.textContent = `${icon} `;
+    iconElement.setAttribute("aria-hidden", "true");
+    valueElement.className = "msj-tiktok-video-metric-value";
+    valueElement.textContent = value;
+    item.append(iconElement, valueElement);
+
+    return item;
+  }
+
   function createPanel(documentRef) {
     const panel = documentRef.createElement("section");
     const header = documentRef.createElement("div");
@@ -1728,9 +1756,10 @@
     const closeButton = documentRef.createElement("button");
     const videoInfo = documentRef.createElement("div");
     const languageWarning = documentRef.createElement("p");
-    const metricText = documentRef.createElement("span");
     const potentialBadge = documentRef.createElement("span");
+    const metricList = documentRef.createElement("span");
     const videoDetails = documentRef.createElement("section");
+    const detailsResizeHandle = documentRef.createElement("span");
     const detailsOriginal = documentRef.createElement("p");
     const detailsTranslation = documentRef.createElement("p");
     const status = documentRef.createElement("p");
@@ -1759,9 +1788,14 @@
     videoInfo.className = "msj-tiktok-video-info";
     languageWarning.className = "msj-tiktok-language-warning";
     languageWarning.setAttribute("aria-live", "polite");
-    metricText.className = "msj-tiktok-metric-text";
     potentialBadge.className = "msj-tiktok-potential is-low";
+    metricList.className = "msj-tiktok-video-metrics";
     videoDetails.className = "msj-tiktok-video-details";
+    detailsResizeHandle.className = "msj-tiktok-video-details-resize";
+    detailsResizeHandle.title = "拖拽调整视频详情高度";
+    detailsResizeHandle.setAttribute("aria-label", "拖拽调整视频详情高度");
+    detailsResizeHandle.setAttribute("role", "separator");
+    detailsResizeHandle.setAttribute("aria-orientation", "horizontal");
     detailsOriginal.className = "msj-tiktok-video-details-original";
     detailsOriginal.textContent = "暂无视频详情。";
     detailsTranslation.className = "msj-tiktok-caption-translation";
@@ -1785,15 +1819,16 @@
     }
 
     modeGroup.append(originalModeButton, bilingualModeButton, chineseModeButton);
-    header.append(modeGroup, headerDragArea, closeButton);
-    videoInfo.append(metricText, potentialBadge);
+    header.append(headerDragArea, closeButton);
+    videoInfo.append(potentialBadge, metricList);
     videoDetails.append(detailsOriginal, detailsTranslation);
-    actions.append(status, refreshButton, copyButton);
+    actions.append(status, modeGroup, refreshButton, copyButton);
     panel.append(
       header,
       videoInfo,
       languageWarning,
       videoDetails,
+      detailsResizeHandle,
       captionList,
       actions,
       resizeHandles.top,
@@ -1807,11 +1842,12 @@
       captionList,
       closeButton,
       copyButton,
+      detailsResizeHandle,
       detailsOriginal,
       detailsTranslation,
       header,
       languageWarning,
-      metricText,
+      metricList,
       modeGroup,
       modeButtons: {
         [DISPLAY_MODES.original]: originalModeButton,
@@ -1903,6 +1939,9 @@
     let autoRefreshTimer = null;
     let pendingAutoRefreshAttempts = 0;
     let buttonDragState = null;
+    let activeDetailsHeight = DEFAULT_DETAILS_HEIGHT;
+    let savedDetailsHeight = DEFAULT_DETAILS_HEIGHT;
+    let detailsResizeState = null;
     let panelDragState = null;
     let panelResizeState = null;
     let suppressNextButtonClick = false;
@@ -1927,6 +1966,16 @@
       panelParts.panel.style.height = `${panelFrame.height}px`;
     }
 
+    function applyDetailsHeight(nextHeight) {
+      activeDetailsHeight = normalizeDetailsHeight(nextHeight);
+      panelParts.videoDetails.style.maxHeight = `${activeDetailsHeight}px`;
+    }
+
+    function applyDetailsHeightForCaptionCount(captionCount) {
+      const shouldUseStoredHeight = captionCount > LONG_CAPTION_DETAILS_LINE_THRESHOLD;
+      applyDetailsHeight(shouldUseStoredHeight ? savedDetailsHeight : DEFAULT_DETAILS_HEIGHT);
+    }
+
     function updateModeButtons() {
       for (const [mode, modeButton] of Object.entries(panelParts.modeButtons)) {
         const isActive = mode === displayMode;
@@ -1941,13 +1990,16 @@
 
       displayMode = storedSettings.displayMode;
       nonEnglishWarningEnabled = storedSettings.nonEnglishWarningEnabled;
+      savedDetailsHeight = storedSettings.detailsHeight;
       applyButtonPosition(storedSettings.buttonPosition);
       applyPanelFrame(storedSettings.panelFrame);
+      applyDetailsHeightForCaptionCount(currentDisplayLines.length);
       updateModeButtons();
     }
 
     applyButtonPosition(buttonPosition);
     applyPanelFrame(panelFrame);
+    applyDetailsHeight(DEFAULT_DETAILS_HEIGHT);
     updateModeButtons();
     const ready = loadSettings();
 
@@ -1963,21 +2015,29 @@
         documentRef,
         lines: currentDisplayLines,
       });
+      applyDetailsHeightForCaptionCount(0);
       setStatus(message);
     }
 
     function renderVideoInfo(metrics, detailsTranslation) {
-      const metricText = [
-        metrics.playRateLabel,
-        metrics.playCountLabel,
-        metrics.durationLabel,
-        metrics.likeRateLabel,
-      ].join(" - ");
+      const metricItems = [
+        { icon: "♥", label: "点赞量", value: metrics.likeCountLabel },
+        { icon: "↗", label: "平均播放量", value: metrics.playRateLabel },
+        { icon: "▶", label: "播放量", value: metrics.playCountLabel },
+        { icon: "⏱", label: "发布时间", value: metrics.durationLabel },
+      ];
 
       panelParts.potentialBadge.textContent = metrics.potential.label;
       panelParts.potentialBadge.classList.remove("is-high", "is-mid", "is-low");
       panelParts.potentialBadge.classList.add(metrics.potential.className);
-      panelParts.metricText.textContent = `${metricText} - `;
+      panelParts.metricList.textContent = "";
+      if (Array.isArray(panelParts.metricList.children)) {
+        panelParts.metricList.children.length = 0;
+      }
+
+      for (const metricItem of metricItems) {
+        panelParts.metricList.append(createVideoMetric(documentRef, metricItem));
+      }
       panelParts.detailsOriginal.textContent = metrics.description || "暂无视频详情。";
       panelParts.detailsTranslation.textContent = detailsTranslation || "";
 
@@ -2074,6 +2134,7 @@
           documentRef,
           lines: displayLines,
         });
+        applyDetailsHeightForCaptionCount(displayLines.length);
 
         if (sourceChanged) {
           panelParts.captionList.scrollTop = 0;
@@ -2227,6 +2288,7 @@
         documentRef,
         lines: currentDisplayLines,
       });
+      applyDetailsHeightForCaptionCount(currentDisplayLines.length);
       setStatus(
         currentDisplayLines.length > 0
           ? `已读取 ${currentDisplayLines.length} 条字幕。`
@@ -2361,6 +2423,63 @@
       panelDragState = null;
     }
 
+    function beginDetailsResize(event) {
+      if (event.button !== 0) {
+        return;
+      }
+
+      event.preventDefault();
+      panelParts.detailsResizeHandle.setPointerCapture?.(event.pointerId);
+      detailsResizeState = {
+        moved: false,
+        pointerId: event.pointerId,
+        startHeight: activeDetailsHeight,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+    }
+
+    function moveDetailsResize(event) {
+      if (!detailsResizeState || event.pointerId !== detailsResizeState.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (
+        !detailsResizeState.moved &&
+        getPointerDistance(detailsResizeState, event) < DRAG_THRESHOLD_PX
+      ) {
+        return;
+      }
+
+      detailsResizeState.moved = true;
+      applyDetailsHeight(detailsResizeState.startHeight + event.clientY - detailsResizeState.startY);
+    }
+
+    async function endDetailsResize(event) {
+      if (!detailsResizeState || event.pointerId !== detailsResizeState.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (panelParts.detailsResizeHandle.hasPointerCapture?.(event.pointerId)) {
+        panelParts.detailsResizeHandle.releasePointerCapture(event.pointerId);
+      }
+
+      if (detailsResizeState.moved) {
+        savedDetailsHeight = activeDetailsHeight;
+        await saveStoredOverlayValue(
+          storageArea,
+          DETAILS_HEIGHT_STORAGE_KEY,
+          savedDetailsHeight,
+        );
+      }
+
+      detailsResizeState = null;
+    }
+
     function beginPanelResize(edge, handle, event) {
       if (event.button !== 0) {
         return;
@@ -2469,6 +2588,12 @@
     panelParts.header.addEventListener("pointercancel", () => {
       panelDragState = null;
     });
+    panelParts.detailsResizeHandle.addEventListener("pointerdown", beginDetailsResize);
+    panelParts.detailsResizeHandle.addEventListener("pointermove", moveDetailsResize);
+    panelParts.detailsResizeHandle.addEventListener("pointerup", endDetailsResize);
+    panelParts.detailsResizeHandle.addEventListener("pointercancel", () => {
+      detailsResizeState = null;
+    });
     for (const [edge, handle] of Object.entries(panelParts.resizeHandles)) {
       handle.addEventListener("pointerdown", (event) => beginPanelResize(edge, handle, event));
       handle.addEventListener("pointermove", movePanelResize);
@@ -2483,6 +2608,7 @@
       captionList: panelParts.captionList,
       closeButton: panelParts.closeButton,
       copyButton: panelParts.copyButton,
+      detailsResizeHandle: panelParts.detailsResizeHandle,
       languageWarning: panelParts.languageWarning,
       modeButtons: panelParts.modeButtons,
       destroy() {
