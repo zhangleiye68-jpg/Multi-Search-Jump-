@@ -28,7 +28,7 @@ describe("TikTok caption overlay style", () => {
     assert.match(css, /\.msj-tiktok-caption-action-button\s*{[\s\S]*flex:\s*0 0 auto/);
     assert.match(css, /\.msj-tiktok-caption-list\s*{[\s\S]*padding:\s*10px 10px 58px/);
     assert.match(css, /\.msj-tiktok-caption-list\s*{[\s\S]*scroll-padding-bottom:\s*58px/);
-    assert.match(source, /⚠ 非因内容/);
+    assert.match(source, /⚠ 非英内容/);
     assert.match(source, /tiktokCaptionDisplayMode/);
     assert.match(source, /tiktokCaptionDetailsHeight/);
     assert.match(source, /tiktokCaptionPanelFrame/);

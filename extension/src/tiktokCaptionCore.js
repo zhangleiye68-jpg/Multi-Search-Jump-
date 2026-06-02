@@ -68,6 +68,7 @@
   const DRAG_THRESHOLD_PX = 6;
   const HIGH_POTENTIAL_K_PER_HOUR = 50 / 12;
   const MID_POTENTIAL_K_PER_HOUR = 2.5;
+  const UNKNOWN_METRIC_LABEL = "—";
   const SUBTITLE_FILE_IGNORED_LINE_PATTERN =
     /^(?:WEBVTT|NOTE\b|STYLE\b|REGION\b|\d+|[\d:,.]+\s+-->\s+[\d:,.]+.*)$/u;
   const DOM_CAPTION_EXCLUDED_SELECTOR = [
@@ -80,7 +81,29 @@
     "[data-e2e*='video-desc' i]",
     "[data-e2e*='music' i]",
   ].join(",");
+  const DOM_VIDEO_DETAIL_SELECTOR = [
+    "[data-e2e*='video-desc' i]",
+    "[class*='video-desc' i]",
+    "[class*='VideoDesc' i]",
+  ].join(",");
+  const DOM_VIDEO_AUTHOR_SELECTOR = [
+    "[data-e2e*='author' i]",
+    "[data-e2e*='username' i]",
+    "[class*='author' i]",
+    "[class*='Author' i]",
+    "[class*='username' i]",
+    "[class*='Username' i]",
+  ].join(",");
+  const DOM_METRIC_SELECTOR = [
+    "button",
+    "[role='button']",
+    "[aria-label]",
+    "[title]",
+    "span",
+    "div",
+  ].join(",");
   const tikTokApiItemCache = new Map();
+  const activeTikTokCaptionOverlays = new Set();
 
   function normalizeCaptionText(value) {
     return String(value ?? "")
@@ -217,8 +240,13 @@
     );
   }
 
+  function isLikelyPlayingVideo(video) {
+    return video?.paused === false && video?.ended !== true;
+  }
+
   function getActiveVideo(root) {
     let activeVideo = null;
+    let activePlaybackScore = 0;
     let activeVisibleArea = 0;
     let activeArea = 0;
     let activeDistance = Number.POSITIVE_INFINITY;
@@ -234,16 +262,24 @@
       const area = rect.width * rect.height;
       const visibleArea = viewportRect ? getRectIntersectionArea(rect, viewportRect) : area;
       const distance = getRectCenterDistance(rect, viewportRect);
+      const playbackScore = isLikelyPlayingVideo(video) ? 1 : 0;
 
       if (viewportRect && (visibleArea <= 0 || !isRectCenterInsideRect(rect, viewportRect))) {
         continue;
       }
 
       if (
-        visibleArea > activeVisibleArea ||
-        (visibleArea === activeVisibleArea && distance < activeDistance) ||
-        (visibleArea === activeVisibleArea && distance === activeDistance && area > activeArea)
+        playbackScore > activePlaybackScore ||
+        (playbackScore === activePlaybackScore && visibleArea > activeVisibleArea) ||
+        (playbackScore === activePlaybackScore && visibleArea === activeVisibleArea && distance < activeDistance) ||
+        (
+          playbackScore === activePlaybackScore &&
+          visibleArea === activeVisibleArea &&
+          distance === activeDistance &&
+          area > activeArea
+        )
       ) {
+        activePlaybackScore = playbackScore;
         activeVisibleArea = visibleArea;
         activeArea = area;
         activeDistance = distance;
@@ -325,7 +361,80 @@
     return normalizeTikTokAuthorId(match?.[1] ?? text);
   }
 
+  function extractVisibleTikTokAuthorId(value) {
+    const text = normalizeCaptionText(value);
+
+    if (!text) {
+      return "";
+    }
+
+    const mentionMatch = text.match(/@([a-zA-Z0-9._]{2,32})/u);
+
+    if (mentionMatch) {
+      return normalizeTikTokAuthorId(mentionMatch[1]);
+    }
+
+    const firstToken = text.split(/\s+/u)[0];
+
+    if (/^[a-zA-Z0-9._]{2,32}$/u.test(firstToken)) {
+      return normalizeTikTokAuthorId(firstToken);
+    }
+
+    return "";
+  }
+
+  function isLikelyAuthorNode(node) {
+    const marker = normalizeCaptionText(
+      [
+        node?.getAttribute?.("data-e2e"),
+        node?.getAttribute?.("class"),
+        node?.className,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
+
+    return /\b(?:author|username|uniqueid)\b/iu.test(marker);
+  }
+
+  function getActiveVideoAuthorTextId(root, activeVideoRect) {
+    let closestAuthorId = "";
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    for (const node of root?.querySelectorAll?.(DOM_VIDEO_AUTHOR_SELECTOR) ?? []) {
+      if (isHiddenNode(node) || isExtensionNode(node) || !isLikelyAuthorNode(node)) {
+        continue;
+      }
+
+      const authorId = extractVisibleTikTokAuthorId(node.textContent);
+      const rect = getNodeRect(node);
+
+      if (!authorId || !rect) {
+        continue;
+      }
+
+      if (isNodeInsideRect(node, activeVideoRect)) {
+        return authorId;
+      }
+
+      const distance = getRectDistance(activeVideoRect, rect);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestAuthorId = authorId;
+      }
+    }
+
+    return closestAuthorId;
+  }
+
   function getActiveVideoAuthorId(root) {
+    const visibleAuthorCandidate = getVisibleMainAuthorCandidate(root);
+
+    if (visibleAuthorCandidate?.authorId) {
+      return visibleAuthorCandidate.authorId;
+    }
+
     const activeVideoRect = getActiveVideoRect(root);
     let closestAuthorId = "";
     let closestDistance = Number.POSITIVE_INFINITY;
@@ -355,7 +464,7 @@
       }
     }
 
-    return closestAuthorId;
+    return getActiveVideoAuthorTextId(root, activeVideoRect) || closestAuthorId;
   }
 
   function isNodeInsideRect(node, containerRect) {
@@ -387,6 +496,69 @@
     const rightCenterY = rightRect.top + rightRect.height / 2;
 
     return Math.hypot(leftCenterX - rightCenterX, leftCenterY - rightCenterY);
+  }
+
+  function isRectInMainContentColumn(rect, viewportRect) {
+    if (!rect || !viewportRect) {
+      return false;
+    }
+
+    const centerX = rect.left + rect.width / 2;
+
+    if (viewportRect.width < 900) {
+      return true;
+    }
+
+    return centerX >= viewportRect.width * 0.24 && centerX <= viewportRect.width * 0.86;
+  }
+
+  function getVisibleMainAuthorCandidate(root) {
+    const viewportRect = getViewportRect(root);
+    let bestCandidate = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    if (!viewportRect) {
+      return null;
+    }
+
+    const candidateNodes = [
+      ...(root?.querySelectorAll?.("a[href*='/@']") ?? []),
+      ...(root?.querySelectorAll?.(DOM_VIDEO_AUTHOR_SELECTOR) ?? []),
+    ];
+
+    for (const node of candidateNodes) {
+      if (isHiddenNode(node) || isExtensionNode(node)) {
+        continue;
+      }
+
+      if (!node.href && !isLikelyAuthorNode(node)) {
+        continue;
+      }
+
+      const authorId = node.href
+        ? extractTikTokAuthorId(node.href || node.getAttribute?.("href") || "")
+        : extractVisibleTikTokAuthorId(node.textContent);
+      const rect = getNodeRect(node);
+
+      if (
+        !authorId ||
+        !rect ||
+        getRectIntersectionArea(rect, viewportRect) <= 0 ||
+        !isRectCenterInsideRect(rect, viewportRect) ||
+        !isRectInMainContentColumn(rect, viewportRect)
+      ) {
+        continue;
+      }
+
+      const distance = getRectCenterDistance(rect, viewportRect);
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestCandidate = { authorId, rect };
+      }
+    }
+
+    return bestCandidate;
   }
 
   function hasChildWithSameText(node, text) {
@@ -479,7 +651,7 @@
       return 0;
     }
 
-    const match = text.match(/^([\d,.]+)\s*([kKmMwW万]?)$/u);
+    const match = text.match(/^([\d,.]+)\s*(千万|百万|千|[kKmMwW万]?)$/u);
 
     if (!match) {
       const numeric = Number(text.replace(/,/gu, ""));
@@ -501,6 +673,18 @@
       return numeric * 1000000;
     }
 
+    if (unit === "千万") {
+      return numeric * 10000000;
+    }
+
+    if (unit === "百万") {
+      return numeric * 1000000;
+    }
+
+    if (unit === "千") {
+      return numeric * 1000;
+    }
+
     if (unit === "w" || unit === "万") {
       return numeric * 10000;
     }
@@ -518,6 +702,122 @@
     }
 
     return 0;
+  }
+
+  function getNodeMetricText(node) {
+    return normalizeCaptionText(
+      [
+        node?.getAttribute?.("aria-label"),
+        node?.getAttribute?.("title"),
+        node?.textContent,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
+  }
+
+  function getMetricValuesFromText(value) {
+    const text = normalizeCaptionText(value);
+    const metrics = [];
+
+    for (const match of text.matchAll(/(?:^|[^\d])([\d,.]+)\s*(千万|百万|千|[kKmMwW万]?)(?!\s*%)/gu)) {
+      const metric = parseMetricNumber(`${match[1]}${match[2] ?? ""}`);
+
+      if (metric > 0) {
+        metrics.push(metric);
+      }
+    }
+
+    return metrics;
+  }
+
+  function getLargestMetricValue(value) {
+    return Math.max(0, ...getMetricValuesFromText(value));
+  }
+
+  function isMetricOnlyText(value) {
+    return /^([\d,.]+)\s*(千万|百万|千|[kKmMwW万]?)$/u.test(normalizeCaptionText(value));
+  }
+
+  function isRectNearActiveVideo(rect, activeVideoRect) {
+    if (!rect || !activeVideoRect) {
+      return false;
+    }
+
+    return (
+      rect.bottom >= activeVideoRect.top - 80 &&
+      rect.top <= activeVideoRect.bottom + 80 &&
+      rect.right >= activeVideoRect.left - 180 &&
+      rect.left <= activeVideoRect.right + 320
+    );
+  }
+
+  function isRectInVideoOverlayColumn(rect, activeVideoRect) {
+    if (!rect || !activeVideoRect) {
+      return false;
+    }
+
+    return (
+      rect.left >= activeVideoRect.left - 180 &&
+      rect.right <= activeVideoRect.right + 80
+    );
+  }
+
+  function getVisibleTikTokDomMetrics(root) {
+    const activeVideoRect = getActiveVideoRect(root);
+    let hasVidIQ = false;
+    let likeCount = 0;
+    let playCount = 0;
+    let vidIQPlayCount = 0;
+    const vidIQMetricOnlyValues = [];
+    const metricOnlyValues = [];
+
+    for (const node of root?.querySelectorAll?.(DOM_METRIC_SELECTOR) ?? []) {
+      if (isHiddenNode(node) || isExtensionNode(node)) {
+        continue;
+      }
+
+      const rect = getNodeRect(node);
+
+      if (activeVideoRect && !isRectNearActiveVideo(rect, activeVideoRect)) {
+        continue;
+      }
+
+      const text = getNodeMetricText(node);
+
+      if (!text) {
+        continue;
+      }
+
+      const metric = getLargestMetricValue(text);
+
+      if (/vidiq/iu.test(text)) {
+        hasVidIQ = true;
+        vidIQPlayCount = Math.max(vidIQPlayCount, metric);
+      }
+
+      if (/(?:点赞|个赞|\blikes?\b)/iu.test(text)) {
+        likeCount = Math.max(likeCount, metric);
+      }
+
+      if (/(?:播放量|次播放|观看次数|\bviews?\b|\bplays?\b)/iu.test(text)) {
+        playCount = Math.max(playCount, metric);
+      }
+
+      if (isMetricOnlyText(text)) {
+        if (!activeVideoRect || isRectInVideoOverlayColumn(rect, activeVideoRect)) {
+          vidIQMetricOnlyValues.push(metric);
+        }
+
+        metricOnlyValues.push(metric);
+      }
+    }
+
+    if (!playCount && hasVidIQ) {
+      playCount = Math.max(vidIQPlayCount, ...vidIQMetricOnlyValues, ...metricOnlyValues);
+    }
+
+    return { likeCount, playCount };
   }
 
   function getTikTokItemPlayCount(item) {
@@ -636,6 +936,81 @@
     appendUniqueLine(lines, seen, item?.photoMode?.text);
 
     return lines.join("\n");
+  }
+
+  function cleanVisibleVideoDescription(value) {
+    return normalizeCaptionText(value)
+      .replace(/\b查看更多\b/gu, " ")
+      .replace(/\b更多\b/gu, " ")
+      .replace(/\b查看翻译\b/gu, " ")
+      .replace(/\s+/gu, " ")
+      .trim();
+  }
+
+  function getVisibleVideoDescription(root) {
+    const visibleAuthorCandidate = getVisibleMainAuthorCandidate(root);
+    const activeVideoRect = visibleAuthorCandidate?.rect || getActiveVideoRect(root);
+    let closestDescription = "";
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    for (const node of root?.querySelectorAll?.(DOM_VIDEO_DETAIL_SELECTOR) ?? []) {
+      if (isHiddenNode(node) || isExtensionNode(node)) {
+        continue;
+      }
+
+      const description = cleanVisibleVideoDescription(node.textContent);
+
+      if (!description) {
+        continue;
+      }
+
+      const rect = getNodeRect(node);
+
+      if (activeVideoRect && rect && isNodeInsideRect(node, activeVideoRect)) {
+        return description;
+      }
+
+      const distance = getRectDistance(activeVideoRect, rect);
+
+      if (!activeVideoRect || !rect || distance < closestDistance) {
+        closestDistance = distance;
+        closestDescription = description;
+      }
+    }
+
+    return closestDescription;
+  }
+
+  function getVisibleTikTokDomFallbackItem(root) {
+    const description = getVisibleVideoDescription(root);
+    const metrics = getVisibleTikTokDomMetrics(root);
+
+    if (!description) {
+      return null;
+    }
+
+    return {
+      __msjDomFallback: true,
+      author: {
+        uniqueId: getActiveVideoAuthorId(root),
+      },
+      desc: description,
+      stats: {
+        diggCount: metrics.likeCount,
+        playCount: metrics.playCount,
+      },
+    };
+  }
+
+  function isTikTokItemCompatibleWithActiveContext(root, item) {
+    const activeAuthorId = getActiveVideoAuthorId(root);
+    const itemAuthorId = getTikTokItemAuthorId(item);
+
+    if (activeAuthorId && itemAuthorId && activeAuthorId !== itemAuthorId) {
+      return false;
+    }
+
+    return true;
   }
 
   function getEntryLanguage(value) {
@@ -831,8 +1206,7 @@
     return items.length;
   }
 
-  function collectTikTokApiCaptionEntries(currentVideoId, entries, seen) {
-    const item = tikTokApiItemCache.get(normalizeCaptionText(currentVideoId));
+  function collectTikTokItemCaptionEntries(item, entries, seen) {
     const subtitleUrl = findSubtitleUrlFromTikTokItem(item);
 
     if (subtitleUrl) {
@@ -844,9 +1218,17 @@
     }
   }
 
-  async function collectTikTokApiCaptionEntriesByHints(root, fetchCaption, entries, seen) {
+  function collectTikTokApiCaptionEntries(currentVideoId, entries, seen) {
+    collectTikTokItemCaptionEntries(
+      tikTokApiItemCache.get(normalizeCaptionText(currentVideoId)),
+      entries,
+      seen,
+    );
+  }
+
+  async function findTikTokApiItemByHints(root, fetchCaption) {
     if (!fetchCaption || tikTokApiItemCache.size === 0) {
-      return;
+      return null;
     }
 
     const hintKeys = collectDomCaptionHintLines(root)
@@ -854,12 +1236,13 @@
       .filter(Boolean);
 
     if (hintKeys.length === 0) {
-      return;
+      return null;
     }
 
     const recentItems = Array.from(tikTokApiItemCache.values())
       .slice(-TIKTOK_API_HINT_ITEM_LIMIT)
-      .reverse();
+      .reverse()
+      .filter((item) => isTikTokItemCompatibleWithActiveContext(root, item));
 
     for (const item of recentItems) {
       const preferredSubtitleUrl = findSubtitleUrlFromTikTokItem(item);
@@ -877,22 +1260,31 @@
         });
 
         if (hasHintLine) {
-          appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.url, preferredSubtitleUrl);
-          return;
+          return item;
         }
       }
     }
+
+    return null;
   }
 
-  function collectTikTokApiCaptionEntriesByActiveContext(root, entries, seen) {
+  async function collectTikTokApiCaptionEntriesByHints(root, fetchCaption, entries, seen) {
+    collectTikTokItemCaptionEntries(
+      await findTikTokApiItemByHints(root, fetchCaption),
+      entries,
+      seen,
+    );
+  }
+
+  function findTikTokApiItemByActiveContext(root) {
     if (tikTokApiItemCache.size === 0) {
-      return;
+      return null;
     }
 
     const activeAuthorId = getActiveVideoAuthorId(root);
 
     if (!activeAuthorId) {
-      return;
+      return null;
     }
 
     const matchingItems = Array.from(tikTokApiItemCache.values())
@@ -901,14 +1293,14 @@
       .filter((item) => getTikTokItemAuthorId(item) === activeAuthorId);
 
     if (matchingItems.length !== 1) {
-      return;
+      return null;
     }
 
-    const subtitleUrl = findSubtitleUrlFromTikTokItem(matchingItems[0]);
+    return findSubtitleUrlFromTikTokItem(matchingItems[0]) ? matchingItems[0] : null;
+  }
 
-    if (subtitleUrl) {
-      appendUniqueEntry(entries, seen, SUBTITLE_ENTRY_TYPES.url, subtitleUrl);
-    }
+  function collectTikTokApiCaptionEntriesByActiveContext(root, entries, seen) {
+    collectTikTokItemCaptionEntries(findTikTokApiItemByActiveContext(root), entries, seen);
   }
 
   function collectDomCaptionEntries(root, entries, seen, { allowText = true } = {}) {
@@ -1174,14 +1566,35 @@
     }
   }
 
-  async function getTikTokVideoItem({ currentPageUrl, currentVideoId, fetchCaption }) {
+  async function getTikTokVideoItem({ root, currentPageUrl, currentVideoId, fetchCaption }) {
     const cachedItem = getCachedTikTokItem(currentVideoId);
 
     if (cachedItem) {
       return cachedItem;
     }
 
-    return fetchTikTokDetailItem(currentPageUrl, normalizeCaptionText(currentVideoId), fetchCaption);
+    const normalizedVideoId = normalizeCaptionText(currentVideoId);
+    const detailItem = await fetchTikTokDetailItem(currentPageUrl, normalizedVideoId, fetchCaption);
+
+    if (detailItem) {
+      return detailItem;
+    }
+
+    if (normalizedVideoId) {
+      return getVisibleTikTokDomFallbackItem(root);
+    }
+
+    const hintItem = await findTikTokApiItemByHints(root, fetchCaption);
+
+    if (hintItem) {
+      return hintItem;
+    }
+
+    if (!getCaptionHintKeyFromRoot(root)) {
+      return findTikTokApiItemByActiveContext(root) ?? getVisibleTikTokDomFallbackItem(root);
+    }
+
+    return getVisibleTikTokDomFallbackItem(root);
   }
 
   function formatMetricNumber(value) {
@@ -1190,28 +1603,34 @@
 
   function formatMetric(value) {
     const numericValue = Math.max(0, Number(value) || 0);
+    const units = [
+      { label: "千万", value: 10000000 },
+      { label: "百万", value: 1000000 },
+      { label: "万", value: 10000 },
+      { label: "千", value: 1000 },
+    ];
 
-    if (numericValue >= 1000000) {
-      return `${formatMetricNumber(numericValue / 1000000)}M`;
+    for (const unit of units) {
+      if (numericValue >= unit.value) {
+        return `${formatMetricNumber(numericValue / unit.value)}${unit.label}`;
+      }
     }
 
-    return `${formatMetricNumber(numericValue / 1000)}K`;
+    return formatMetricNumber(numericValue);
   }
 
-  function formatDurationShort(elapsedHours) {
+  function formatDurationDays(elapsedHours) {
     if (!Number.isFinite(elapsedHours) || elapsedHours <= 0) {
-      return "<1h";
+      return "0天";
     }
 
-    if (elapsedHours < 1) {
-      return "<1h";
+    const elapsedDays = elapsedHours / 24;
+
+    if (elapsedDays > 0 && elapsedDays < 0.1) {
+      return "<0.1天";
     }
 
-    if (elapsedHours < 24) {
-      return `${Math.floor(elapsedHours)}h`;
-    }
-
-    return `${(elapsedHours / 24).toFixed(1).replace(/\.0$/u, "")}d`;
+    return `${formatMetricNumber(elapsedDays)}天`;
   }
 
   function getPotential(rateKPerHour) {
@@ -1226,7 +1645,25 @@
     return { className: "is-low", label: "低" };
   }
 
+  function getUnknownVideoMetrics(item) {
+    const playCount = getTikTokItemPlayCount(item);
+
+    return {
+      description: getTikTokItemDescription(item),
+      durationLabel: UNKNOWN_METRIC_LABEL,
+      language: getTikTokItemLanguage(item),
+      likeRateLabel: UNKNOWN_METRIC_LABEL,
+      playCountLabel: playCount > 0 ? formatMetric(playCount) : UNKNOWN_METRIC_LABEL,
+      playRateLabel: UNKNOWN_METRIC_LABEL,
+      potential: { className: "is-low", label: UNKNOWN_METRIC_LABEL },
+    };
+  }
+
   function getVideoMetrics(item, nowMs) {
+    if (!item || item.__msjDomFallback) {
+      return getUnknownVideoMetrics(item);
+    }
+
     const playCount = getTikTokItemPlayCount(item);
     const likeCount = getTikTokItemLikeCount(item);
     const createTimeMs = getTikTokItemCreateTimeMs(item);
@@ -1238,9 +1675,9 @@
 
     return {
       description: getTikTokItemDescription(item),
-      durationLabel: formatDurationShort(elapsedHours),
+      durationLabel: formatDurationDays(elapsedHours),
       language: getTikTokItemLanguage(item),
-      likeCountLabel: formatMetric(likeCount),
+      likeRateLabel: `${formatMetric(likeCount / rateHours)}/h`,
       playCountLabel: formatMetric(playCount),
       playRateLabel: `${formatMetric(playCount / rateHours)}/h`,
       potential,
@@ -1353,12 +1790,17 @@
       allowDomFallback = true,
       ignoreScriptCaptions = false,
       preferDomCaptions = false,
+      resolvedItem = null,
     } = {},
   ) {
     const apiEntries = [];
     const apiSeen = new Set();
 
-    collectTikTokApiCaptionEntries(currentVideoId, apiEntries, apiSeen);
+    if (resolvedItem) {
+      collectTikTokItemCaptionEntries(resolvedItem, apiEntries, apiSeen);
+    } else {
+      collectTikTokApiCaptionEntries(currentVideoId, apiEntries, apiSeen);
+    }
 
     if (apiEntries.length > 0) {
       const apiLines = await resolveCaptionEntries(apiEntries, fetchCaption);
@@ -1655,8 +2097,9 @@
     const activeVideoSource = getVideoSource(getActiveVideo(root));
     const activeVideoLink = getActiveVideoLink(root);
     const activeAuthorId = getActiveVideoAuthorId(root);
+    const visibleAuthorId = getVisibleMainAuthorCandidate(root)?.authorId || "";
 
-    return `${baseSourceKey}|${activeVideoSource}|${activeVideoLink}|${activeAuthorId}`;
+    return `${baseSourceKey}|${activeVideoSource}|${activeVideoLink}|${activeAuthorId}|${visibleAuthorId}`;
   }
 
   function hasConcreteVideoSourceKey(sourceKey) {
@@ -1692,6 +2135,14 @@
     return queryMatch?.[1] ?? "";
   }
 
+  function refreshTikTokCaptionOverlaysAfterApiPayload() {
+    return Promise.all(
+      Array.from(activeTikTokCaptionOverlays, (overlay) =>
+        overlay.refreshAfterTikTokApiPayload?.() ?? Promise.resolve(),
+      ),
+    );
+  }
+
   function handleTikTokApiMessage(event) {
     if (event?.origin && !/https:\/\/(?:[^/]+\.)?tiktok\.com$/u.test(event.origin)) {
       return;
@@ -1701,7 +2152,11 @@
       return;
     }
 
-    ingestTikTokApiPayload(event.data.payload);
+    if (ingestTikTokApiPayload(event.data.payload) > 0) {
+      return refreshTikTokCaptionOverlaysAfterApiPayload();
+    }
+
+    return Promise.resolve();
   }
 
   globalThis.window?.addEventListener?.("message", handleTikTokApiMessage);
@@ -1936,6 +2391,8 @@
     let lastSourceKey = getSourceKey();
     let lastHintKey = getHintKey();
     let refreshRequestId = 0;
+    let activeRefreshRequestId = 0;
+    let activeRefreshSourceKey = "";
     let autoRefreshTimer = null;
     let pendingAutoRefreshAttempts = 0;
     let buttonDragState = null;
@@ -2021,10 +2478,10 @@
 
     function renderVideoInfo(metrics, detailsTranslation) {
       const metricItems = [
-        { icon: "♥", label: "点赞量", value: metrics.likeCountLabel },
-        { icon: "↗", label: "平均播放量", value: metrics.playRateLabel },
-        { icon: "▶", label: "播放量", value: metrics.playCountLabel },
-        { icon: "⏱", label: "发布时间", value: metrics.durationLabel },
+        { icon: "♥", label: "每小时点赞量", value: metrics.likeRateLabel },
+        { icon: "↗", label: "每小时播放量", value: metrics.playRateLabel },
+        { icon: "▶", label: "总播放量", value: metrics.playCountLabel },
+        { icon: "⏱", label: "天数", value: metrics.durationLabel },
       ];
 
       panelParts.potentialBadge.textContent = metrics.potential.label;
@@ -2046,7 +2503,7 @@
         metrics.language &&
         normalizeLanguageKey(metrics.language) !== "en"
       ) {
-        panelParts.languageWarning.textContent = "⚠ 非因内容";
+        panelParts.languageWarning.textContent = "⚠ 非英内容";
         panelParts.languageWarning.classList.add("is-visible");
       } else {
         panelParts.languageWarning.textContent = "";
@@ -2054,12 +2511,7 @@
       }
     }
 
-    async function refreshVideoInfo(currentVideoId, sourceKey, requestId) {
-      const item = await getTikTokVideoItem({
-        currentPageUrl: getPageUrlFromSourceKey(sourceKey),
-        currentVideoId,
-        fetchCaption,
-      });
+    async function refreshVideoInfo(item, sourceKey, requestId) {
       const metrics = getVideoMetrics(item, now());
       let detailsTranslation = "";
 
@@ -2079,6 +2531,16 @@
       return true;
     }
 
+    function renderVisibleDomFallbackVideoInfo(rootRef, sourceKey, requestId) {
+      const fallbackItem = getVisibleTikTokDomFallbackItem(rootRef);
+
+      if (requestId !== refreshRequestId || getSourceKey() !== sourceKey) {
+        return;
+      }
+
+      renderVideoInfo(getVideoMetrics(fallbackItem, now()), "");
+    }
+
     async function createDisplayLines(lines) {
       return translateCaptionLines(lines, translateCaption, displayMode);
     }
@@ -2087,6 +2549,7 @@
       const requestId = ++refreshRequestId;
       const nextSourceKey = getSourceKey();
       const nextHintKey = getHintKey();
+      const rootRef = getRoot();
       const sourceChanged = nextSourceKey !== lastSourceKey;
       const shouldIgnoreScriptCaptions =
         ignoreScriptCaptions ||
@@ -2095,24 +2558,39 @@
 
       lastSourceKey = nextSourceKey;
       lastHintKey = nextHintKey;
+      activeRefreshRequestId = requestId;
+      activeRefreshSourceKey = nextSourceKey;
       setStatus("正在读取字幕。");
+
+      if (sourceChanged) {
+        clearCaptions("正在读取字幕。");
+        renderVisibleDomFallbackVideoInfo(rootRef, nextSourceKey, requestId);
+      }
 
       try {
         const currentVideoId = extractTikTokVideoId(nextSourceKey);
-        const didRenderVideoInfo = await refreshVideoInfo(currentVideoId, nextSourceKey, requestId);
+        const currentPageUrl = getPageUrlFromSourceKey(nextSourceKey);
+        const currentItem = await getTikTokVideoItem({
+          root: rootRef,
+          currentPageUrl,
+          currentVideoId,
+          fetchCaption,
+        });
+        const didRenderVideoInfo = await refreshVideoInfo(currentItem, nextSourceKey, requestId);
 
         if (!didRenderVideoInfo) {
           return;
         }
 
-        const captionResult = await extractCaptionResult(getRoot(), {
-          currentPageUrl: getPageUrlFromSourceKey(nextSourceKey),
+        const captionResult = await extractCaptionResult(rootRef, {
+          currentPageUrl,
           currentVideoId,
           fetchCaption,
           allowDomTextCaptions: false,
           allowDomFallback: true,
           ignoreScriptCaptions: shouldIgnoreScriptCaptions,
           preferDomCaptions: true,
+          resolvedItem: currentItem,
         });
         const nextLines = captionResult.lines;
         const displayLines = await createDisplayLines(nextLines);
@@ -2153,6 +2631,11 @@
 
         console.error(error);
         clearCaptions("字幕读取失败。");
+      } finally {
+        if (activeRefreshRequestId === requestId) {
+          activeRefreshRequestId = 0;
+          activeRefreshSourceKey = "";
+        }
       }
     }
 
@@ -2165,6 +2648,15 @@
       const nextHintKey = getHintKey();
 
       if (nextSourceKey === lastSourceKey) {
+        if (
+          activeRefreshRequestId > 0 &&
+          activeRefreshSourceKey === nextSourceKey &&
+          currentDisplayLines.length === 0
+        ) {
+          lastHintKey = nextHintKey;
+          return Promise.resolve();
+        }
+
         if (currentDisplayLines.length > 0) {
           lastHintKey = nextHintKey;
           return Promise.resolve();
@@ -2263,6 +2755,27 @@
       );
 
       return refreshCaptions();
+    }
+
+    function hasIncompleteVideoInfo() {
+      return panelParts.detailsOriginal.textContent === "暂无视频详情。";
+    }
+
+    function refreshAfterTikTokApiPayload() {
+      if (panelParts.panel.hidden) {
+        return Promise.resolve();
+      }
+
+      if (currentDisplayLines.length > 0 && !hasIncompleteVideoInfo()) {
+        return Promise.resolve();
+      }
+
+      pendingAutoRefreshAttempts = Math.max(
+        pendingAutoRefreshAttempts,
+        autoRefreshRetryAttempts,
+      );
+
+      return refreshCaptions({ ignoreScriptCaptions: true });
     }
 
     async function updateDisplayMode(nextDisplayMode, { persist = true } = {}) {
@@ -2613,6 +3126,7 @@
       modeButtons: panelParts.modeButtons,
       destroy() {
         stopAutoRefresh();
+        activeTikTokCaptionOverlays.delete(overlay);
         root.remove();
       },
       navigator: navigatorRef,
@@ -2620,6 +3134,7 @@
       panelHeader: panelParts.header,
       potentialBadge: panelParts.potentialBadge,
       ready,
+      refreshAfterTikTokApiPayload,
       refreshButton: panelParts.refreshButton,
       refreshCaptions,
       refreshCaptionsIfSourceChanged,
@@ -2635,6 +3150,7 @@
       videoInfo: panelParts.videoInfo,
     };
 
+    activeTikTokCaptionOverlays.add(overlay);
     root.__msjTikTokCaptionOverlay = overlay;
     return overlay;
   }

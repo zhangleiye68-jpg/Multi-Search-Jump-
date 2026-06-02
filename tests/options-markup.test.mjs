@@ -52,7 +52,7 @@ describe("options markup", () => {
     assert.match(html, /侧边栏显示/);
     assert.match(html, /id="tiktok-non-english-warning-toggle"/);
     assert.match(html, /非英语警示/);
-    assert.match(html, /非因内容/);
+    assert.match(html, /非英内容/);
     assert.doesNotMatch(html, />固定</);
     assert.match(html, /id="shortcut-settings-button"/);
     assert.match(html, /id="target-order-list"/);
