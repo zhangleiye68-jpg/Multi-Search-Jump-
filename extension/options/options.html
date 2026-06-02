@@ -35,6 +35,10 @@
             <span class="options-nav-index">05</span>
             <span>历史记录</span>
           </a>
+          <a class="options-nav-link" href="#settings-guide" data-options-nav="settings-guide">
+            <span class="options-nav-index">06</span>
+            <span>使用说明</span>
+          </a>
         </nav>
 
         <div class="options-content">
@@ -352,6 +356,77 @@
                   </table>
                 </div>
                 <p id="all-search-history-empty" class="setting-note">暂无历史记录。</p>
+              </div>
+            </section>
+          </section>
+
+          <section
+            id="settings-guide"
+            class="settings-module"
+            aria-labelledby="settings-guide-heading"
+            data-settings-section
+          >
+            <div class="module-heading">
+              <div class="module-title-row">
+                <span class="module-index">06</span>
+                <h2 id="settings-guide-heading">使用说明</h2>
+              </div>
+              <p>查看插件的常用搜索方式、历史记录入口和注意事项。</p>
+            </div>
+
+            <section class="settings-subsection" aria-labelledby="usage-guide-heading">
+              <div class="subsection-heading">
+                <span class="subsection-index">6.1</span>
+                <h3 id="usage-guide-heading">快速上手</h3>
+              </div>
+              <div class="usage-guide">
+                <section class="usage-guide-block" aria-labelledby="usage-search-heading">
+                  <h4 id="usage-search-heading">常用搜索</h4>
+                  <ol>
+                    <li>点击浏览器右上角的 Multi Search Jump 图标。</li>
+                    <li>输入关键词后按 Enter，或点击「搜索」。</li>
+                    <li>插件会自动打开已启用网站的搜索结果页。</li>
+                  </ol>
+                  <p>新安装后，默认只启用 Google 普通网页搜索。其他平台可以在「搜索网站」里开启。</p>
+                </section>
+
+                <section class="usage-guide-block" aria-labelledby="usage-display-heading">
+                  <h4 id="usage-display-heading">侧边栏与搜索网站</h4>
+                  <ul>
+                    <li>弹窗右上角的侧边栏图标可以打开右侧搜索面板。</li>
+                    <li>「搜索网站」里可以开启或关闭平台，并拖动调整打开顺序。</li>
+                    <li>「Google 搜索类型」里可以切换图片搜索和过去 24 小时搜索。</li>
+                  </ul>
+                </section>
+
+                <section class="usage-guide-block" aria-labelledby="usage-history-heading">
+                  <h4 id="usage-history-heading">历史记录</h4>
+                  <ul>
+                    <li>开启「小窗口显示历史」后，小窗口只显示最近 5 条。</li>
+                    <li>小窗口不通过上滑下滑展开更多历史。</li>
+                    <li>设置页底部会显示全部历史记录，可以查找、重新搜索、删除单条记录或清空全部历史。</li>
+                    <li>历史记录不做去重，你搜过什么，就按实际搜索记录保存什么。</li>
+                  </ul>
+                </section>
+
+                <section class="usage-guide-block" aria-labelledby="usage-selection-heading">
+                  <h4 id="usage-selection-heading">选中文字搜索</h4>
+                  <ul>
+                    <li>在网页里选中文字后，可以右键点击「用 Multi Search Jump 搜索」。</li>
+                    <li>也可以按快捷键 Alt+Shift+S 搜索选中文字。</li>
+                    <li>如果想修改快捷键，点击「设置快捷键」后在浏览器快捷键页面调整。</li>
+                  </ul>
+                </section>
+
+                <section class="usage-guide-block" aria-labelledby="usage-notes-heading">
+                  <h4 id="usage-notes-heading">注意事项</h4>
+                  <ul>
+                    <li>X、Facebook、TikTok、Instagram、Reddit 等平台结果，取决于当前浏览器是否已登录对应账号。</li>
+                    <li>插件只负责打开搜索结果页，不抓取内容，不绕过平台限制。</li>
+                    <li>浏览器内部页面，比如 chrome://extensions，通常不能使用选中文字搜索。</li>
+                    <li>修改插件代码后，需要在扩展管理页点击「刷新」让新版本生效。</li>
+                  </ul>
+                </section>
               </div>
             </section>
           </section>

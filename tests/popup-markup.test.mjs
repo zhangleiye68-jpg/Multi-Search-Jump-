@@ -12,6 +12,7 @@ describe("popup markup", () => {
     assert.match(html, /<button[^>]+id="search-button"/);
     assert.match(html, /<header[^>]+class="popup-header"[\s\S]*id="options-button"[\s\S]*<\/header>/);
     assert.doesNotMatch(html, /<div[^>]+class="search-input-shell"[\s\S]*id="options-button"[\s\S]*<\/div>/);
+    assert.match(html, /<button[^>]+id="side-panel-button"[^>]+aria-label="打开侧边栏"/);
     assert.match(html, /<button[^>]+id="options-button"[^>]+aria-label="打开设置"/);
     assert.match(html, /⚙/);
     assert.doesNotMatch(html, /id="show-history-toggle"/);
@@ -30,10 +31,11 @@ describe("popup markup", () => {
     const sharedScript = await readFile("extension/src/searchUi.js", "utf8");
 
     assert.match(popupScript, /initSearchUi/);
+    assert.match(popupScript, /initPinButton/);
+    assert.match(popupScript, /#side-panel-button/);
     assert.match(popupScript, /#search-history/);
     assert.match(popupScript, /useHistoryVisibilityPreference: true/);
     assert.doesNotMatch(popupScript, /#show-history-toggle/);
-    assert.doesNotMatch(popupScript, /initPinButton/);
     assert.match(sharedScript, /chrome\.runtime\.sendMessage/);
     assert.match(sharedScript, /chrome\.runtime\.openOptionsPage/);
     assert.match(sharedScript, /chrome\.sidePanel\.open/);
@@ -41,14 +43,15 @@ describe("popup markup", () => {
     assert.doesNotMatch(sharedScript, /chrome\.tabGroups/);
   });
 
-  it("styles the settings button as a header action", async () => {
+  it("styles the header icon buttons as compact actions", async () => {
     const css = await readFile("extension/popup/popup.css", "utf8");
-    const settingsButtonRule = css.match(/\.settings-icon-button\s*{(?<body>[\s\S]*?)}/);
+    const headerButtonRule = css.match(/\.header-icon-button\s*{(?<body>[\s\S]*?)}/);
 
     assert.match(css, /\.popup-header\s*{[\s\S]*justify-content: space-between/);
-    assert.ok(settingsButtonRule?.groups?.body);
-    assert.doesNotMatch(settingsButtonRule.groups.body, /position: absolute/);
-    assert.match(css, /\.settings-icon-button\s*{[\s\S]*width: 32px/);
+    assert.match(css, /\.popup-actions\s*{/);
+    assert.ok(headerButtonRule?.groups?.body);
+    assert.doesNotMatch(headerButtonRule.groups.body, /position: absolute/);
+    assert.match(css, /\.header-icon-button\s*{[\s\S]*width: 32px/);
     assert.doesNotMatch(css, /padding: 9px 42px 9px 11px/);
   });
 });

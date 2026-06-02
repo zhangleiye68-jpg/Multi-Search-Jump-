@@ -10,25 +10,26 @@ describe("options markup", () => {
     assert.match(html, /<nav[^>]+class="options-sidebar"/);
     assert.match(
       html,
-      /href="#settings-search"[\s\S]*>搜索<[\s\S]*href="#settings-display"[\s\S]*>显示<[\s\S]*href="#settings-shortcuts"[\s\S]*>快捷键<[\s\S]*href="#settings-targets"[\s\S]*>搜索网站<[\s\S]*href="#settings-history"[\s\S]*>历史记录</,
+      /href="#settings-search"[\s\S]*>搜索<[\s\S]*href="#settings-display"[\s\S]*>显示<[\s\S]*href="#settings-shortcuts"[\s\S]*>快捷键<[\s\S]*href="#settings-targets"[\s\S]*>搜索网站<[\s\S]*href="#settings-history"[\s\S]*>历史记录<[\s\S]*href="#settings-guide"[\s\S]*>使用说明</,
     );
     assert.match(
       html,
-      /options-nav-index">01<[\s\S]*options-nav-index">02<[\s\S]*options-nav-index">03<[\s\S]*options-nav-index">04<[\s\S]*options-nav-index">05</,
+      /options-nav-index">01<[\s\S]*options-nav-index">02<[\s\S]*options-nav-index">03<[\s\S]*options-nav-index">04<[\s\S]*options-nav-index">05<[\s\S]*options-nav-index">06</,
     );
     assert.match(
       html,
-      /module-index">01<[\s\S]*id="settings-search-heading"[\s\S]*module-index">02<[\s\S]*id="settings-display-heading"[\s\S]*module-index">03<[\s\S]*id="settings-shortcuts-heading"[\s\S]*module-index">04<[\s\S]*id="settings-targets-heading"[\s\S]*module-index">05<[\s\S]*id="settings-history-heading"/,
+      /module-index">01<[\s\S]*id="settings-search-heading"[\s\S]*module-index">02<[\s\S]*id="settings-display-heading"[\s\S]*module-index">03<[\s\S]*id="settings-shortcuts-heading"[\s\S]*module-index">04<[\s\S]*id="settings-targets-heading"[\s\S]*module-index">05<[\s\S]*id="settings-history-heading"[\s\S]*module-index">06<[\s\S]*id="settings-guide-heading"/,
     );
     assert.match(
       html,
-      /subsection-index">1\.1<[\s\S]*id="options-search-heading"[\s\S]*subsection-index">1\.2<[\s\S]*id="search-behavior-heading"[\s\S]*subsection-index">1\.3<[\s\S]*id="google-search-heading"[\s\S]*subsection-index">2\.1<[\s\S]*id="popup-display-heading"[\s\S]*subsection-index">2\.2<[\s\S]*id="side-panel-heading"[\s\S]*subsection-index">3\.1<[\s\S]*id="selection-shortcut-heading"[\s\S]*subsection-index">4\.1<[\s\S]*id="target-order-heading"[\s\S]*subsection-index">5\.1<[\s\S]*id="history-management-heading"/,
+      /subsection-index">1\.1<[\s\S]*id="options-search-heading"[\s\S]*subsection-index">1\.2<[\s\S]*id="search-behavior-heading"[\s\S]*subsection-index">1\.3<[\s\S]*id="google-search-heading"[\s\S]*subsection-index">2\.1<[\s\S]*id="popup-display-heading"[\s\S]*subsection-index">2\.2<[\s\S]*id="side-panel-heading"[\s\S]*subsection-index">3\.1<[\s\S]*id="selection-shortcut-heading"[\s\S]*subsection-index">4\.1<[\s\S]*id="target-order-heading"[\s\S]*subsection-index">5\.1<[\s\S]*id="history-management-heading"[\s\S]*subsection-index">6\.1<[\s\S]*id="usage-guide-heading"/,
     );
     assert.match(html, /id="settings-search"/);
     assert.match(html, /id="settings-display"/);
     assert.match(html, /id="settings-shortcuts"/);
     assert.match(html, /id="settings-targets"/);
     assert.match(html, /id="settings-history"/);
+    assert.match(html, /id="settings-guide"/);
     assert.match(html, /id="options-search-form"/);
     assert.match(html, /<textarea[^>]+id="options-search-input"/);
     assert.doesNotMatch(html, /<input[^>]+id="options-search-input"/);
@@ -65,6 +66,10 @@ describe("options markup", () => {
     assert.match(html, /选中文字搜索/);
     assert.match(html, /网站开关与排序/);
     assert.match(html, /历史管理/);
+    assert.match(html, /新安装后，默认只启用 Google 普通网页搜索/);
+    assert.match(html, /小窗口只显示最近 5 条/);
+    assert.match(html, /设置页底部会显示全部历史记录/);
+    assert.match(html, /浏览器内部页面/);
     assert.match(html, /class="setting-help"/);
     assert.match(html, /data-tooltip="开启后，搜索 B 前会自动关闭搜索 A 的标签组。"/);
     assert.doesNotMatch(html, /<span class="setting-note">开启后，搜索 B 前会自动关闭搜索 A 的标签组。<\/span>/);
@@ -86,6 +91,8 @@ describe("options markup", () => {
     assert.match(css, /\.settings-module\s*{[\s\S]*scroll-margin-top/);
     assert.match(css, /\.setting-help:hover::after/);
     assert.match(css, /\.setting-help:focus-visible::after/);
+    assert.match(css, /\.usage-guide\s*{/);
+    assert.match(css, /\.usage-guide-block h4\s*{/);
     assert.match(css, /@media \(max-width: 760px\)/);
   });
 

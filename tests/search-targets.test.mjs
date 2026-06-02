@@ -23,8 +23,33 @@ describe("search targets", () => {
     );
   });
 
-  it("builds encoded search result URLs for a query", () => {
+  it("builds the default Google web search URL for a query", () => {
     assert.deepEqual(buildSearchUrls("人工智能 写作"), [
+      "https://www.google.com/search?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
+    ]);
+  });
+
+  it("builds encoded search result URLs for every configured target", () => {
+    const allTargetIds = [
+      "google",
+      "x",
+      "facebook",
+      "tiktok",
+      "instagram",
+      "reddit",
+      "xiaohongshu",
+      "douyin",
+      "weibo",
+      "zhihu",
+      "bilibili",
+    ];
+
+    assert.deepEqual(buildSearchUrls("人工智能 写作", {
+      enabledTargetIds: allTargetIds,
+      googleSearchType: "images",
+      googleRecent24Hours: true,
+      targetOrder: allTargetIds,
+    }), [
       "https://www.google.com/search?tbm=isch&tbs=qdr:d&q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
       "https://x.com/search?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C&src=typed_query",
       "https://www.facebook.com/search/top/?q=%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%20%E5%86%99%E4%BD%9C",
@@ -41,18 +66,27 @@ describe("search targets", () => {
 
   it("can switch Google from image search to regular search", () => {
     assert.equal(
-      buildSearchUrls("ai", { googleSearchType: "web" })[0],
+      buildSearchUrls("ai", {
+        enabledTargetIds: ["google"],
+        googleRecent24Hours: true,
+        googleSearchType: "web",
+      })[0],
       "https://www.google.com/search?tbs=qdr:d&q=ai",
     );
   });
 
   it("can use Google search without the recent 24 hours filter", () => {
     assert.equal(
-      buildSearchUrls("ai", { googleRecent24Hours: false })[0],
+      buildSearchUrls("ai", {
+        enabledTargetIds: ["google"],
+        googleRecent24Hours: false,
+        googleSearchType: "images",
+      })[0],
       "https://www.google.com/search?tbm=isch&q=ai",
     );
     assert.equal(
       buildSearchUrls("ai", {
+        enabledTargetIds: ["google"],
         googleRecent24Hours: false,
         googleSearchType: "web",
       })[0],
@@ -64,6 +98,7 @@ describe("search targets", () => {
     assert.deepEqual(
       buildSearchUrls("ai", {
         enabledTargetIds: ["facebook", "google"],
+        googleRecent24Hours: true,
         googleSearchType: "web",
         targetOrder: ["facebook", "x", "google", "tiktok"],
       }),

@@ -41,17 +41,28 @@ describe("search settings", () => {
     "bilibili",
   ];
 
-  it("defaults to auto-close, all sites enabled, configured order, and Google images", async () => {
+  it("defaults to auto-close, Google-only web search, and the configured order", async () => {
     const settings = await getSearchSettings(createStorageArea());
 
     assert.deepEqual(settings, {
       autoClosePrevious: true,
-      enabledTargetIds: allTargetIds,
-      googleRecent24Hours: true,
-      googleSearchType: "images",
+      enabledTargetIds: ["google"],
+      googleRecent24Hours: false,
+      googleSearchType: "web",
       targetOrder: allTargetIds,
       translateChineseToEnglish: false,
     });
+  });
+
+  it("keeps existing saved enabled targets instead of forcing the new default", async () => {
+    const storageArea = createStorageArea({
+      [ENABLED_TARGET_IDS_KEY]: ["facebook", "google"],
+      [TARGET_ORDER_KEY]: allTargetIds,
+    });
+    const settings = await getSearchSettings(storageArea);
+
+    assert.deepEqual(settings.enabledTargetIds, ["google", "facebook"]);
+    assert.deepEqual(storageArea.values[ENABLED_TARGET_IDS_KEY], ["google", "facebook"]);
   });
 
   it("persists search settings to chrome storage keys", async () => {

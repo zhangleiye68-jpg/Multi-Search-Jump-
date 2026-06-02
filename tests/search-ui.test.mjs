@@ -137,6 +137,24 @@ function createSwitchHarness() {
   };
 }
 
+function createButtonHarness() {
+  let clickHandler = null;
+
+  return {
+    disabled: false,
+    title: "",
+    type: "button",
+    addEventListener(type, handler) {
+      if (type === "click") {
+        clickHandler = handler;
+      }
+    },
+    async click() {
+      await clickHandler?.();
+    },
+  };
+}
+
 async function flushAsyncWork() {
   await Promise.resolve();
   await Promise.resolve();
@@ -365,7 +383,7 @@ describe("search UI", () => {
 
     assert.equal(messages[0].query, "red dress");
     assert.equal(messages[0].title, "Search: red dress");
-    assert.deepEqual(messages[0].urls, ["https://www.google.com/search?tbs=qdr:d&q=red%20dress"]);
+    assert.deepEqual(messages[0].urls, ["https://www.google.com/search?q=red%20dress"]);
   });
 
   it("hides popup history when the popup visibility preference is off", async () => {
@@ -493,5 +511,44 @@ describe("search UI", () => {
 
     assert.deepEqual(openedWindows, [7]);
     assert.equal(sidePanelSwitch.checked, false);
+  });
+
+  it("opens the side panel from a popup icon button and closes the popup", async () => {
+    const sidePanelButton = createButtonHarness();
+    const openedWindows = [];
+    const originalWindow = globalThis.window;
+    let closeCount = 0;
+    const statusMessage = {
+      classList: createClassList(),
+      textContent: "",
+    };
+
+    globalThis.chrome = {
+      sidePanel: {
+        async open(options) {
+          openedWindows.push(options.windowId);
+        },
+      },
+      windows: {
+        async getCurrent() {
+          return { id: 9 };
+        },
+      },
+    };
+    globalThis.window = {
+      close() {
+        closeCount += 1;
+      },
+    };
+
+    try {
+      initPinButton(sidePanelButton, statusMessage);
+      await sidePanelButton.click();
+
+      assert.deepEqual(openedWindows, [9]);
+      assert.equal(closeCount, 1);
+    } finally {
+      globalThis.window = originalWindow;
+    }
   });
 });

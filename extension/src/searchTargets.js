@@ -3,9 +3,9 @@ export const SEARCH_TARGETS = Object.freeze([
     id: "google",
     name: "Google",
     buildUrl: (query, settings = {}) => {
-      const recent24Hours = settings.googleRecent24Hours !== false;
+      const recent24Hours = settings.googleRecent24Hours === true;
 
-      if (settings.googleSearchType === "web") {
+      if (settings.googleSearchType !== "images") {
         if (recent24Hours) {
           return `https://www.google.com/search?tbs=qdr:d&q=${query}`;
         }
@@ -74,6 +74,7 @@ export const SEARCH_TARGETS = Object.freeze([
 
 const TARGETS_BY_ID = new Map(SEARCH_TARGETS.map((target) => [target.id, target]));
 const DEFAULT_TARGET_ORDER = SEARCH_TARGETS.map((target) => target.id);
+const DEFAULT_ENABLED_TARGET_IDS = ["google"];
 
 export function normalizeQuery(value) {
   return String(value ?? "").trim();
@@ -94,7 +95,7 @@ export function getOrderedSearchTargets(settings = {}) {
   const enabledIds = new Set(
     Array.isArray(settings.enabledTargetIds)
       ? settings.enabledTargetIds
-      : DEFAULT_TARGET_ORDER,
+      : DEFAULT_ENABLED_TARGET_IDS,
   );
 
   return orderedIds

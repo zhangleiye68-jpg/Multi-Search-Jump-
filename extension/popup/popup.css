@@ -37,6 +37,12 @@ body {
   min-width: 0;
 }
 
+.popup-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .mark {
   position: relative;
   flex: 0 0 auto;
@@ -118,7 +124,7 @@ p {
   box-shadow: 0 0 0 3px rgba(23, 107, 99, 0.16);
 }
 
-.settings-icon-button {
+.header-icon-button {
   display: grid;
   place-items: center;
   min-width: 32px;
@@ -133,7 +139,7 @@ p {
   line-height: 1;
 }
 
-.settings-icon-button:hover {
+.header-icon-button:hover {
   background: #edf3f0;
   color: #176b63;
 }

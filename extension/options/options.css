@@ -457,6 +457,39 @@ body {
   font-size: 12px;
 }
 
+.usage-guide {
+  display: grid;
+  max-width: 760px;
+  gap: 16px;
+  color: #263331;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.usage-guide-block {
+  display: grid;
+  gap: 6px;
+}
+
+.usage-guide-block h4 {
+  margin: 0;
+  color: #15201f;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.usage-guide p,
+.usage-guide ol,
+.usage-guide ul {
+  margin: 0;
+}
+
+.usage-guide ol,
+.usage-guide ul {
+  padding-left: 18px;
+}
+
 .switch-control {
   position: relative;
   flex: 0 0 auto;
