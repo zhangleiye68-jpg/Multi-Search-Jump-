@@ -22,7 +22,7 @@ describe("options markup", () => {
     );
     assert.match(
       html,
-      /subsection-index">1\.1<[\s\S]*id="options-search-heading"[\s\S]*subsection-index">1\.2<[\s\S]*id="search-behavior-heading"[\s\S]*subsection-index">1\.3<[\s\S]*id="google-search-heading"[\s\S]*subsection-index">2\.1<[\s\S]*id="popup-display-heading"[\s\S]*subsection-index">2\.2<[\s\S]*id="side-panel-heading"[\s\S]*subsection-index">3\.1<[\s\S]*id="selection-shortcut-heading"[\s\S]*subsection-index">4\.1<[\s\S]*id="target-order-heading"[\s\S]*subsection-index">5\.1<[\s\S]*id="history-management-heading"[\s\S]*subsection-index">6\.1<[\s\S]*id="usage-guide-heading"/,
+      /subsection-index">1\.1<[\s\S]*id="options-search-heading"[\s\S]*subsection-index">1\.2<[\s\S]*id="search-behavior-heading"[\s\S]*subsection-index">1\.3<[\s\S]*id="google-search-heading"[\s\S]*subsection-index">2\.1<[\s\S]*id="popup-display-heading"[\s\S]*subsection-index">2\.2<[\s\S]*id="side-panel-heading"[\s\S]*subsection-index">2\.3<[\s\S]*id="tiktok-caption-heading"[\s\S]*subsection-index">3\.1<[\s\S]*id="selection-shortcut-heading"[\s\S]*subsection-index">4\.1<[\s\S]*id="target-order-heading"[\s\S]*subsection-index">5\.1<[\s\S]*id="history-management-heading"[\s\S]*subsection-index">6\.1<[\s\S]*id="usage-guide-heading"/,
     );
     assert.match(html, /id="settings-search"/);
     assert.match(html, /id="settings-display"/);
@@ -50,6 +50,9 @@ describe("options markup", () => {
     );
     assert.doesNotMatch(html, /<button id="side-panel-button"/);
     assert.match(html, /侧边栏显示/);
+    assert.match(html, /id="tiktok-non-english-warning-toggle"/);
+    assert.match(html, /非英语警示/);
+    assert.match(html, /非英内容/);
     assert.doesNotMatch(html, />固定</);
     assert.match(html, /id="shortcut-settings-button"/);
     assert.match(html, /id="target-order-list"/);
@@ -117,6 +120,8 @@ describe("options markup", () => {
     assert.match(source, /getShowPopupSearchHistory/);
     assert.match(source, /saveShowPopupSearchHistory/);
     assert.match(source, /#side-panel-button/);
+    assert.match(source, /#tiktok-non-english-warning-toggle/);
+    assert.match(source, /tiktokCaptionNonEnglishWarningEnabled/);
     assert.match(source, /initPinButton/);
     assert.match(source, /closeOnSuccess: false/);
     assert.match(source, /#all-search-history/);

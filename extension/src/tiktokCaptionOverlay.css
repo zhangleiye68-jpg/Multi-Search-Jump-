@@ -1,7 +1,7 @@
 .msj-tiktok-caption-root {
   position: fixed;
   top: 42%;
-  right: 18px;
+  right: 76px;
   z-index: 2147483647;
   color: #15201f;
   font-family:
@@ -24,10 +24,11 @@
   background: #176b63;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
   color: #ffffff;
-  cursor: pointer;
+  cursor: grab;
   font-size: 14px;
   font-weight: 850;
   letter-spacing: 0;
+  touch-action: none;
 }
 
 .msj-tiktok-caption-button:hover,
@@ -35,25 +36,34 @@
   background: #0f5d56;
 }
 
+.msj-tiktok-caption-button:active {
+  cursor: grabbing;
+}
+
 .msj-tiktok-caption-button:focus-visible,
 .msj-tiktok-caption-panel button:focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.42);
+  outline: 3px solid rgba(23, 107, 99, 0.22);
   outline-offset: 2px;
 }
 
 .msj-tiktok-caption-panel {
-  position: absolute;
-  top: -116px;
-  right: 56px;
+  position: fixed;
+  top: 72px;
+  right: 92px;
   display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
   width: min(360px, calc(100vw - 96px));
-  max-height: min(560px, calc(100vh - 72px));
-  gap: 10px;
+  min-width: 280px;
+  min-height: 260px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  gap: 9px;
   border: 1px solid #d9e0dc;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   background: #ffffff;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  overflow: hidden;
 }
 
 .msj-tiktok-caption-panel[hidden] {
@@ -63,104 +73,137 @@
 .msj-tiktok-caption-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 8px;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
 }
 
-.msj-tiktok-caption-header h2 {
-  margin: 0;
-  color: #15201f;
-  font-size: 16px;
-  letter-spacing: 0;
+.msj-tiktok-caption-header-drag {
+  flex: 1 1 auto;
+  min-height: 24px;
 }
 
-.msj-tiktok-caption-header-actions,
-.msj-tiktok-caption-bilingual {
+.msj-tiktok-caption-mode-group {
   display: flex;
   align-items: center;
 }
 
-.msj-tiktok-caption-header-actions {
-  gap: 8px;
+.msj-tiktok-caption-mode-group {
+  flex: 0 0 auto;
+  gap: 3px;
+  border: 1px solid #d9e0dc;
+  border-radius: 999px;
+  padding: 2px;
+  background: #f7f8f5;
 }
 
-.msj-tiktok-caption-bilingual {
-  gap: 6px;
+.msj-tiktok-caption-mode {
+  min-width: 0;
+  height: 18px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 6px;
+  background: transparent;
   color: #5f6d68;
   cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 18px;
 }
 
-.msj-tiktok-caption-bilingual-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.msj-tiktok-caption-bilingual-track {
-  position: relative;
-  width: 38px;
-  height: 22px;
-  border-radius: 999px;
-  background: #d9dee5;
-  transition: background 0.16s ease;
-}
-
-.msj-tiktok-caption-bilingual-track::after {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
-  content: "";
-  transition: transform 0.16s ease;
-}
-
-.msj-tiktok-caption-bilingual-input:checked
-  + .msj-tiktok-caption-bilingual-track {
+.msj-tiktok-caption-mode.is-active {
   background: #176b63;
-}
-
-.msj-tiktok-caption-bilingual-input:checked
-  + .msj-tiktok-caption-bilingual-track::after {
-  transform: translateX(16px);
-}
-
-.msj-tiktok-caption-bilingual-input:focus-visible
-  + .msj-tiktok-caption-bilingual-track {
-  outline: 3px solid rgba(23, 107, 99, 0.22);
-  outline-offset: 2px;
+  color: #ffffff;
 }
 
 .msj-tiktok-caption-close {
-  min-width: 28px;
-  width: 28px;
-  height: 28px;
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: #5f6d68;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
 }
 
+.msj-tiktok-video-info {
+  color: #263331;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.msj-tiktok-potential {
+  font-weight: 900;
+}
+
+.msj-tiktok-potential.is-high {
+  color: #d92d20;
+}
+
+.msj-tiktok-potential.is-mid {
+  color: #15803d;
+}
+
+.msj-tiktok-potential.is-low {
+  color: #6b7280;
+}
+
+.msj-tiktok-language-warning {
+  display: none;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.msj-tiktok-language-warning.is-visible {
+  display: block;
+  color: #d92d20;
+}
+
+.msj-tiktok-video-details {
+  display: grid;
+  max-height: 84px;
+  gap: 4px;
+  overflow: auto;
+  border: 1px solid #edf3f0;
+  border-radius: 7px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.msj-tiktok-video-details p {
+  margin: 0;
+}
+
+.msj-tiktok-video-details p {
+  color: #263331;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .msj-tiktok-caption-status {
-  min-height: 18px;
+  min-height: 16px;
   margin: 0;
   color: #5f6d68;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.35;
 }
 
 .msj-tiktok-caption-list {
   display: grid;
+  min-height: 0;
   gap: 8px;
-  max-height: 360px;
   overflow: auto;
   border: 1px solid #edf3f0;
   border-radius: 7px;
@@ -186,16 +229,23 @@
 }
 
 .msj-tiktok-caption-translation {
-  color: #4e615d;
+  color: #000000;
+  font-weight: 800;
 }
 
 .msj-tiktok-caption-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 
-.msj-tiktok-caption-actions button {
+.msj-tiktok-caption-actions .msj-tiktok-caption-status {
+  flex: 1 0 100%;
+}
+
+.msj-tiktok-caption-action-button {
   min-width: 72px;
   height: 32px;
   border: 1px solid #cfd8d3;
@@ -207,8 +257,45 @@
   font-weight: 750;
 }
 
-.msj-tiktok-caption-actions button:hover {
+.msj-tiktok-caption-action-button:hover {
   background: #edf3f0;
+}
+
+.msj-tiktok-caption-resize-handle {
+  position: absolute;
+  touch-action: none;
+}
+
+.msj-tiktok-caption-resize-handle.is-top {
+  top: 0;
+  right: 24px;
+  left: 24px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.msj-tiktok-caption-resize-handle.is-right {
+  top: 24px;
+  right: 0;
+  bottom: 24px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.msj-tiktok-caption-resize-handle.is-bottom {
+  right: 24px;
+  bottom: 0;
+  left: 24px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.msj-tiktok-caption-resize-handle.is-left {
+  top: 24px;
+  bottom: 24px;
+  left: 0;
+  width: 8px;
+  cursor: ew-resize;
 }
 
 @media (max-width: 560px) {
@@ -217,8 +304,6 @@
   }
 
   .msj-tiktok-caption-panel {
-    top: 54px;
-    right: 0;
     width: min(340px, calc(100vw - 24px));
   }
 }

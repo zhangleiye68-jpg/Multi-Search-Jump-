@@ -15,6 +15,7 @@ import {
 import { initPinButton, initSearchUi } from "../src/searchUi.js";
 import { openShortcutSettings } from "../src/shortcutSettings.js";
 
+const TIKTOK_NON_ENGLISH_WARNING_KEY = "tiktokCaptionNonEnglishWarningEnabled";
 const storageArea = chrome.storage.local;
 const allSearchHistory = document.querySelector("#all-search-history");
 const allSearchHistoryEmpty = document.querySelector("#all-search-history-empty");
@@ -34,6 +35,7 @@ const shortcutSettingsButton = document.querySelector("#shortcut-settings-button
 const showPopupHistoryToggle = document.querySelector("#show-popup-history-toggle");
 const sidePanelButton = document.querySelector("#side-panel-button");
 const targetOrderList = document.querySelector("#target-order-list");
+const tiktokNonEnglishWarningToggle = document.querySelector("#tiktok-non-english-warning-toggle");
 const translateChineseToggle = document.querySelector("#translate-chinese-toggle");
 const statusMessage = document.querySelector("#status-message");
 const settingsSections = optionsNavLinks
@@ -46,6 +48,7 @@ let persistToken = 0;
 let optionsSearchUi = null;
 let allHistoryRecords = [];
 let showPopupSearchHistory = true;
+let tiktokCaptionNonEnglishWarningEnabled = true;
 
 function setStatus(message, state = "idle") {
   statusMessage.textContent = message;
@@ -136,6 +139,22 @@ async function persist(nextSettings = settings) {
       setStatus("设置保存失败，请重新尝试。", "error");
     }
   }
+}
+
+async function getTikTokNonEnglishWarningEnabled() {
+  const result = await storageArea.get(TIKTOK_NON_ENGLISH_WARNING_KEY);
+
+  return result[TIKTOK_NON_ENGLISH_WARNING_KEY] !== false;
+}
+
+async function saveTikTokNonEnglishWarningEnabled(enabled) {
+  const normalizedEnabled = Boolean(enabled);
+
+  await storageArea.set({
+    [TIKTOK_NON_ENGLISH_WARNING_KEY]: normalizedEnabled,
+  });
+
+  return normalizedEnabled;
 }
 
 function isTargetEnabled(id) {
@@ -434,6 +453,7 @@ function render() {
   googleImageToggle.checked = settings.googleSearchType === GOOGLE_SEARCH_TYPES.IMAGES;
   googleRecent24hToggle.checked = settings.googleRecent24Hours;
   showPopupHistoryToggle.checked = showPopupSearchHistory;
+  tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
   translateChineseToggle.checked = settings.translateChineseToEnglish;
   renderTargetList();
 }
@@ -470,6 +490,19 @@ showPopupHistoryToggle.addEventListener("change", async () => {
   } catch (error) {
     console.error(error);
     showPopupHistoryToggle.checked = showPopupSearchHistory;
+    setStatus("设置保存失败，请重新尝试。", "error");
+  }
+});
+
+tiktokNonEnglishWarningToggle.addEventListener("change", async () => {
+  try {
+    tiktokCaptionNonEnglishWarningEnabled =
+      await saveTikTokNonEnglishWarningEnabled(tiktokNonEnglishWarningToggle.checked);
+    tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
+    setStatus("设置已保存。");
+  } catch (error) {
+    console.error(error);
+    tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
     setStatus("设置保存失败，请重新尝试。", "error");
   }
 });
@@ -604,6 +637,7 @@ initPinButton(sidePanelButton, statusMessage, { closeOnSuccess: false });
 initOptionsNavigation();
 
 showPopupSearchHistory = await getShowPopupSearchHistory(storageArea);
+tiktokCaptionNonEnglishWarningEnabled = await getTikTokNonEnglishWarningEnabled();
 settings = await getSearchSettings(storageArea);
 settings.targetOrder = settings.targetOrder.filter((id) =>
   SEARCH_TARGETS.some((target) => target.id === id),

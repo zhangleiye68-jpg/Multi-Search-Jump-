@@ -10,6 +10,7 @@ async function loadCaptionCore() {
 function createTextNode(textContent) {
   return {
     hidden: false,
+    scrollTop: 0,
     textContent,
     children: [],
     closest() {
@@ -195,6 +196,8 @@ function createClassList() {
 
 function createElementHarness(tagName) {
   const handlers = new Map();
+  const capturedPointers = new Set();
+  let ownTextContent = "";
 
   return {
     attributes: {},
@@ -202,13 +205,34 @@ function createElementHarness(tagName) {
     classList: createClassList(),
     dataset: {},
     hidden: false,
+    style: {},
     tagName,
-    textContent: "",
+    get textContent() {
+      if (this.children.length > 0) {
+        return `${ownTextContent}${this.children.map((child) => child.textContent ?? "").join("")}`;
+      }
+
+      return ownTextContent;
+    },
+    set textContent(value) {
+      ownTextContent = String(value ?? "");
+    },
     append(...children) {
       this.children.push(...children);
     },
     addEventListener(type, handler) {
       handlers.set(type, handler);
+    },
+    dispatch(type, event = {}) {
+      return handlers.get(type)?.({
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+        preventDefault() {},
+        target: this,
+        ...event,
+      });
     },
     click() {
       if (this.tagName === "input" && this.type === "checkbox") {
@@ -226,8 +250,25 @@ function createElementHarness(tagName) {
     querySelector(selector) {
       return this.children.find((child) => child.matches?.(selector)) ?? null;
     },
+    getBoundingClientRect() {
+      return createRect(
+        Number.parseFloat(this.style.left) || 0,
+        Number.parseFloat(this.style.top) || 0,
+        Number.parseFloat(this.style.width) || 320,
+        Number.parseFloat(this.style.height) || 240,
+      );
+    },
+    hasPointerCapture(pointerId) {
+      return capturedPointers.has(pointerId);
+    },
+    releasePointerCapture(pointerId) {
+      capturedPointers.delete(pointerId);
+    },
     remove() {
       this.removed = true;
+    },
+    setPointerCapture(pointerId) {
+      capturedPointers.add(pointerId);
     },
     setAttribute(name, value) {
       this.attributes[name] = value;
@@ -244,6 +285,10 @@ function createDocumentHarness() {
 
   return {
     body,
+    defaultView: {
+      innerHeight: 900,
+      innerWidth: 1280,
+    },
     createElement(tagName) {
       const element = createElementHarness(tagName);
       elements.push(element);
@@ -257,6 +302,26 @@ function createDocumentHarness() {
     },
     querySelectorAll() {
       return [];
+    },
+  };
+}
+
+function createStorageArea(initialValues = {}) {
+  return {
+    values: { ...initialValues },
+    async get(keys) {
+      if (typeof keys === "string") {
+        return { [keys]: this.values[keys] };
+      }
+
+      if (Array.isArray(keys)) {
+        return Object.fromEntries(keys.map((key) => [key, this.values[key]]));
+      }
+
+      return { ...this.values };
+    },
+    async set(nextValues) {
+      Object.assign(this.values, nextValues);
     },
   };
 }
@@ -1810,6 +1875,406 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.status.textContent, "已读取 2 条字幕。");
   });
 
+  it("renders video metrics, details, warning, and compact display modes", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const now = Date.UTC(2026, 5, 2, 12, 0, 0);
+
+    ingestTikTokApiPayload({
+      itemInfo: {
+        itemStruct: {
+          createTime: String(Math.floor((now - 12 * 60 * 60 * 1000) / 1000)),
+          desc: "A practical breakdown of a travel product.",
+          id: "1234567890",
+          stats: {
+            playCount: 50000,
+          },
+          statsV2: {
+            likeCount: "4,800",
+          },
+          textLanguage: "es-ES",
+          video: {
+            subtitleInfos: [
+              {
+                languageCode: "es-ES",
+                Url: "https://example.test/video-metrics.vtt",
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      fetchCaption: createFetchCaption({
+        "https://example.test/video-metrics.vtt": createVtt("Original subtitle."),
+      }),
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => "https://www.tiktok.com/@user/video/1234567890|blob:https://www.tiktok.com/current",
+      now: () => now,
+      setInterval: null,
+      storageArea: createStorageArea(),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.modeButtons.original.textContent, "原版");
+    assert.equal(overlay.modeButtons.bilingual.textContent, "原+中");
+    assert.equal(overlay.modeButtons.chinese.textContent, "中文");
+    assert.equal(
+      overlay.videoInfo.textContent,
+      "High - ▶ 5W - ⏱ 12h - ⚡ 4.2K/h - ♥ 0.4K/h",
+    );
+    assert.equal(overlay.potentialBadge.textContent, "High");
+    assert.equal(overlay.potentialBadge.classList.contains("is-high"), true);
+    assert.equal(overlay.languageWarning.textContent, "⚠ 非英内容");
+    assert.equal(overlay.languageWarning.classList.contains("is-visible"), true);
+    assert.doesNotMatch(overlay.videoDetails.textContent, /标题|详情/);
+    assert.match(overlay.videoDetails.textContent, /A practical breakdown/);
+    assert.match(overlay.videoDetails.textContent, /A practical breakdown of a travel product\. 中文/);
+    assert.equal(overlay.detailsTranslation.classList.contains("msj-tiktok-caption-translation"), true);
+    assert.equal(overlay.actions.children.includes(overlay.status), true);
+    assert.equal(overlay.actions.children.includes(overlay.modeGroup), true);
+  });
+
+  it("switches between original, bilingual, and Chinese-only captions", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const storageArea = createStorageArea();
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          scripts: [
+            {
+              textContent: JSON.stringify({
+                item: {
+                  subtitles: [{ text: "Fresh subtitle" }],
+                },
+              }),
+            },
+          ],
+        }),
+      setInterval: null,
+      storageArea,
+      translateCaption: async (line) => `${line} 的中文翻译`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Fresh subtitle");
+    assert.equal(overlay.captionList.children[0].children[1].textContent, "Fresh subtitle 的中文翻译");
+
+    await overlay.modeButtons.original.click();
+    assert.equal(overlay.captionList.children[0].textContent, "Fresh subtitle");
+    assert.equal(overlay.captionList.children[0].children.length, 0);
+
+    await overlay.modeButtons.chinese.click();
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Fresh subtitle 的中文翻译");
+    assert.equal(overlay.captionList.children[0].children[0].classList.contains("msj-tiktok-caption-translation"), true);
+    assert.equal(storageArea.values.tiktokCaptionDisplayMode, "chinese");
+  });
+
+  it("classifies Mid and Low potential from hourly play rate", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const now = Date.UTC(2026, 5, 2, 12, 0, 0);
+    let activeVideoId = "2234567890";
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          createTime: String(Math.floor((now - 12 * 60 * 60 * 1000) / 1000)),
+          id: "2234567890",
+          stats: { diggCount: 300, playCount: 30000 },
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/mid.vtt" }],
+          },
+        },
+        {
+          createTime: String(Math.floor((now - 12 * 60 * 60 * 1000) / 1000)),
+          id: "3234567890",
+          stats: { diggCount: 20, playCount: 1200 },
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/low.vtt" }],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      fetchCaption: createFetchCaption({
+        "https://example.test/mid.vtt": createVtt("Mid subtitle."),
+        "https://example.test/low.vtt": createVtt("Low subtitle."),
+      }),
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => `https://www.tiktok.com/@user/video/${activeVideoId}|blob:https://www.tiktok.com/current`,
+      now: () => now,
+      setInterval: null,
+      storageArea: createStorageArea(),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+
+    assert.match(overlay.videoInfo.textContent, /^Mid/);
+    assert.equal(overlay.potentialBadge.classList.contains("is-mid"), true);
+
+    activeVideoId = "3234567890";
+    await overlay.refreshCaptions({ ignoreScriptCaptions: true });
+
+    assert.match(overlay.videoInfo.textContent, /^Low/);
+    assert.equal(overlay.potentialBadge.classList.contains("is-low"), true);
+  });
+
+  it("hides non-English warning when the setting is disabled", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemInfo: {
+        itemStruct: {
+          id: "4234567890",
+          stats: { playCount: 1 },
+          textLanguage: "zh-Hans",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/non-english-off.vtt" }],
+          },
+        },
+      },
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      fetchCaption: createFetchCaption({
+        "https://example.test/non-english-off.vtt": createVtt("Subtitle."),
+      }),
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => "https://www.tiktok.com/@user/video/4234567890",
+      setInterval: null,
+      storageArea: createStorageArea({
+        tiktokCaptionNonEnglishWarningEnabled: false,
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+
+    assert.equal(overlay.languageWarning.textContent, "");
+    assert.equal(overlay.languageWarning.classList.contains("is-visible"), false);
+  });
+
+  it("stores dragged button position and resized panel frame from every edge", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const storageArea = createStorageArea();
+    const overlay = createCaptionOverlay({
+      document,
+      setInterval: null,
+      storageArea,
+    });
+
+    await overlay.ready;
+
+    overlay.button.dispatch("pointerdown", {
+      clientX: 100,
+      clientY: 120,
+    });
+    overlay.button.dispatch("pointermove", {
+      clientX: 128,
+      clientY: 150,
+    });
+    await overlay.button.dispatch("pointerup", {
+      clientX: 128,
+      clientY: 150,
+    });
+
+    assert.equal(overlay.panel.hidden, true);
+    assert.equal(typeof storageArea.values.tiktokCaptionButtonPosition.x, "number");
+    assert.equal(typeof storageArea.values.tiktokCaptionButtonPosition.y, "number");
+
+    overlay.panelHeader.dispatch("pointerdown", {
+      clientX: 200,
+      clientY: 220,
+    });
+    overlay.panelHeader.dispatch("pointermove", {
+      clientX: 240,
+      clientY: 260,
+    });
+    await overlay.panelHeader.dispatch("pointerup", {
+      clientX: 240,
+      clientY: 260,
+    });
+
+    overlay.resizeHandles.right.dispatch("pointerdown", {
+      clientX: 320,
+      clientY: 300,
+    });
+    overlay.resizeHandles.right.dispatch("pointermove", {
+      clientX: 380,
+      clientY: 300,
+    });
+    await overlay.resizeHandles.right.dispatch("pointerup", {
+      clientX: 380,
+      clientY: 300,
+    });
+
+    overlay.resizeHandles.left.dispatch("pointerdown", {
+      clientX: 200,
+      clientY: 300,
+    });
+    overlay.resizeHandles.left.dispatch("pointermove", {
+      clientX: 170,
+      clientY: 300,
+    });
+    await overlay.resizeHandles.left.dispatch("pointerup", {
+      clientX: 170,
+      clientY: 300,
+    });
+
+    overlay.resizeHandles.top.dispatch("pointerdown", {
+      clientX: 320,
+      clientY: 220,
+    });
+    overlay.resizeHandles.top.dispatch("pointermove", {
+      clientX: 320,
+      clientY: 190,
+    });
+    await overlay.resizeHandles.top.dispatch("pointerup", {
+      clientX: 320,
+      clientY: 190,
+    });
+
+    overlay.resizeHandles.bottom.dispatch("pointerdown", {
+      clientX: 320,
+      clientY: 420,
+    });
+    overlay.resizeHandles.bottom.dispatch("pointermove", {
+      clientX: 320,
+      clientY: 460,
+    });
+    await overlay.resizeHandles.bottom.dispatch("pointerup", {
+      clientX: 320,
+      clientY: 460,
+    });
+
+    assert.equal(typeof storageArea.values.tiktokCaptionPanelFrame.x, "number");
+    assert.equal(typeof storageArea.values.tiktokCaptionPanelFrame.y, "number");
+    assert.equal(typeof storageArea.values.tiktokCaptionPanelFrame.width, "number");
+    assert.equal(typeof storageArea.values.tiktokCaptionPanelFrame.height, "number");
+  });
+
+  it("resets caption scroll when the active item changes", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    let activeItemId = "5234567890";
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "5234567890",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/scroll-first.vtt" }],
+          },
+        },
+        {
+          id: "6234567890",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/scroll-second.vtt" }],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      fetchCaption: createFetchCaption({
+        "https://example.test/scroll-first.vtt": createVtt("First scroll subtitle."),
+        "https://example.test/scroll-second.vtt": createVtt("Second scroll subtitle."),
+      }),
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => `https://www.tiktok.com/@user/video/${activeItemId}`,
+      setInterval: null,
+      storageArea: createStorageArea(),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+    overlay.captionList.scrollTop = 220;
+
+    activeItemId = "6234567890";
+    await overlay.refreshCaptions({ ignoreScriptCaptions: true });
+
+    assert.equal(overlay.captionList.scrollTop, 0);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Second scroll subtitle.");
+  });
+
+  it("uses TikTok photo post text when there are no video subtitles", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+
+    ingestTikTokApiPayload({
+      itemInfo: {
+        itemStruct: {
+          createTime: "1780401600",
+          desc: "A photo post about a new product drop.",
+          id: "7234567890",
+          imagePost: {
+            title: "Photo launch notes",
+          },
+          stats: {
+            collectCount: 10,
+            digg_count: 1200,
+            playCount: 1200000,
+          },
+          textLanguage: "eng-US",
+        },
+      },
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => "https://www.tiktok.com/@user/photo/7234567890",
+      now: () => Date.UTC(2026, 5, 2, 12, 0, 0),
+      setInterval: null,
+      storageArea: createStorageArea(),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+
+    assert.match(overlay.videoInfo.textContent, /▶ 1\.2M/);
+    assert.match(overlay.captionList.children[0].children[0].textContent, /Photo launch notes/);
+    assert.match(overlay.captionList.children[0].children[1].textContent, /中文/);
+  });
+
   it("retries hint matching when a visible cue appears after an empty read", async () => {
     const {
       createCaptionOverlay,
@@ -1957,7 +2422,7 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.navigator.clipboard.value, "Fresh subtitle\nFresh subtitle 的中文翻译");
   });
 
-  it("toggles Chinese translations from the caption board", async () => {
+  it("toggles Chinese translations from the caption board mode buttons", async () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();
     const overlay = createCaptionOverlay({
@@ -1987,12 +2452,12 @@ describe("TikTok caption content", () => {
 
     await overlay.refreshCaptions();
 
-    assert.equal(overlay.bilingualToggle.checked, true);
+    assert.equal(overlay.modeButtons.bilingual.classList.contains("is-active"), true);
     assert.equal(overlay.captionList.children[0].children[1].textContent, "Fresh subtitle 的中文翻译");
 
-    await overlay.bilingualToggle.click();
+    await overlay.modeButtons.original.click();
 
-    assert.equal(overlay.bilingualToggle.checked, false);
+    assert.equal(overlay.modeButtons.original.classList.contains("is-active"), true);
     assert.equal(overlay.captionList.children[0].textContent, "Fresh subtitle");
     assert.equal(overlay.captionList.children[0].children.length, 0);
 
