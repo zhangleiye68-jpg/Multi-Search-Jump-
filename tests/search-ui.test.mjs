@@ -394,6 +394,7 @@ describe("search UI", () => {
     const storageArea = createStorageArea({
       translateChineseToEnglish: true,
       enabledTargetIds: ["google"],
+      googleRecent24Hours: false,
       googleSearchType: "web",
     });
     const messages = [];

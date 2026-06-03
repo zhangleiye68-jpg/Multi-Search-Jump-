@@ -73,8 +73,15 @@ export const SEARCH_TARGETS = Object.freeze([
 ]);
 
 const TARGETS_BY_ID = new Map(SEARCH_TARGETS.map((target) => [target.id, target]));
-const DEFAULT_TARGET_ORDER = SEARCH_TARGETS.map((target) => target.id);
-const DEFAULT_ENABLED_TARGET_IDS = ["google"];
+const DEFAULT_ENABLED_TARGET_IDS = ["tiktok", "google", "x", "facebook"];
+const DEFAULT_TARGET_ORDER = [
+  ...DEFAULT_ENABLED_TARGET_IDS,
+  ...SEARCH_TARGETS.map((target) => target.id).filter(
+    (id) => !DEFAULT_ENABLED_TARGET_IDS.includes(id),
+  ),
+];
+const DEFAULT_GOOGLE_RECENT_24H = true;
+const DEFAULT_GOOGLE_SEARCH_TYPE = "images";
 
 export function normalizeQuery(value) {
   return String(value ?? "").trim();
@@ -111,5 +118,19 @@ export function buildSearchUrls(value, settings = {}) {
   }
 
   const encodedQuery = encodeURIComponent(query);
-  return getOrderedSearchTargets(settings).map((target) => target.buildUrl(encodedQuery, settings));
+  const searchSettings = {
+    ...settings,
+    googleRecent24Hours:
+      typeof settings.googleRecent24Hours === "boolean"
+        ? settings.googleRecent24Hours
+        : DEFAULT_GOOGLE_RECENT_24H,
+    googleSearchType:
+      settings.googleSearchType === "web" || settings.googleSearchType === "images"
+        ? settings.googleSearchType
+        : DEFAULT_GOOGLE_SEARCH_TYPE,
+  };
+
+  return getOrderedSearchTargets(searchSettings).map((target) =>
+    target.buildUrl(encodedQuery, searchSettings),
+  );
 }

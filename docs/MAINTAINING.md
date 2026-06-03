@@ -6,7 +6,7 @@
 
 1. 修改功能代码时，只改 `extension/` 里对应模块。
 2. 修改说明时，优先改 `README.md` 和 `docs/USAGE.zh-CN.md`。
-3. 如果改动本地工具套件，同步检查 `extension/local-toolkit/`、`extension/src/localToolkit/`、`extension/assets/localToolkit/`、`extension/rules/` 和 `extension/manifest.json`。
+3. 如果改动本地下载能力，同步检查 `extension/src/localToolkit/`、`extension/assets/localToolkit/`、`extension/rules/`、`extension/src/localToolkitMessaging.js` 和 `extension/manifest.json`。
 4. 运行检查：
 
 ```bash
@@ -19,7 +19,6 @@ npm run check:store
 ## 目录职责
 
 - `extension/`：唯一可加载的扩展目录。Chrome/Edge 加载未打包扩展时选择这个目录。
-- `extension/local-toolkit/`：本地工具套件页面入口。
 - `extension/src/localToolkit/`：从 DataTool 本地免费版迁移来的本地工具运行脚本和平台脚本。
 - `extension/assets/localToolkit/`：本地工具需要的图片、ffmpeg 和辅助资源。
 - `extension/rules/`：本地工具使用的 DNR 规则，当前用于阻断 DataTool 云端、付费、上传和云端语音转文字相关接口。
@@ -50,7 +49,7 @@ npm run check:store
 
 - 不恢复 DataTool 登录、购买、会员、云端上传或云端语音转文字。
 - 下载命名统一经过 `extension/src/localToolkitDownloadNames.js`。
-- 新入口通过 `extension/src/localToolkitUi.js` 打开 `local-toolkit/local-toolkit.html`。
+- 下载浮窗触发 `openPopup` 时，通过 `extension/src/localToolkitMessaging.js` 打开统一设置页的 `#settings-download-sites` 区域。
 - 如果替换 DataTool bundle，旧 hash 文件名要继续改成清晰命名，并同步 manifest、结构检查和文档。
 
 ## 版本记录

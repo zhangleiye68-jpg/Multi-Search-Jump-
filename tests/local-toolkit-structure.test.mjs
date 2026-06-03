@@ -227,7 +227,7 @@ describe("local toolkit structure", () => {
 
     assert.match(html, /id="settings-download-sites"/);
     assert.match(html, /支持下载的网站/);
-    assert.match(html, /下载浮窗图标/);
+    assert.match(html, /下载悬浮图标/);
     assert.doesNotMatch(html, /绿色工具箱/);
     assert.doesNotMatch(html, /打开工具箱/);
   });

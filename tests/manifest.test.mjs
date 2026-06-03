@@ -61,8 +61,8 @@ describe("extension manifest", () => {
     }
     assert.deepEqual(manifest.commands["search-selected-text"], {
       suggested_key: {
-        default: "Alt+Shift+S",
-        mac: "Alt+Shift+S",
+        default: "Alt+1",
+        mac: "Option+1",
       },
       description: "Search selected text with Multi Search Jump",
     });

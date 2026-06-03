@@ -13,11 +13,16 @@ export const GOOGLE_SEARCH_TYPES = Object.freeze({
 });
 
 const DEFAULT_AUTO_CLOSE_PREVIOUS = true;
-const DEFAULT_GOOGLE_RECENT_24H = false;
-const DEFAULT_GOOGLE_SEARCH_TYPE = GOOGLE_SEARCH_TYPES.WEB;
-const DEFAULT_TRANSLATE_CHINESE_TO_ENGLISH = false;
-const DEFAULT_TARGET_ORDER = SEARCH_TARGETS.map((target) => target.id);
-const DEFAULT_ENABLED_TARGET_IDS = ["google"];
+const DEFAULT_GOOGLE_RECENT_24H = true;
+const DEFAULT_GOOGLE_SEARCH_TYPE = GOOGLE_SEARCH_TYPES.IMAGES;
+const DEFAULT_TRANSLATE_CHINESE_TO_ENGLISH = true;
+const DEFAULT_ENABLED_TARGET_IDS = ["tiktok", "google", "x", "facebook"];
+const DEFAULT_TARGET_ORDER = [
+  ...DEFAULT_ENABLED_TARGET_IDS,
+  ...SEARCH_TARGETS.map((target) => target.id).filter(
+    (id) => !DEFAULT_ENABLED_TARGET_IDS.includes(id),
+  ),
+];
 const AUTO_ENABLE_ADDED_TARGET_IDS = new Set(["instagram", "reddit"]);
 const LEGACY_GOOGLE_IMAGE_RECENT_24H_KEY = "googleImageRecent24Hours";
 const VALID_TARGET_IDS = new Set(DEFAULT_TARGET_ORDER);

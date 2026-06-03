@@ -2,13 +2,13 @@
 
 ## Current Scope
 
-Multi Search Jump opens one typed or selected query across the user's enabled search platforms. This version also embeds a Local Toolkit page for locally downloading page-available media, comments, tables, and captions from supported platforms.
+Multi Search Jump opens one typed or selected query across the user's enabled search platforms. This version also renders local download controls on supported platforms for page-available media, comments, tables, and captions.
 
 ## Package
 
 The Chrome extension is isolated in `extension/`. For Chrome Web Store upload, compress the contents of `extension/` so `manifest.json` sits at the root of the uploaded zip. Tests, development scripts, local documentation, and `.DS_Store` stay outside the upload directory.
 
-The Local Toolkit increases the package size because it includes migrated bundle files, images, ffmpeg assets, and DNR rules.
+Local download support increases the package size because it includes migrated bundle files, images, ffmpeg assets, and DNR rules.
 
 ## Permission Justifications
 
