@@ -6,7 +6,9 @@ describe("side panel markup", () => {
   it("contains the popup-style search form, settings button, and caption board host", async () => {
     const html = await readFile("extension/side-panel/panel.html", "utf8");
     const css = await readFile("extension/side-panel/panel.css", "utf8");
+    const script = await readFile("extension/side-panel/panel.js", "utf8");
 
+    assert.match(html, /class="panel-search-area"/);
     assert.match(html, /<header[^>]+class="popup-header panel-header"[\s\S]*<\/header>/);
     assert.match(html, /class="popup-title"/);
     assert.match(html, /class="popup-actions"/);
@@ -15,8 +17,10 @@ describe("side panel markup", () => {
     assert.match(html, /<textarea[^>]+id="search-input"/);
     assert.doesNotMatch(html, /<input[^>]+id="search-input"/);
     assert.match(html, /<button[^>]+id="search-button"/);
-    assert.match(html, /id="search-history"/);
+    assert.doesNotMatch(html, /id="search-history"/);
+    assert.doesNotMatch(html, /class="search-history"/);
     assert.match(html, /<button[^>]+id="options-button"[^>]+class="header-icon-button"[^>]+aria-label="打开设置"/);
+    assert.match(html, /class="panel-content"/);
     assert.match(html, /id="caption-board-section"/);
     assert.match(html, /id="caption-board-list"/);
     assert.match(html, /id="caption-board-refresh-button"/);
@@ -28,7 +32,11 @@ describe("side panel markup", () => {
     assert.match(html, /<script[^>]+type="module"[^>]+src="panel\.js"/);
 
     assert.match(css, /@import url\("\.\.\/popup\/popup\.css"\);/);
+    assert.match(css, /\.panel-shell\s*{[\s\S]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);/);
+    assert.match(css, /\.panel-search-area\s*{[\s\S]*position:\s*sticky;[\s\S]*top:\s*0;/);
+    assert.match(css, /\.panel-content\s*{[\s\S]*min-height:\s*0;[\s\S]*overflow:\s*hidden;/);
     assert.match(css, /\.caption-board-section\s*{/);
     assert.match(css, /\.caption-board-list\s*{/);
+    assert.doesNotMatch(script, /historyList/);
   });
 });

@@ -8,13 +8,38 @@ body {
 body {
   width: auto;
   min-width: 280px;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .panel-shell {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
-  min-height: 100vh;
+  min-height: 0;
+  height: 100vh;
   padding: 14px;
+  align-content: start;
+}
+
+.panel-search-area {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  background: #f7f8f5;
+}
+
+.panel-search-area .status-message:empty {
+  display: none;
+}
+
+.panel-content {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .panel-header {
@@ -34,8 +59,11 @@ body {
 
 .caption-board-section {
   display: grid;
+  grid-template-rows: auto auto auto minmax(0, auto) minmax(0, 1fr) auto;
+  height: 100%;
   min-height: 0;
   gap: 9px;
+  overflow: hidden;
   border-top: 1px solid #d9e0dc;
   padding-top: 12px;
 }
@@ -169,7 +197,7 @@ body {
 
 .caption-board-details {
   display: grid;
-  max-height: 96px;
+  max-height: min(112px, 22vh);
   min-height: 0;
   gap: 4px;
   overflow: auto;
@@ -197,8 +225,8 @@ body {
 .caption-board-list {
   display: grid;
   align-content: start;
-  min-height: 180px;
-  max-height: calc(100vh - 360px);
+  min-height: 0;
+  max-height: none;
   gap: 8px;
   overflow: auto;
   border: 1px solid #edf3f0;

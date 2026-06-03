@@ -26,6 +26,32 @@ function normalizeCaptionState(value = {}) {
   };
 }
 
+function hasText(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function hasRenderableCaptionState(state) {
+  return (
+    state.lines.some((line) => (
+      typeof line === "string"
+        ? hasText(line)
+        : hasText(line?.original) || hasText(line?.translation)
+    )) ||
+    state.metrics.some((metric) => hasText(metric?.value)) ||
+    hasText(state.potential?.label) ||
+    hasText(state.videoDetails.original) ||
+    hasText(state.videoDetails.translation) ||
+    state.warnings.some(hasText)
+  );
+}
+
+function isTransientEmptyState(state) {
+  return (
+    !hasRenderableCaptionState(state) &&
+    /(?:正在|读取中|加载中|刷新中)/u.test(state.status)
+  );
+}
+
 export function isTikTokTab(tab) {
   try {
     const url = new URL(tab?.url ?? "");
@@ -176,7 +202,22 @@ export function initCaptionBoardUi({
     return runtimeApi.sendMessage(activeTabId, message);
   }
 
-  async function refreshState() {
+  function applyCaptionState(stateValue, { preserveRenderable = false } = {}) {
+    const nextState = normalizeCaptionState(stateValue);
+
+    if (
+      preserveRenderable &&
+      hasRenderableCaptionState(currentState) &&
+      isTransientEmptyState(nextState)
+    ) {
+      return currentState;
+    }
+
+    currentState = renderCaptionBoardState(elements, nextState, documentRef);
+    return currentState;
+  }
+
+  async function readCaptionState(options) {
     const response = await sendToActiveTab({
       type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE,
     });
@@ -185,13 +226,12 @@ export function initCaptionBoardUi({
       throw new Error(response?.error ?? "Unable to read TikTok captions");
     }
 
-    currentState = renderCaptionBoardState(elements, response.state, documentRef);
-    return currentState;
+    return applyCaptionState(response.state, options);
   }
 
   async function runCommand(message) {
     await sendToActiveTab(message);
-    return refreshState();
+    return readCaptionState({ preserveRenderable: true });
   }
 
   async function syncActiveTab() {
@@ -203,15 +243,20 @@ export function initCaptionBoardUi({
       return null;
     }
 
+    if (activeTabId !== activeTab.id) {
+      currentState = normalizeCaptionState();
+    }
+
     activeTabId = activeTab.id;
     elements.section.hidden = false;
     elements.unavailable.hidden = true;
 
     try {
+      await readCaptionState();
       await sendToActiveTab({
         type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED,
       });
-      return refreshState();
+      return readCaptionState({ preserveRenderable: true });
     } catch (error) {
       console.error(error);
       setText(elements.status, "无法连接 TikTok 字幕看板。");

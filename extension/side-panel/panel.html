@@ -8,98 +8,96 @@
   </head>
   <body>
     <main class="panel-shell">
-      <header class="popup-header panel-header">
-        <div class="popup-title">
-          <div class="mark" aria-hidden="true"></div>
-          <div>
-            <h1>Multi Search Jump</h1>
+      <section class="panel-search-area" aria-label="搜索">
+        <header class="popup-header panel-header">
+          <div class="popup-title">
+            <div class="mark" aria-hidden="true"></div>
+            <div>
+              <h1>Multi Search Jump</h1>
+            </div>
           </div>
-        </div>
-        <div class="popup-actions">
-          <button
-            id="options-button"
-            class="header-icon-button"
-            type="button"
-            aria-label="打开设置"
-            title="打开设置"
-          >⚙</button>
-        </div>
-      </header>
-
-      <form id="search-form" class="search-form">
-        <label class="visually-hidden" for="search-input">搜索关键词</label>
-        <div class="search-input-shell">
-          <textarea
-            id="search-input"
-            name="query"
-            rows="1"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="输入关键词"
-          ></textarea>
-        </div>
-        <button id="search-button" type="submit">搜索</button>
-      </form>
-      <div
-        id="search-history"
-        class="search-history"
-        aria-label="最近搜索记录"
-        hidden
-      ></div>
-
-      <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
-
-      <p
-        id="caption-board-unavailable"
-        class="caption-board-unavailable"
-        hidden
-      ></p>
-
-      <section
-        id="caption-board-section"
-        class="caption-board-section"
-        aria-label="TikTok 字幕看板"
-        hidden
-      >
-        <div class="caption-board-heading">
-          <h2>TikTok 字幕看板</h2>
-          <div class="caption-board-mode-group" aria-label="字幕显示模式">
-            <button class="caption-board-mode" type="button" data-caption-mode="original">原版</button>
-            <button class="caption-board-mode" type="button" data-caption-mode="bilingual">原+中</button>
-            <button class="caption-board-mode" type="button" data-caption-mode="chinese">中文</button>
+          <div class="popup-actions">
+            <button
+              id="options-button"
+              class="header-icon-button"
+              type="button"
+              aria-label="打开设置"
+              title="打开设置"
+            >⚙</button>
           </div>
-        </div>
-        <div class="caption-board-video-info">
-          <span id="caption-board-potential" class="caption-board-potential"></span>
-          <span id="caption-board-metrics" class="caption-board-metrics"></span>
-        </div>
-        <div
-          id="caption-board-warnings"
-          class="caption-board-warnings"
-          aria-live="polite"
+        </header>
+
+        <form id="search-form" class="search-form">
+          <label class="visually-hidden" for="search-input">搜索关键词</label>
+          <div class="search-input-shell">
+            <textarea
+              id="search-input"
+              name="query"
+              rows="1"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="输入关键词"
+            ></textarea>
+          </div>
+          <button id="search-button" type="submit">搜索</button>
+        </form>
+
+        <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel-content">
+        <p
+          id="caption-board-unavailable"
+          class="caption-board-unavailable"
           hidden
-        ></div>
-        <section class="caption-board-details" aria-label="视频详情">
-          <p id="caption-board-details-original"></p>
-          <p id="caption-board-details-translation" class="caption-board-translation" lang="zh-CN"></p>
-        </section>
-        <div
-          id="caption-board-list"
-          class="caption-board-list"
-          aria-label="字幕列表"
-        ></div>
-        <div class="caption-board-actions">
-          <p
-            id="caption-board-status"
-            class="caption-board-status"
-            role="status"
+        ></p>
+
+        <section
+          id="caption-board-section"
+          class="caption-board-section"
+          aria-label="TikTok 字幕看板"
+          hidden
+        >
+          <div class="caption-board-heading">
+            <h2>TikTok 字幕看板</h2>
+            <div class="caption-board-mode-group" aria-label="字幕显示模式">
+              <button class="caption-board-mode" type="button" data-caption-mode="original">原版</button>
+              <button class="caption-board-mode" type="button" data-caption-mode="bilingual">原+中</button>
+              <button class="caption-board-mode" type="button" data-caption-mode="chinese">中文</button>
+            </div>
+          </div>
+          <div class="caption-board-video-info">
+            <span id="caption-board-potential" class="caption-board-potential"></span>
+            <span id="caption-board-metrics" class="caption-board-metrics"></span>
+          </div>
+          <div
+            id="caption-board-warnings"
+            class="caption-board-warnings"
             aria-live="polite"
-          ></p>
-          <button id="caption-board-font-decrease-button" class="caption-board-tool-button" type="button" aria-label="缩小字幕板文字">-</button>
-          <button id="caption-board-font-increase-button" class="caption-board-tool-button" type="button" aria-label="放大字幕板文字">+</button>
-          <button id="caption-board-refresh-button" class="caption-board-action-button" type="button">刷新字幕</button>
-          <button id="caption-board-copy-button" class="caption-board-action-button" type="button">复制全部</button>
-        </div>
+            hidden
+          ></div>
+          <section class="caption-board-details" aria-label="视频详情">
+            <p id="caption-board-details-original"></p>
+            <p id="caption-board-details-translation" class="caption-board-translation" lang="zh-CN"></p>
+          </section>
+          <div
+            id="caption-board-list"
+            class="caption-board-list"
+            aria-label="字幕列表"
+          ></div>
+          <div class="caption-board-actions">
+            <p
+              id="caption-board-status"
+              class="caption-board-status"
+              role="status"
+              aria-live="polite"
+            ></p>
+            <button id="caption-board-font-decrease-button" class="caption-board-tool-button" type="button" aria-label="缩小字幕板文字">-</button>
+            <button id="caption-board-font-increase-button" class="caption-board-tool-button" type="button" aria-label="放大字幕板文字">+</button>
+            <button id="caption-board-refresh-button" class="caption-board-action-button" type="button">刷新字幕</button>
+            <button id="caption-board-copy-button" class="caption-board-action-button" type="button">复制全部</button>
+          </div>
+        </section>
       </section>
     </main>
 

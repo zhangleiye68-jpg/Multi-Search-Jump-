@@ -110,6 +110,27 @@ function createDocument() {
   };
 }
 
+function createCaptionState(overrides = {}) {
+  return {
+    canDecreaseFont: true,
+    canIncreaseFont: true,
+    copyText: "Fresh subtitle\n新鲜字幕",
+    displayMode: "bilingual",
+    fontScale: 110,
+    lines: [{ original: "Fresh subtitle", translation: "新鲜字幕" }],
+    metrics: [
+      { icon: "♥", label: "每小时点赞量", value: "1万/h" },
+    ],
+    status: "已读取 1 条字幕。",
+    videoDetails: {
+      original: "A practical breakdown.",
+      translation: "实用拆解。",
+    },
+    warnings: ["非英内容"],
+    ...overrides,
+  };
+}
+
 describe("side panel caption board", () => {
   it("detects TikTok tabs without matching unrelated pages", () => {
     assert.equal(isTikTokTab({ url: "https://www.tiktok.com/@demo/video/123" }), true);
@@ -144,23 +165,7 @@ describe("side panel caption board", () => {
         if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
           return {
             ok: true,
-            state: {
-              canDecreaseFont: true,
-              canIncreaseFont: true,
-              copyText: "Fresh subtitle\n新鲜字幕",
-              displayMode: "bilingual",
-              fontScale: 110,
-              lines: [{ original: "Fresh subtitle", translation: "新鲜字幕" }],
-              metrics: [
-                { icon: "♥", label: "每小时点赞量", value: "1万/h" },
-              ],
-              status: "已读取 1 条字幕。",
-              videoDetails: {
-                original: "A practical breakdown.",
-                translation: "实用拆解。",
-              },
-              warnings: ["非英内容"],
-            },
+            state: createCaptionState(),
           };
         }
 
@@ -201,6 +206,7 @@ describe("side panel caption board", () => {
     assert.deepEqual(
       messages.map(({ message }) => message),
       [
+        { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE },
         { type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED },
         { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE },
         { type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH },
@@ -212,6 +218,56 @@ describe("side panel caption board", () => {
       ],
     );
     assert.deepEqual(copied, ["Fresh subtitle\n新鲜字幕"]);
+  });
+
+  it("renders existing overlay captions before refreshing and keeps them during transient empty states", async () => {
+    const elements = createElements();
+    const messages = [];
+    const states = [
+      createCaptionState(),
+      createCaptionState({
+        copyText: "",
+        lines: [],
+        metrics: [],
+        status: "正在读取字幕。",
+        videoDetails: { original: "", translation: "" },
+        warnings: [],
+      }),
+    ];
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      runtimeApi: {
+        async sendMessage(_tabId, message) {
+          messages.push(message);
+
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return { ok: true, state: states.shift() };
+          }
+
+          return { ok: true };
+        },
+      },
+      setInterval: null,
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123" }];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+
+    assert.deepEqual(messages, [
+      { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE },
+      { type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED },
+      { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE },
+    ]);
+    assert.equal(elements.status.textContent, "已读取 1 条字幕。");
+    assert.equal(elements.captionList.children[0].textContent, "Fresh subtitle新鲜字幕");
+    assert.equal(elements.detailsOriginal.textContent, "A practical breakdown.");
+    assert.equal(elements.metrics.textContent, "♥ 1万/h");
+    assert.equal(elements.warnings.textContent, "非英内容");
   });
 
   it("hides the caption board outside TikTok", async () => {
