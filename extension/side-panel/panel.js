@@ -17,6 +17,10 @@ const modeButtons = Object.fromEntries(
 
 const captionBoard = initCaptionBoardUi({
   elements: {
+    authorAvatar: document.querySelector("#caption-board-author-avatar"),
+    authorFallback: document.querySelector("#caption-board-author-fallback"),
+    authorLink: document.querySelector("#caption-board-author-link"),
+    authorName: document.querySelector("#caption-board-author-name"),
     captionList: document.querySelector("#caption-board-list"),
     copyButton: document.querySelector("#caption-board-copy-button"),
     detailsCopyButton: document.querySelector("#caption-board-details-copy-button"),

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
 async function loadCaptionCore() {
@@ -822,6 +823,34 @@ describe("TikTok caption content", () => {
 
     await overlay.copyButton.click();
     assert.equal(overlay.navigator.clipboard.value, "Fresh subtitle\n新鲜字幕");
+  });
+
+  it("keeps the CC button pinned to the browser right edge while dragging vertically", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const storageArea = createStorageArea();
+    const overlay = createCaptionOverlay({
+      document,
+      setInterval: null,
+      storageArea,
+    });
+
+    await overlay.ready;
+
+    assert.equal(overlay.root.style.right, "8px");
+    assert.equal(overlay.root.style.left, "auto");
+    const css = await readFile("extension/src/tiktokCaptionOverlay.css", "utf8");
+    assert.match(css, /\.msj-tiktok-caption-button\s*{[\s\S]*width:\s*30px;[\s\S]*height:\s*30px;/);
+
+    overlay.button.dispatch("pointerdown", { clientX: 100, clientY: 100 });
+    await overlay.button.dispatch("pointermove", { clientX: 260, clientY: 160 });
+    await overlay.button.dispatch("pointerup", { clientX: 260, clientY: 160 });
+
+    assert.equal(overlay.root.style.right, "8px");
+    assert.equal(overlay.root.style.left, "auto");
+    assert.equal(overlay.root.style.top, "438px");
+    assert.equal(storageArea.values.tiktokCaptionButtonPosition.x, 1242);
+    assert.equal(storageArea.values.tiktokCaptionButtonPosition.y, 438);
   });
 
   it("does not auto-open captions when the setting is missing", async () => {
@@ -3638,6 +3667,11 @@ describe("TikTok caption content", () => {
     ingestTikTokApiPayload({
       itemInfo: {
         itemStruct: {
+          author: {
+            avatarThumb: "https://example.test/author.jpeg",
+            nickname: "Travel Builder",
+            uniqueId: "travelbuilder",
+          },
           createTime: String(Math.floor((now - 12 * 60 * 60 * 1000) / 1000)),
           desc: "A practical breakdown of a travel product.",
           id: "1234567890",
@@ -3691,6 +3725,16 @@ describe("TikTok caption content", () => {
       original: "A practical breakdown of a travel product.",
       translation: "A practical breakdown of a travel product. 的中文翻译",
     });
+    assert.deepEqual(state.author, {
+      avatarUrl: "https://example.test/author.jpeg",
+      name: "Travel Builder",
+      profileUrl: "https://www.tiktok.com/@travelbuilder",
+      uniqueId: "travelbuilder",
+    });
+    assert.equal(overlay.authorLink.hidden, false);
+    assert.equal(overlay.authorLink.href, "https://www.tiktok.com/@travelbuilder");
+    assert.equal(overlay.authorAvatar.src, "https://example.test/author.jpeg");
+    assert.equal(overlay.authorName.textContent, "Travel Builder");
     assert.equal(state.metrics[0].value, "1万/h");
     assert.equal(state.metrics[1].value, "4.2千/h");
     assert.equal(state.metrics[2].value, "5万");

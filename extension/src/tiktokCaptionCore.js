@@ -71,7 +71,8 @@
   const MIN_DETAILS_HEIGHT = 56;
   const MAX_DETAILS_HEIGHT = 220;
   const LONG_CAPTION_DETAILS_LINE_THRESHOLD = 4;
-  const BUTTON_SIZE = 44;
+  const BUTTON_SIZE = 30;
+  const BUTTON_RIGHT_OFFSET = 8;
   const DRAG_THRESHOLD_PX = 6;
   const HIGH_POTENTIAL_LIKES_PER_HOUR = 10000;
   const MID_POTENTIAL_LIKES_PER_HOUR = 5000;
@@ -633,6 +634,79 @@
         item?.authorInfo?.unique_id ||
         "",
     );
+  }
+
+  function getTikTokItemAuthorUniqueId(item) {
+    return normalizeCaptionText(
+      item?.author?.uniqueId ||
+        item?.author?.unique_id ||
+        item?.author?.unique_id_str ||
+        item?.authorInfo?.uniqueId ||
+        item?.authorInfo?.unique_id ||
+        "",
+    ).replace(/^@/u, "");
+  }
+
+  function getFirstStringValue(...values) {
+    for (const value of values) {
+      if (typeof value === "string" && normalizeCaptionText(value)) {
+        return normalizeCaptionText(value);
+      }
+
+      if (Array.isArray(value)) {
+        const nestedValue = getFirstStringValue(...value);
+
+        if (nestedValue) {
+          return nestedValue;
+        }
+      }
+
+      if (value && typeof value === "object") {
+        const nestedValue = getFirstStringValue(
+          value.url,
+          value.Url,
+          value.uri,
+          value.src,
+          value.urlList,
+          value.UrlList,
+        );
+
+        if (nestedValue) {
+          return nestedValue;
+        }
+      }
+    }
+
+    return "";
+  }
+
+  function getTikTokItemAuthorInfo(item) {
+    const author = item?.author || item?.authorInfo || {};
+    const uniqueId = getTikTokItemAuthorUniqueId(item);
+    const name = normalizeCaptionText(
+      author.nickname ||
+        author.nickName ||
+        author.name ||
+        author.displayName ||
+        uniqueId,
+    );
+    const profileUrl = uniqueId ? `https://www.tiktok.com/@${encodeURIComponent(uniqueId)}` : "";
+    const avatarUrl = getFirstStringValue(
+      author.avatarLarger,
+      author.avatarMedium,
+      author.avatarThumb,
+      author.avatarUrl,
+      author.avatar_url,
+      author.avatar,
+      author.avatarUri,
+    );
+
+    return {
+      avatarUrl,
+      name,
+      profileUrl,
+      uniqueId,
+    };
   }
 
   function getTikTokItemLanguage(item) {
@@ -1706,6 +1780,7 @@
     const playCount = getTikTokItemPlayCount(item);
 
     return {
+      author: getTikTokItemAuthorInfo(item),
       description: getTikTokItemDescription(item),
       durationLabel: UNKNOWN_METRIC_LABEL,
       durationSeconds: 0,
@@ -1738,6 +1813,7 @@
     const potential = getPotential(likeRate);
 
     return {
+      author: getTikTokItemAuthorInfo(item),
       description: getTikTokItemDescription(item),
       durationLabel: hasRate ? formatDurationDays(elapsedHours) : UNKNOWN_METRIC_LABEL,
       durationSeconds,
@@ -2121,7 +2197,7 @@
     const viewport = getViewportSize(documentRef);
 
     return {
-      x: Math.round(viewport.width - BUTTON_SIZE - 76),
+      x: Math.round(viewport.width - BUTTON_SIZE - BUTTON_RIGHT_OFFSET),
       y: Math.round(viewport.height * 0.42),
     };
   }
@@ -2131,7 +2207,7 @@
     const fallback = getDefaultButtonPosition(documentRef);
 
     return {
-      x: Math.round(clampNumber(position?.x ?? fallback.x, 8, viewport.width - BUTTON_SIZE - 8)),
+      x: Math.round(viewport.width - BUTTON_SIZE - BUTTON_RIGHT_OFFSET),
       y: Math.round(clampNumber(position?.y ?? fallback.y, 8, viewport.height - BUTTON_SIZE - 8)),
     };
   }
@@ -2299,6 +2375,11 @@
     const chineseModeButton = createDisplayModeButton(documentRef, DISPLAY_MODES.chinese);
     const closeButton = documentRef.createElement("button");
     const videoInfo = documentRef.createElement("div");
+    const authorLink = documentRef.createElement("a");
+    const authorAvatarWrap = documentRef.createElement("span");
+    const authorAvatar = documentRef.createElement("img");
+    const authorFallback = documentRef.createElement("span");
+    const authorName = documentRef.createElement("span");
     const warningBadges = documentRef.createElement("div");
     const potentialBadge = documentRef.createElement("span");
     const metricList = documentRef.createElement("span");
@@ -2334,6 +2415,16 @@
     closeButton.textContent = "×";
     closeButton.setAttribute("aria-label", "关闭字幕看板");
     videoInfo.className = "msj-tiktok-video-info";
+    authorLink.className = "msj-tiktok-video-author";
+    authorLink.target = "_blank";
+    authorLink.rel = "noopener noreferrer";
+    authorLink.hidden = true;
+    authorAvatarWrap.className = "msj-tiktok-video-author-avatar-wrap";
+    authorAvatar.className = "msj-tiktok-video-author-avatar";
+    authorAvatar.alt = "";
+    authorAvatar.hidden = true;
+    authorFallback.className = "msj-tiktok-video-author-fallback";
+    authorName.className = "msj-tiktok-video-author-name";
     warningBadges.className = "msj-tiktok-warning-badges";
     warningBadges.setAttribute("aria-live", "polite");
     potentialBadge.className = "msj-tiktok-potential is-low";
@@ -2382,7 +2473,9 @@
 
     modeGroup.append(originalModeButton, bilingualModeButton, chineseModeButton);
     header.append(headerDragArea, closeButton);
-    videoInfo.append(potentialBadge, metricList);
+    authorAvatarWrap.append(authorAvatar, authorFallback);
+    authorLink.append(authorAvatarWrap, authorName);
+    videoInfo.append(authorLink, potentialBadge, metricList);
     detailsHeader.append(detailsCopyButton);
     videoDetails.append(detailsHeader, detailsOriginal, detailsTranslation);
     actions.append(status, modeGroup, fontDecreaseButton, fontIncreaseButton, refreshButton, copyButton);
@@ -2402,6 +2495,10 @@
 
     return {
       actions,
+      authorAvatar,
+      authorFallback,
+      authorLink,
+      authorName,
       captionList,
       closeButton,
       copyButton,
@@ -2526,9 +2623,9 @@
 
     function applyButtonPosition(nextPosition) {
       buttonPosition = normalizeButtonPosition(nextPosition, documentRef);
-      root.style.left = `${buttonPosition.x}px`;
+      root.style.left = "auto";
       root.style.top = `${buttonPosition.y}px`;
-      root.style.right = "auto";
+      root.style.right = `${BUTTON_RIGHT_OFFSET}px`;
       root.style.transform = "none";
     }
 
@@ -2664,11 +2761,45 @@
       ];
     }
 
+    function renderAuthorInfo(author) {
+      const authorName = author?.name || (author?.uniqueId ? `@${author.uniqueId}` : "");
+      const hasAuthor = Boolean(authorName || author?.profileUrl || author?.avatarUrl);
+
+      panelParts.authorLink.hidden = !hasAuthor;
+      panelParts.authorName.textContent = authorName;
+
+      if (!hasAuthor) {
+        panelParts.authorLink.removeAttribute?.("href");
+        panelParts.authorLink.title = "";
+        panelParts.authorAvatar.hidden = true;
+        panelParts.authorAvatar.src = "";
+        panelParts.authorAvatar.alt = "作者头像";
+        panelParts.authorFallback.hidden = true;
+        panelParts.authorFallback.textContent = "";
+        return;
+      }
+
+      if (author?.profileUrl) {
+        panelParts.authorLink.href = author.profileUrl;
+        panelParts.authorLink.title = author?.uniqueId ? `打开 @${author.uniqueId} 主页` : "打开作者主页";
+      } else {
+        panelParts.authorLink.removeAttribute?.("href");
+        panelParts.authorLink.title = "";
+      }
+
+      panelParts.authorAvatar.hidden = !author?.avatarUrl;
+      panelParts.authorAvatar.src = author?.avatarUrl || "";
+      panelParts.authorAvatar.alt = authorName ? `${authorName} 头像` : "作者头像";
+      panelParts.authorFallback.hidden = Boolean(author?.avatarUrl);
+      panelParts.authorFallback.textContent = (authorName.replace(/^@/u, "").trim().charAt(0) || "T").toUpperCase();
+    }
+
     function renderVideoInfo(metrics, detailsTranslation) {
       const metricItems = getVideoMetricItems(metrics);
 
       currentVideoMetrics = metrics;
       currentDetailsTranslation = detailsTranslation || "";
+      renderAuthorInfo(metrics.author);
       panelParts.potentialBadge.textContent = metrics.potential.label;
       panelParts.potentialBadge.classList.remove("is-high", "is-mid", "is-low");
       if (metrics.potential.className) {
@@ -2971,6 +3102,7 @@
 
     function getCaptionBoardState() {
       return {
+        author: currentVideoMetrics.author,
         canDecreaseFont: fontScale > MIN_FONT_SCALE,
         canIncreaseFont: fontScale < MAX_FONT_SCALE,
         copyText: getCaptionCopyText(),
@@ -3134,7 +3266,7 @@
 
       buttonDragState.moved = true;
       applyButtonPosition({
-        x: buttonDragState.startFrame.x + event.clientX - buttonDragState.startX,
+        x: buttonDragState.startFrame.x,
         y: buttonDragState.startFrame.y + event.clientY - buttonDragState.startY,
       });
     }
@@ -3411,6 +3543,10 @@
     }
 
     const overlay = {
+      authorAvatar: panelParts.authorAvatar,
+      authorFallback: panelParts.authorFallback,
+      authorLink: panelParts.authorLink,
+      authorName: panelParts.authorName,
       button,
       captionList: panelParts.captionList,
       closeButton: panelParts.closeButton,

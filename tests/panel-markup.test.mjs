@@ -22,6 +22,9 @@ describe("side panel markup", () => {
     assert.match(html, /<button[^>]+id="options-button"[^>]+class="header-icon-button"[^>]+aria-label="打开设置"/);
     assert.match(html, /class="panel-content"/);
     assert.match(html, /id="caption-board-section"/);
+    assert.match(html, /id="caption-board-author-link"/);
+    assert.match(html, /id="caption-board-author-avatar"/);
+    assert.match(html, /id="caption-board-author-name"/);
     assert.match(html, /id="caption-board-details-copy-button"/);
     assert.match(html, /id="caption-board-list"/);
     assert.match(html, /id="caption-board-refresh-button"/);
@@ -37,8 +40,13 @@ describe("side panel markup", () => {
     assert.match(css, /\.panel-search-area\s*{[\s\S]*position:\s*sticky;[\s\S]*top:\s*0;/);
     assert.match(css, /\.panel-content\s*{[\s\S]*min-height:\s*0;[\s\S]*overflow:\s*hidden;/);
     assert.match(css, /\.caption-board-section\s*{/);
+    assert.match(css, /\.caption-board-author\s*{/);
+    assert.match(css, /\.caption-board-details-header\s*{[\s\S]*justify-content:\s*flex-start;/);
     assert.match(css, /\.caption-board-details-copy-button\s*{/);
+    assert.match(css, /\.caption-board-details p\s*{[\s\S]*font-size:\s*0\.75em;/);
     assert.match(css, /\.caption-board-list\s*{/);
+    assert.match(css, /\.caption-board-list p\s*{[\s\S]*font-size:\s*0\.8125em;/);
     assert.doesNotMatch(script, /historyList/);
+    assert.match(script, /authorLink:\s*document\.querySelector\("#caption-board-author-link"\)/);
   });
 });

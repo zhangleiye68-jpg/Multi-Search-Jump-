@@ -1,7 +1,7 @@
 .msj-tiktok-caption-root {
   position: fixed;
   top: 42%;
-  right: 76px;
+  right: 8px;
   z-index: 2147483647;
   color: #15201f;
   font-family:
@@ -17,15 +17,15 @@
 .msj-tiktok-caption-button {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
   background: #176b63;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
   color: #ffffff;
   cursor: grab;
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0;
   touch-action: none;
@@ -145,6 +145,59 @@
   word-break: break-word;
 }
 
+.msj-tiktok-video-author {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 6px;
+  border: 1px solid #edf3f0;
+  border-radius: 999px;
+  padding: 2px 8px 2px 3px;
+  background: #ffffff;
+  color: #263331;
+  text-decoration: none;
+}
+
+.msj-tiktok-video-author[hidden] {
+  display: none;
+}
+
+.msj-tiktok-video-author:hover {
+  background: #edf3f0;
+}
+
+.msj-tiktok-video-author-avatar-wrap {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #176b63;
+  color: #ffffff;
+}
+
+.msj-tiktok-video-author-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msj-tiktok-video-author-fallback {
+  font-size: 0.75em;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.msj-tiktok-video-author-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .msj-tiktok-potential {
   flex: 0 0 auto;
   border-radius: 999px;
@@ -232,7 +285,7 @@
 
 .msj-tiktok-video-details-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .msj-tiktok-video-details-copy-button {
@@ -421,7 +474,7 @@
 
 @media (max-width: 560px) {
   .msj-tiktok-caption-root {
-    right: 12px;
+    right: 8px;
   }
 
   .msj-tiktok-caption-panel {

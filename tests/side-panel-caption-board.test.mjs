@@ -46,14 +46,19 @@ function createElement(tagName = "div") {
   let textContent = "";
 
   return {
+    attributes: {},
     children: [],
     classList: createClassList(),
     dataset: {},
     disabled: false,
+    href: "",
     hidden: false,
     lang: "",
+    rel: "",
+    src: "",
     style: {},
     tagName,
+    target: "",
     title: "",
     get textContent() {
       if (this.children.length > 0) {
@@ -75,10 +80,15 @@ function createElement(tagName = "div") {
     append(...children) {
       this.children.push(...children);
     },
+    removeAttribute(name) {
+      delete this.attributes[name];
+      this[name] = "";
+    },
     async click() {
       return handlers.get("click")?.({ preventDefault() {} });
     },
     setAttribute(name, value) {
+      this.attributes[name] = value;
       this[name] = value;
     },
   };
@@ -86,6 +96,10 @@ function createElement(tagName = "div") {
 
 function createElements() {
   return {
+    authorAvatar: createElement("img"),
+    authorFallback: createElement("span"),
+    authorLink: createElement("a"),
+    authorName: createElement("span"),
     captionList: createElement(),
     copyButton: createElement("button"),
     detailsCopyButton: createElement("button"),
@@ -118,6 +132,12 @@ function createCaptionState(overrides = {}) {
   return {
     canDecreaseFont: true,
     canIncreaseFont: true,
+    author: {
+      avatarUrl: "https://example.test/avatar.jpeg",
+      name: "Demo Creator",
+      profileUrl: "https://www.tiktok.com/@demo",
+      uniqueId: "demo",
+    },
     copyText: "Fresh subtitle\n新鲜字幕",
     displayMode: "bilingual",
     fontScale: 110,
@@ -195,6 +215,12 @@ describe("side panel caption board", () => {
     assert.equal(elements.section.hidden, false);
     assert.equal(elements.unavailable.hidden, true);
     assert.equal(elements.status.textContent, "已读取 1 条字幕。");
+    assert.equal(elements.authorLink.hidden, false);
+    assert.equal(elements.authorLink.href, "https://www.tiktok.com/@demo");
+    assert.equal(elements.authorLink.target, "_blank");
+    assert.equal(elements.authorAvatar.hidden, false);
+    assert.equal(elements.authorAvatar.src, "https://example.test/avatar.jpeg");
+    assert.equal(elements.authorName.textContent, "Demo Creator");
     assert.equal(elements.captionList.children[0].textContent, "Fresh subtitle新鲜字幕");
     assert.equal(elements.modeButtons.bilingual.classList.contains("is-active"), true);
     assert.equal(elements.section.style.fontSize, "110%");

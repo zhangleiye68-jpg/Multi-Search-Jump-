@@ -15,6 +15,7 @@ const RECOVERING_STATUS = "字幕看板连接恢复中。";
 
 function normalizeCaptionState(value = {}) {
   return {
+    author: normalizeAuthorInfo(value.author),
     canDecreaseFont: value.canDecreaseFont === true,
     canIncreaseFont: value.canIncreaseFont === true,
     copyText: typeof value.copyText === "string" ? value.copyText : "",
@@ -28,6 +29,15 @@ function normalizeCaptionState(value = {}) {
       ? value.videoDetails
       : { original: "", translation: "" },
     warnings: Array.isArray(value.warnings) ? value.warnings : [],
+  };
+}
+
+function normalizeAuthorInfo(value = {}) {
+  return {
+    avatarUrl: typeof value.avatarUrl === "string" ? value.avatarUrl : "",
+    name: typeof value.name === "string" ? value.name : "",
+    profileUrl: typeof value.profileUrl === "string" ? value.profileUrl : "",
+    uniqueId: typeof value.uniqueId === "string" ? value.uniqueId : "",
   };
 }
 
@@ -139,6 +149,54 @@ function renderWarnings(documentRef, container, warnings) {
   }
 }
 
+function renderAuthor(elements, author) {
+  if (!elements.authorLink) {
+    return;
+  }
+
+  const authorName = author.name || (author.uniqueId ? `@${author.uniqueId}` : "");
+  const hasAuthor = hasText(authorName) || hasText(author.profileUrl) || hasText(author.avatarUrl);
+
+  elements.authorLink.hidden = !hasAuthor;
+  setText(elements.authorName, authorName);
+
+  if (!hasAuthor) {
+    elements.authorLink.removeAttribute?.("href");
+    elements.authorLink.title = "";
+    if (elements.authorAvatar) {
+      elements.authorAvatar.hidden = true;
+      elements.authorAvatar.src = "";
+      elements.authorAvatar.alt = "作者头像";
+    }
+    if (elements.authorFallback) {
+      elements.authorFallback.hidden = true;
+      elements.authorFallback.textContent = "";
+    }
+    return;
+  }
+
+  if (author.profileUrl) {
+    elements.authorLink.href = author.profileUrl;
+    elements.authorLink.target = "_blank";
+    elements.authorLink.rel = "noopener noreferrer";
+    elements.authorLink.title = author.uniqueId ? `打开 @${author.uniqueId} 主页` : "打开作者主页";
+  } else {
+    elements.authorLink.removeAttribute?.("href");
+    elements.authorLink.title = "";
+  }
+
+  if (elements.authorAvatar) {
+    elements.authorAvatar.hidden = !author.avatarUrl;
+    elements.authorAvatar.src = author.avatarUrl || "";
+    elements.authorAvatar.alt = authorName ? `${authorName} 头像` : "作者头像";
+  }
+
+  if (elements.authorFallback) {
+    elements.authorFallback.hidden = Boolean(author.avatarUrl);
+    elements.authorFallback.textContent = (authorName.replace(/^@/u, "").trim().charAt(0) || "T").toUpperCase();
+  }
+}
+
 export function renderCaptionBoardState(elements, stateValue, documentRef = document) {
   const state = normalizeCaptionState(stateValue);
 
@@ -148,6 +206,7 @@ export function renderCaptionBoardState(elements, stateValue, documentRef = docu
     elements.section.style.fontSize = `${state.fontScale}%`;
   }
   setText(elements.status, state.status);
+  renderAuthor(elements, state.author);
   setText(elements.detailsOriginal, state.videoDetails.original ?? "");
   setText(elements.detailsTranslation, state.videoDetails.translation ?? "");
 
