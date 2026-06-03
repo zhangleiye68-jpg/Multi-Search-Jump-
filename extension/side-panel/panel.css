@@ -1,4 +1,9 @@
-@import url("./popup.css");
+@import url("../popup/popup.css");
+
+html,
+body {
+  min-height: 100%;
+}
 
 body {
   width: auto;
@@ -8,15 +13,254 @@ body {
 .panel-shell {
   display: grid;
   gap: 12px;
-  padding: 16px;
+  min-height: 100vh;
+  padding: 14px;
 }
 
 .panel-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  min-width: 0;
 }
 
 .panel-header h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption-board-unavailable[hidden],
+.caption-board-section[hidden] {
+  display: none;
+}
+
+.caption-board-section {
+  display: grid;
+  min-height: 0;
+  gap: 9px;
+  border-top: 1px solid #d9e0dc;
+  padding-top: 12px;
+}
+
+.caption-board-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.caption-board-heading h2 {
   margin: 0;
+  color: #15201f;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.caption-board-mode-group {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  gap: 3px;
+  border: 1px solid #d9e0dc;
+  border-radius: 999px;
+  padding: 2px;
+  background: #f7f8f5;
+}
+
+.caption-board-mode {
+  min-width: 0;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: transparent;
+  color: #5f6d68;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.caption-board-mode.is-active {
+  background: #176b63;
+  color: #ffffff;
+}
+
+.caption-board-video-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  color: #263331;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.caption-board-potential {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #edf3f0;
+  font-weight: 900;
+}
+
+.caption-board-potential:empty {
+  display: none;
+}
+
+.caption-board-potential.is-high {
+  color: #d92d20;
+}
+
+.caption-board-potential.is-mid {
+  color: #15803d;
+}
+
+.caption-board-potential.is-low {
+  color: #6b7280;
+}
+
+.caption-board-metrics {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.caption-board-metric {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid #edf3f0;
+  border-radius: 999px;
+  padding: 2px 6px;
+  background: #ffffff;
+  color: #263331;
+  white-space: nowrap;
+}
+
+.caption-board-metric-icon {
+  flex: 0 0 auto;
+  color: #176b63;
+}
+
+.caption-board-metric-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.caption-board-warnings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 0;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.caption-board-warning {
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #fff5f3;
+  color: #d92d20;
+  font-weight: 900;
+}
+
+.caption-board-details {
+  display: grid;
+  max-height: 96px;
+  min-height: 0;
+  gap: 4px;
+  overflow: auto;
+  border: 1px solid #edf3f0;
+  border-radius: 7px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.caption-board-details p {
+  margin: 0;
+  color: #263331;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.caption-board-translation,
+.caption-board-list .msj-tiktok-caption-translation {
+  color: #000000;
+  font-weight: 800;
+}
+
+.caption-board-list {
+  display: grid;
+  align-content: start;
+  min-height: 180px;
+  max-height: calc(100vh - 360px);
+  gap: 8px;
+  overflow: auto;
+  border: 1px solid #edf3f0;
+  border-radius: 7px;
+  padding: 10px;
+  background: #f7f8f5;
+}
+
+.caption-board-list p {
+  margin: 0;
+  color: #263331;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.caption-board-original,
+.caption-board-translation {
+  display: block;
+}
+
+.caption-board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.caption-board-status {
+  flex: 1 1 100%;
+  min-height: 16px;
+  margin: 0;
+  color: #5f6d68;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.caption-board-action-button,
+.caption-board-tool-button {
+  flex: 0 0 auto;
+  height: 30px;
+  border: 1px solid #cfd8d3;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #263331;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.caption-board-tool-button {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+}
+
+.caption-board-action-button {
+  min-width: 64px;
+  padding: 0 9px;
+}
+
+.caption-board-action-button:hover,
+.caption-board-tool-button:hover {
+  background: #edf3f0;
 }

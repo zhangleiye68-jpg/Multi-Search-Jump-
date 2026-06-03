@@ -3529,4 +3529,75 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.navigator.clipboard.value, undefined);
     assert.match(overlay.status.textContent, /没有可复制的字幕/);
   });
+
+  it("exposes a serializable caption board state for the side panel", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const now = Date.UTC(2026, 5, 2, 12, 0, 0);
+
+    ingestTikTokApiPayload({
+      itemInfo: {
+        itemStruct: {
+          createTime: String(Math.floor((now - 12 * 60 * 60 * 1000) / 1000)),
+          desc: "A practical breakdown of a travel product.",
+          id: "1234567890",
+          stats: {
+            playCount: 50000,
+          },
+          statsV2: {
+            likeCount: "120,000",
+          },
+          textLanguage: "es-ES",
+          video: {
+            subtitleInfos: [
+              {
+                languageCode: "es-ES",
+                Url: "https://example.test/side-panel-state.vtt",
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      fetchCaption: createFetchCaption({
+        "https://example.test/side-panel-state.vtt": createVtt("Fresh subtitle"),
+      }),
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => "https://www.tiktok.com/@user/video/1234567890|blob:https://www.tiktok.com/current",
+      now: () => now,
+      setInterval: null,
+      storageArea: createStorageArea({ tiktokCaptionFontScale: 110 }),
+      translateCaption: async (line) => `${line} 的中文翻译`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+
+    const state = overlay.getCaptionBoardState();
+
+    assert.equal(state.status, "已读取 1 条字幕。");
+    assert.equal(state.displayMode, "bilingual");
+    assert.equal(state.fontScale, 110);
+    assert.equal(state.canDecreaseFont, true);
+    assert.equal(state.canIncreaseFont, true);
+    assert.equal(state.copyText, "Fresh subtitle\nFresh subtitle 的中文翻译");
+    assert.deepEqual(state.lines, [
+      { original: "Fresh subtitle", translation: "Fresh subtitle 的中文翻译" },
+    ]);
+    assert.deepEqual(state.videoDetails, {
+      original: "A practical breakdown of a travel product.",
+      translation: "A practical breakdown of a travel product. 的中文翻译",
+    });
+    assert.equal(state.metrics[0].value, "1万/h");
+    assert.equal(state.metrics[1].value, "4.2千/h");
+    assert.equal(state.metrics[2].value, "5万");
+    assert.equal(state.metrics[3].value, "0.5天");
+    assert.deepEqual(state.warnings, ["非英内容"]);
+  });
 });

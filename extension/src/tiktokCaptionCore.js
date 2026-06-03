@@ -2493,6 +2493,8 @@
     let panelFrame = normalizePanelFrame(null, documentRef);
     let currentLines = [];
     let currentDisplayLines = [];
+    let currentDetailsTranslation = "";
+    let currentVideoMetrics = getUnknownVideoMetrics(null);
     let lastSourceKey = getSourceKey();
     let lastHintKey = getHintKey();
     let refreshRequestId = 0;
@@ -2607,7 +2609,7 @@
       return badge;
     }
 
-    function renderWarningBadges(metrics) {
+    function getWarningLabels(metrics) {
       const labels = [];
 
       if (
@@ -2626,6 +2628,12 @@
         labels.push("发布>1天");
       }
 
+      return labels;
+    }
+
+    function renderWarningBadges(metrics) {
+      const labels = getWarningLabels(metrics);
+
       panelParts.warningBadges.textContent = "";
       if (Array.isArray(panelParts.warningBadges.children)) {
         panelParts.warningBadges.children.length = 0;
@@ -2638,14 +2646,20 @@
       panelParts.warningBadges.classList.toggle("is-visible", labels.length > 0);
     }
 
-    function renderVideoInfo(metrics, detailsTranslation) {
-      const metricItems = [
+    function getVideoMetricItems(metrics) {
+      return [
         { icon: "♥", label: "每小时点赞量", value: metrics.likeRateLabel },
         { icon: "↗", label: "每小时播放量", value: metrics.playRateLabel },
         { icon: "▶", label: "总播放量", value: metrics.playCountLabel },
         { icon: "⏱", label: "天数", value: metrics.durationLabel },
       ];
+    }
 
+    function renderVideoInfo(metrics, detailsTranslation) {
+      const metricItems = getVideoMetricItems(metrics);
+
+      currentVideoMetrics = metrics;
+      currentDetailsTranslation = detailsTranslation || "";
       panelParts.potentialBadge.textContent = metrics.potential.label;
       panelParts.potentialBadge.classList.remove("is-high", "is-mid", "is-low");
       if (metrics.potential.className) {
@@ -2660,7 +2674,7 @@
         panelParts.metricList.append(createVideoMetric(documentRef, metricItem));
       }
       panelParts.detailsOriginal.textContent = metrics.description || "暂无视频详情。";
-      panelParts.detailsTranslation.textContent = detailsTranslation || "";
+      panelParts.detailsTranslation.textContent = currentDetailsTranslation;
       renderWarningBadges(metrics);
     }
 
@@ -2908,8 +2922,59 @@
       return Promise.resolve();
     }
 
+    function getCaptionCopyText(lines = currentDisplayLines) {
+      return lines
+        .flatMap((line) =>
+          typeof line === "string"
+            ? [line]
+            : [line.original, line.translation].filter(Boolean),
+        )
+        .join("\n");
+    }
+
+    function getSerializableDisplayLines() {
+      return currentDisplayLines.map((line) => {
+        if (typeof line === "string") {
+          return line;
+        }
+
+        const serializedLine = {};
+
+        if (line.original) {
+          serializedLine.original = line.original;
+        }
+
+        if (line.translation) {
+          serializedLine.translation = line.translation;
+        }
+
+        return serializedLine;
+      });
+    }
+
+    function getCaptionBoardState() {
+      return {
+        canDecreaseFont: fontScale > MIN_FONT_SCALE,
+        canIncreaseFont: fontScale < MAX_FONT_SCALE,
+        copyText: getCaptionCopyText(),
+        displayMode,
+        fontScale,
+        lines: getSerializableDisplayLines(),
+        metrics: getVideoMetricItems(currentVideoMetrics),
+        potential: currentVideoMetrics.potential,
+        status: panelParts.status.textContent,
+        videoDetails: {
+          original: panelParts.detailsOriginal.textContent,
+          translation: currentDetailsTranslation,
+        },
+        warnings: getWarningLabels(currentVideoMetrics),
+      };
+    }
+
     async function copyCaptions() {
-      if (currentDisplayLines.length === 0) {
+      const copyText = getCaptionCopyText();
+
+      if (!copyText) {
         setStatus("没有可复制的字幕。");
         return;
       }
@@ -2920,14 +2985,6 @@
       }
 
       try {
-        const copyText = currentDisplayLines
-          .flatMap((line) =>
-            typeof line === "string"
-              ? [line]
-              : [line.original, line.translation].filter(Boolean),
-          )
-          .join("\n");
-
         await navigatorRef.clipboard.writeText(copyText);
         setStatus("字幕已复制。");
       } catch (error) {
@@ -3319,8 +3376,10 @@
       closeButton: panelParts.closeButton,
       copyButton: panelParts.copyButton,
       detailsResizeHandle: panelParts.detailsResizeHandle,
+      adjustFontScale: updateFontScale,
       fontDecreaseButton: panelParts.fontDecreaseButton,
       fontIncreaseButton: panelParts.fontIncreaseButton,
+      getCaptionBoardState,
       languageWarning: panelParts.warningBadges,
       modeButtons: panelParts.modeButtons,
       destroy() {
@@ -3337,6 +3396,7 @@
       refreshButton: panelParts.refreshButton,
       refreshCaptions,
       refreshCaptionsIfSourceChanged,
+      setDisplayMode: updateDisplayMode,
       resizeHandle: panelParts.resizeHandle,
       resizeHandles: panelParts.resizeHandles,
       root,
