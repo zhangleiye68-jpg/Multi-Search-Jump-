@@ -46,13 +46,354 @@
       ],
       "run_at": "document_start",
       "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://instagram.com/*",
+        "https://www.instagram.com/*",
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://www.xiaohongshu.com/*",
+        "https://www.tiktok.com/*",
+        "https://www.snapchat.com/*",
+        "https://web.snapchat.com/*",
+        "https://www.kuaishou.com/*",
+        "https://ads.tiktok.com/*",
+        "https://creatormarketplace.tiktok.com/*",
+        "https://www.facebook.com/*",
+        "https://www.bilibili.com/*",
+        "https://space.bilibili.com/*",
+        "https://search.bilibili.com/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://www.doubao.com/*",
+        "https://chat.deepseek.com/*",
+        "https://www.kimi.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://claude.ai/*",
+        "https://chat.x.ai/*",
+        "https://grok.com/*",
+        "https://gemini.google.com/*",
+        "https://www.kwai.com/*",
+        "https://vimeo.com/*",
+        "https://www.xinpianchang.com/*"
+      ],
+      "js": [
+        "src/localToolkit/localToolkitRelay.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.tiktok.com/*",
+        "https://ads.tiktok.com/*",
+        "https://www.instagram.com/*",
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://www.xiaohongshu.com/*",
+        "https://www.douyin.com/*",
+        "https://creatormarketplace.tiktok.com/*",
+        "https://www.youtube.com/*",
+        "https://www.facebook.com/*",
+        "https://www.bilibili.com/*",
+        "https://space.bilibili.com/*",
+        "https://search.bilibili.com/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://www.doubao.com/*",
+        "https://chat.deepseek.com/*",
+        "https://www.kimi.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://claude.ai/*",
+        "https://chat.x.ai/*",
+        "https://grok.com/*",
+        "https://gemini.google.com/*",
+        "https://www.kwai.com/*",
+        "https://www.kuaishou.com/*",
+        "https://vimeo.com/*",
+        "https://www.xinpianchang.com/*",
+        "https://www.taobao.com/*",
+        "https://item.taobao.com/*",
+        "https://detail.tmall.com/*",
+        "https://www.tmall.com/*",
+        "https://s.taobao.com/*",
+        "https://chaoshi.detail.tmall.com/*",
+        "https://chaoshi.tmall.com/*",
+        "https://pages-fast.m.taobao.com/*",
+        "https://huodong.taobao.com/*",
+        "https://b.taobao.com/*"
+      ],
+      "js": [
+        "src/localToolkit/localToolkitFreeMode.js",
+        "src/localToolkit/localToolkitContent.js"
+      ],
+      "run_at": "document_start",
+      "css": [
+        "src/localToolkit/localToolkitContent.css",
+        "src/localToolkit/localToolkitContentElements.css"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.tiktok.com/*",
+        "https://ads.tiktok.com/*",
+        "https://www.instagram.com/*",
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://www.xiaohongshu.com/*",
+        "https://www.douyin.com/*",
+        "https://creatormarketplace.tiktok.com/*",
+        "https://www.youtube.com/*",
+        "https://www.facebook.com/*",
+        "https://www.bilibili.com/*",
+        "https://space.bilibili.com/*",
+        "https://search.bilibili.com/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://www.doubao.com/*",
+        "https://chat.deepseek.com/*",
+        "https://www.kimi.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://claude.ai/*",
+        "https://chat.x.ai/*",
+        "https://grok.com/*",
+        "https://gemini.google.com/*",
+        "https://www.kwai.com/*",
+        "https://www.kuaishou.com/*",
+        "https://kuaishou.com/*",
+        "https://vimeo.com/*",
+        "https://www.xinpianchang.com/*",
+        "https://www.taobao.com/*",
+        "https://item.taobao.com/*",
+        "https://detail.tmall.com/*",
+        "https://www.tmall.com/*",
+        "https://s.taobao.com/*",
+        "https://chaoshi.detail.tmall.com/*",
+        "https://chaoshi.tmall.com/*",
+        "https://pages-fast.m.taobao.com/*",
+        "https://huodong.taobao.com/*",
+        "https://b.taobao.com/*"
+      ],
+      "js": [
+        "src/localToolkit/localToolkitFreeMode.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.instagram.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformInstagram.js"
+      ],
+      "run_at": "document_end",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.douyin.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformDouyin.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.douyin.com/*",
+        "https://www.tiktok.com/*",
+        "https://www.xiaohongshu.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformSharedButtons.js"
+      ],
+      "run_at": "document_end",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.facebook.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformFacebook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.instagram.com/*",
+        "https://www.tiktok.com/*",
+        "https://www.bilibili.com/*",
+        "https://space.bilibili.com/*",
+        "https://search.bilibili.com/*",
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://www.douyin.com/*",
+        "https://www.youtube.com/*",
+        "https://ads.tiktok.com/*",
+        "https://creatormarketplace.tiktok.com/*",
+        "https://www.xiaohongshu.com/*",
+        "https://www.facebook.com/*",
+        "https://www.kwai.com/*",
+        "https://www.kuaishou.com/*",
+        "https://vimeo.com/*",
+        "https://www.xinpianchang.com/*",
+        "https://www.taobao.com/*",
+        "https://item.taobao.com/*",
+        "https://detail.tmall.com/*",
+        "https://www.tmall.com/*",
+        "https://s.taobao.com/*",
+        "https://chaoshi.detail.tmall.com/*",
+        "https://chaoshi.tmall.com/*",
+        "https://pages-fast.m.taobao.com/*",
+        "https://huodong.taobao.com/*",
+        "https://b.taobao.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformCommon.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.taobao.com/*",
+        "https://item.taobao.com/*",
+        "https://detail.tmall.com/*",
+        "https://www.tmall.com/*",
+        "https://s.taobao.com/*",
+        "https://chaoshi.detail.tmall.com/*",
+        "https://chaoshi.tmall.com/*",
+        "https://pages-fast.m.taobao.com/*",
+        "https://huodong.taobao.com/*",
+        "https://b.taobao.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformTaobao.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.kuaishou.com/*",
+        "https://kuaishou.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformKuaishou.js"
+      ],
+      "run_at": "document_end",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.xiaohongshu.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformXiaohongshu.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.bilibili.com/*",
+        "https://space.bilibili.com/*",
+        "https://search.bilibili.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformBilibili.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://www.doubao.com/*",
+        "https://chat.deepseek.com/*",
+        "https://www.kimi.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://claude.ai/*",
+        "https://chat.x.ai/*",
+        "https://grok.com/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformAiChat.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.kwai.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformKwai.js"
+      ],
+      "run_at": "document_end",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.tiktok.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformTikTok.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://vimeo.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformVimeo.js"
+      ],
+      "run_at": "document_end",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://x.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformX.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformYouTube.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.xinpianchang.com/*"
+      ],
+      "js": [
+        "src/localToolkit/platforms/platformXinpianchang.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
   "commands": {
     "search-selected-text": {
       "suggested_key": {
-        "default": "Alt+Shift+S",
-        "mac": "Alt+Shift+S"
+        "default": "Alt+1",
+        "mac": "Option+1"
       },
       "description": "Search selected text with Multi Search Jump"
     }
@@ -69,7 +410,12 @@
     "sidePanel",
     "contextMenus",
     "activeTab",
-    "scripting"
+    "scripting",
+    "downloads",
+    "downloads.open",
+    "unlimitedStorage",
+    "cookies",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "https://translate.googleapis.com/",
@@ -80,6 +426,73 @@
     "https://*.tiktokv.com/*",
     "https://*.byteoversea.com/*",
     "https://*.byteimg.com/*",
-    "https://*.ibyteimg.com/*"
-  ]
+    "https://*.ibyteimg.com/*",
+    "https://www.instagram.com/*",
+    "https://instagram.com/*",
+    "https://www.snapchat.com/*",
+    "https://web.snapchat.com/*",
+    "https://www.tiktok.com/*",
+    "https://ads.tiktok.com/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://www.doubao.com/*",
+    "https://kimi.moonshot.cn/*",
+    "https://www.kimi.com/*",
+    "https://chat.deepseek.com/*",
+    "https://claude.ai/*",
+    "https://chat.x.ai/*",
+    "https://grok.com/*",
+    "https://gemini.google.com/*",
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://www.douyin.com/*",
+    "https://www.xiaohongshu.com/*",
+    "https://creatormarketplace.tiktok.com/*",
+    "https://www.youtube.com/*",
+    "https://www.facebook.com/*",
+    "https://www.bilibili.com/*",
+    "https://space.bilibili.com/*",
+    "https://search.bilibili.com/*",
+    "https://www.kwai.com/*",
+    "https://www.kuaishou.com/*",
+    "https://kuaishou.com/*",
+    "https://vimeo.com/*",
+    "https://www.xinpianchang.com/*",
+    "https://mod-api.xinpianchang.com/*",
+    "https://www.taobao.com/*",
+    "https://item.taobao.com/*",
+    "https://detail.tmall.com/*",
+    "https://www.tmall.com/*",
+    "https://s.taobao.com/*",
+    "https://chaoshi.detail.tmall.com/*",
+    "https://chaoshi.tmall.com/*",
+    "https://pages-fast.m.taobao.com/*",
+    "https://huodong.taobao.com/*",
+    "https://b.taobao.com/*",
+    "https://*.douyinvod.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/localToolkit/localToolkitFreeMode.js",
+        "src/localToolkit/localToolkitPageBridge.js",
+        "assets/localToolkit/image/*.png",
+        "assets/localToolkit/ffmpeg/*.js",
+        "assets/localToolkit/ffmpeg/*.wasm",
+        "assets/localToolkit/js/*.js"
+      ],
+      "matches": [
+        "*://*/*"
+      ]
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "local_toolkit_backend_block",
+        "enabled": true,
+        "path": "rules/localToolkitBackendBlock.json"
+      }
+    ]
+  }
 }

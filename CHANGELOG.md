@@ -2,6 +2,11 @@
 
 ## 0.2.0 - 2026-06-02
 
+- Embedded the DataTool local-free toolkit as `extension/local-toolkit/` without replacing the existing search popup, side panel, options page, history, or TikTok subtitle behavior.
+- Added Local Toolkit bundle paths under `extension/src/localToolkit/`, `extension/assets/localToolkit/`, and `extension/rules/`.
+- Added Local Toolkit entry buttons in the popup and options page.
+- Added Local Toolkit download filename normalization under `Multi Search Jump Local Toolkit/`.
+- Added Local Toolkit permissions, host permissions, web accessible resources, and backend blocking DNR rules.
 - Added a GitHub-ready repository structure with bilingual README, privacy notes, maintenance notes, and changelog.
 - Moved the Chinese usage guide into `docs/USAGE.zh-CN.md`.
 - Moved Chrome Web Store review notes into `docs/WEB_STORE_REVIEW_NOTES.md`.

@@ -20,21 +20,24 @@ describe("extension manifest", () => {
     assert.deepEqual(manifest.side_panel, {
       default_path: "side-panel/panel.html",
     });
-    assert.deepEqual(manifest.content_scripts, [
-      {
-        matches: ["https://www.tiktok.com/*"],
-        css: ["src/tiktokCaptionOverlay.css"],
-        js: ["src/tiktokCaptionCore.js", "src/tiktokCaptionContent.js"],
-        run_at: "document_start",
-      },
-      {
-        matches: ["https://www.tiktok.com/*"],
-        js: ["src/tiktokCaptionBridge.js"],
-        run_at: "document_start",
-        world: "MAIN",
-      },
-    ]);
-    assert.deepEqual(manifest.permissions, [
+    assert.ok(
+      manifest.content_scripts.some((script) =>
+        script.matches.includes("https://www.tiktok.com/*") &&
+        script.css?.includes("src/tiktokCaptionOverlay.css") &&
+        script.js.includes("src/tiktokCaptionCore.js") &&
+        script.js.includes("src/tiktokCaptionContent.js") &&
+        script.run_at === "document_start",
+      ),
+    );
+    assert.ok(
+      manifest.content_scripts.some((script) =>
+        script.matches.includes("https://www.tiktok.com/*") &&
+        script.js.includes("src/tiktokCaptionBridge.js") &&
+        script.run_at === "document_start" &&
+        script.world === "MAIN",
+      ),
+    );
+    assert.deepEqual(manifest.permissions.slice(0, 7), [
       "tabs",
       "tabGroups",
       "storage",
@@ -43,7 +46,7 @@ describe("extension manifest", () => {
       "activeTab",
       "scripting",
     ]);
-    assert.deepEqual(manifest.host_permissions, [
+    for (const hostPermission of [
       "https://translate.googleapis.com/",
       "https://*.tiktok.com/*",
       "https://*.tiktokcdn.com/*",
@@ -53,11 +56,13 @@ describe("extension manifest", () => {
       "https://*.byteoversea.com/*",
       "https://*.byteimg.com/*",
       "https://*.ibyteimg.com/*",
-    ]);
+    ]) {
+      assert.ok(manifest.host_permissions.includes(hostPermission));
+    }
     assert.deepEqual(manifest.commands["search-selected-text"], {
       suggested_key: {
-        default: "Alt+Shift+S",
-        mac: "Alt+Shift+S",
+        default: "Alt+1",
+        mac: "Option+1",
       },
       description: "Search selected text with Multi Search Jump",
     });

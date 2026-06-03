@@ -1,4 +1,9 @@
 import { addSearchHistoryRecord } from "./searchHistory.js";
+import { installLocalToolkitDownloadNaming } from "./localToolkitDownloadNames.js";
+import {
+  handleLocalToolkitMessage,
+  isLocalToolkitMessage,
+} from "./localToolkitMessaging.js";
 import { openManagedSearchTabs } from "./tabLauncher.js";
 import {
   CONTEXT_MENU_ID,
@@ -9,6 +14,8 @@ import {
   openSearchForText,
   resetSelectionContextMenu,
 } from "./selectionSearch.js";
+
+installLocalToolkitDownloadNaming(chrome.downloads);
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel
@@ -59,6 +66,22 @@ async function handleCommandSearch() {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (isLocalToolkitMessage(message)) {
+    handleLocalToolkitMessage(message)
+      .then((result) => {
+        sendResponse(result);
+      })
+      .catch((error) => {
+        console.error(error);
+        sendResponse({
+          error: error instanceof Error ? error.message : String(error),
+          success: false,
+        });
+      });
+
+    return true;
+  }
+
   if (message?.type !== "OPEN_SEARCH_GROUP") {
     return false;
   }

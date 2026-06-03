@@ -112,6 +112,21 @@
                 </span>
               </label>
 
+              <div class="settings-action-row">
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">上次搜索结果</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：立即关闭上一次由插件打开的搜索标签组。"
+                      data-tooltip="立即关闭上一次由插件打开的搜索标签组。"
+                    >!</span>
+                  </span>
+                </span>
+                <button id="close-last-search-group-button" type="button">关闭上次结果</button>
+              </div>
+
               <label class="switch-setting" for="translate-chinese-toggle">
                 <span class="setting-label">
                   <span class="setting-title-row">
@@ -273,6 +288,49 @@
                 </span>
               </label>
             </section>
+
+            <section
+              id="settings-download-sites"
+              class="settings-subsection"
+              aria-labelledby="download-sites-heading"
+            >
+              <div class="subsection-heading">
+                <span class="subsection-index">2.4</span>
+                <h3 id="download-sites-heading">支持下载的网站</h3>
+              </div>
+              <ol class="download-sites-list" aria-label="支持下载的网站">
+                <li>TikTok</li>
+                <li>Douyin</li>
+                <li>Instagram</li>
+                <li>X / Twitter</li>
+                <li>Facebook</li>
+                <li>Bilibili</li>
+                <li>小红书</li>
+                <li>Kwai</li>
+                <li>快手</li>
+                <li>新片场</li>
+                <li>Vimeo</li>
+              </ol>
+              <label class="switch-setting" for="local-toolkit-floating-icon-toggle">
+                <span class="setting-label">
+                  <span class="setting-title-row">
+                    <span class="setting-title">下载悬浮图标</span>
+                    <span
+                      class="setting-help"
+                      tabindex="0"
+                      aria-label="说明：控制支持网站页面上的本地下载悬浮图标。"
+                      data-tooltip="控制支持网站页面上的本地下载悬浮图标。"
+                    >!</span>
+                  </span>
+                </span>
+                <span class="switch-control">
+                  <input id="local-toolkit-floating-icon-toggle" type="checkbox">
+                  <span class="switch-track" aria-hidden="true">
+                    <span class="switch-thumb"></span>
+                  </span>
+                </span>
+              </label>
+            </section>
           </section>
 
           <section
@@ -413,13 +471,14 @@
                     <li>输入关键词后按 Enter，或点击「搜索」。</li>
                     <li>插件会自动打开已启用网站的搜索结果页。</li>
                   </ol>
-                  <p>新安装后，默认只启用 Google 普通网页搜索。其他平台可以在「搜索网站」里开启。</p>
+                  <p>新安装后，默认启用 TikTok、Google 图片、X 和 Facebook，Google 默认使用过去 24 小时筛选。其他平台可以在「搜索网站」里开启。</p>
                 </section>
 
                 <section class="usage-guide-block" aria-labelledby="usage-display-heading">
                   <h4 id="usage-display-heading">侧边栏与搜索网站</h4>
                   <ul>
                     <li>弹窗右上角的侧边栏图标可以打开右侧搜索面板。</li>
+                    <li>「搜索行为」里可以手动关闭上一次由插件打开的搜索结果标签组。</li>
                     <li>「搜索网站」里可以开启或关闭平台，并拖动调整打开顺序。</li>
                     <li>「Google 搜索类型」里可以切换图片搜索和过去 24 小时搜索。</li>
                   </ul>
@@ -439,7 +498,7 @@
                   <h4 id="usage-selection-heading">选中文字搜索</h4>
                   <ul>
                     <li>在网页里选中文字后，可以右键点击「用 Multi Search Jump 搜索」。</li>
-                    <li>也可以按快捷键 Alt+Shift+S 搜索选中文字。</li>
+                    <li>也可以按快捷键 Alt+1 搜索选中文字；Mac 上默认是 Option+1。</li>
                     <li>如果想修改快捷键，点击「设置快捷键」后在浏览器快捷键页面调整。</li>
                   </ul>
                 </section>
