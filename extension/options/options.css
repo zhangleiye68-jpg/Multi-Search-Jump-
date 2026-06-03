@@ -457,6 +457,26 @@ body {
   font-size: 12px;
 }
 
+.download-sites-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px 10px;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 12px 12px 12px 34px;
+  border: 1px solid #d9e0dc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #263331;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.download-sites-list li::marker {
+  color: #176b63;
+  font-weight: 850;
+}
+
 .usage-guide {
   display: grid;
   max-width: 760px;

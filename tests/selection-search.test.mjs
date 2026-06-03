@@ -10,6 +10,7 @@ import {
 } from "../extension/src/selectionSearch.js";
 import {
   ENABLED_TARGET_IDS_KEY,
+  GOOGLE_RECENT_24H_KEY,
   GOOGLE_SEARCH_TYPE_KEY,
   TARGET_ORDER_KEY,
   TRANSLATE_CHINESE_TO_ENGLISH_KEY,
@@ -129,6 +130,7 @@ describe("selection search", () => {
     const storageArea = createStorageArea({
       [AUTO_CLOSE_PREVIOUS_KEY]: false,
       [ENABLED_TARGET_IDS_KEY]: ["facebook", "google"],
+      [GOOGLE_RECENT_24H_KEY]: false,
       [GOOGLE_SEARCH_TYPE_KEY]: "web",
       [TARGET_ORDER_KEY]: ["facebook", "google", "x", "tiktok"],
     });
@@ -178,6 +180,7 @@ describe("selection search", () => {
     const calls = [];
     const storageArea = createStorageArea({
       [ENABLED_TARGET_IDS_KEY]: ["google"],
+      [GOOGLE_RECENT_24H_KEY]: false,
       [GOOGLE_SEARCH_TYPE_KEY]: "web",
       [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
     });
@@ -233,6 +236,7 @@ describe("selection search", () => {
     try {
       const storageArea = createStorageArea({
         [ENABLED_TARGET_IDS_KEY]: ["google"],
+        [GOOGLE_RECENT_24H_KEY]: false,
         [GOOGLE_SEARCH_TYPE_KEY]: "web",
         [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
       });
@@ -271,6 +275,7 @@ describe("selection search", () => {
     const calls = [];
     const storageArea = createStorageArea({
       [ENABLED_TARGET_IDS_KEY]: ["google"],
+      [GOOGLE_RECENT_24H_KEY]: false,
       [GOOGLE_SEARCH_TYPE_KEY]: "web",
       [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
     });

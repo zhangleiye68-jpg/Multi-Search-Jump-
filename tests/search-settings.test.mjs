@@ -28,10 +28,10 @@ function createStorageArea(initialValues = {}) {
 
 describe("search settings", () => {
   const allTargetIds = [
+    "tiktok",
     "google",
     "x",
     "facebook",
-    "tiktok",
     "instagram",
     "reddit",
     "xiaohongshu",
@@ -41,16 +41,16 @@ describe("search settings", () => {
     "bilibili",
   ];
 
-  it("defaults to auto-close, Google-only web search, and the configured order", async () => {
+  it("defaults to auto-close, translated Google image search, and the four enabled targets", async () => {
     const settings = await getSearchSettings(createStorageArea());
 
     assert.deepEqual(settings, {
       autoClosePrevious: true,
-      enabledTargetIds: ["google"],
-      googleRecent24Hours: false,
-      googleSearchType: "web",
+      enabledTargetIds: ["tiktok", "google", "x", "facebook"],
+      googleRecent24Hours: true,
+      googleSearchType: "images",
       targetOrder: allTargetIds,
-      translateChineseToEnglish: false,
+      translateChineseToEnglish: true,
     });
   });
 
@@ -63,6 +63,22 @@ describe("search settings", () => {
 
     assert.deepEqual(settings.enabledTargetIds, ["google", "facebook"]);
     assert.deepEqual(storageArea.values[ENABLED_TARGET_IDS_KEY], ["google", "facebook"]);
+  });
+
+  it("keeps existing saved Google and translation settings instead of forcing the new defaults", async () => {
+    const storageArea = createStorageArea({
+      [GOOGLE_RECENT_24H_KEY]: false,
+      [GOOGLE_SEARCH_TYPE_KEY]: "web",
+      [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: false,
+    });
+    const settings = await getSearchSettings(storageArea);
+
+    assert.equal(settings.googleRecent24Hours, false);
+    assert.equal(settings.googleSearchType, "web");
+    assert.equal(settings.translateChineseToEnglish, false);
+    assert.equal(storageArea.values[GOOGLE_RECENT_24H_KEY], false);
+    assert.equal(storageArea.values[GOOGLE_SEARCH_TYPE_KEY], "web");
+    assert.equal(storageArea.values[TRANSLATE_CHINESE_TO_ENGLISH_KEY], false);
   });
 
   it("persists search settings to chrome storage keys", async () => {
@@ -109,6 +125,19 @@ describe("search settings", () => {
       ],
       [TRANSLATE_CHINESE_TO_ENGLISH_KEY]: true,
     });
+  });
+
+  it("persists Google image search type", async () => {
+    const storageArea = createStorageArea();
+
+    const savedSettings = await saveSearchSettings(storageArea, {
+      googleSearchType: "images",
+    });
+    const loadedSettings = await getSearchSettings(storageArea);
+
+    assert.equal(savedSettings.googleSearchType, "images");
+    assert.equal(storageArea.values[GOOGLE_SEARCH_TYPE_KEY], "images");
+    assert.equal(loadedSettings.googleSearchType, "images");
   });
 
   it("migrates the older image-only Google 24 hours setting", async () => {
