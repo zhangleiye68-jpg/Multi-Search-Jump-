@@ -824,6 +824,120 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.navigator.clipboard.value, "Fresh subtitle\n新鲜字幕");
   });
 
+  it("does not auto-open captions when the setting is missing", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes: [createTrackNode("https://example.test/default-closed.vtt")],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/default-closed.vtt": createVtt("Default closed subtitle."),
+      }),
+      setInterval: null,
+      storageArea: createStorageArea(),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+
+    assert.equal(overlay.panel.hidden, true);
+    assert.equal(overlay.captionList.children.length, 0);
+  });
+
+  it("auto-opens when enabled and a complete WebVTT source is readable", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes: [createTrackNode("https://example.test/auto-open.vtt")],
+        }),
+      fetchCaption: createFetchCaption({
+        "https://example.test/auto-open.vtt": createVtt("Auto opened subtitle."),
+      }),
+      setInterval: null,
+      storageArea: createStorageArea({
+        tiktokCaptionAutoOpenEnabled: true,
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+
+    assert.equal(overlay.panel.hidden, false);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Auto opened subtitle.");
+  });
+
+  it("does not auto-open from visible DOM captions alone", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () =>
+        createRootHarness({
+          nodes: [
+            createVisibleCaptionNode("Only the visible cue", createRect(100, 780, 360, 42)),
+          ],
+          videos: [
+            createVideoNode(createRect(0, 0, 640, 900)),
+          ],
+        }),
+      setInterval: null,
+      storageArea: createStorageArea({
+        tiktokCaptionAutoOpenEnabled: true,
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+
+    assert.equal(overlay.panel.hidden, true);
+    assert.equal(overlay.captionList.children.length, 0);
+  });
+
+  it("stops auto-opening on the same page after the user closes the board", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const intervalHandlers = [];
+    let nodes = [createTrackNode("https://example.test/auto-first.vtt")];
+    let sourceKey = "video-1";
+    const overlay = createCaptionOverlay({
+      document,
+      getRoot: () => createRootHarness({ nodes }),
+      getSourceKey: () => sourceKey,
+      fetchCaption: createFetchCaption({
+        "https://example.test/auto-first.vtt": createVtt("First auto subtitle."),
+        "https://example.test/auto-second.vtt": createVtt("Second auto subtitle."),
+      }),
+      setInterval: (handler) => {
+        intervalHandlers.push(handler);
+        return intervalHandlers.length;
+      },
+      clearInterval: () => {},
+      storageArea: createStorageArea({
+        tiktokCaptionAutoOpenEnabled: true,
+      }),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    assert.equal(overlay.panel.hidden, false);
+
+    await overlay.closeButton.click();
+    assert.equal(overlay.panel.hidden, true);
+
+    nodes = [createTrackNode("https://example.test/auto-second.vtt")];
+    sourceKey = "video-2";
+    await intervalHandlers[0]();
+
+    assert.equal(overlay.panel.hidden, true);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "First auto subtitle.");
+  });
+
   it("automatically refreshes captions when the current video changes", async () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();
@@ -2464,7 +2578,7 @@ describe("TikTok caption content", () => {
             playCount: 50000,
           },
           statsV2: {
-            likeCount: "4,800",
+            likeCount: "120,000",
           },
           textLanguage: "es-ES",
           video: {
@@ -2501,17 +2615,17 @@ describe("TikTok caption content", () => {
     const videoInfoText = overlay.videoInfo.textContent;
 
     assert.equal(videoInfoText.startsWith("高"), true);
-    assert.equal(videoInfoText.includes("♥ 400/h"), true);
+    assert.equal(videoInfoText.includes("♥ 1万/h"), true);
     assert.equal(videoInfoText.includes("↗ 4.2千/h"), true);
     assert.equal(videoInfoText.includes("▶ 5万"), true);
     assert.equal(videoInfoText.includes("⏱ 0.5天"), true);
-    assert.equal(videoInfoText.indexOf("♥ 400/h") < videoInfoText.indexOf("↗ 4.2千/h"), true);
+    assert.equal(videoInfoText.indexOf("♥ 1万/h") < videoInfoText.indexOf("↗ 4.2千/h"), true);
     assert.equal(videoInfoText.indexOf("↗ 4.2千/h") < videoInfoText.indexOf("▶ 5万"), true);
     assert.equal(videoInfoText.indexOf("▶ 5万") < videoInfoText.indexOf("⏱ 0.5天"), true);
     assert.equal(overlay.potentialBadge.textContent, "高");
     assert.equal(overlay.potentialBadge.classList.contains("is-high"), true);
-    assert.equal(overlay.languageWarning.textContent, "⚠ 非英内容");
-    assert.equal(overlay.languageWarning.classList.contains("is-visible"), true);
+    assert.equal(overlay.warningBadges.textContent, "非英内容");
+    assert.equal(overlay.warningBadges.classList.contains("is-visible"), true);
     assert.doesNotMatch(overlay.videoDetails.textContent, /标题|详情/);
     assert.match(overlay.videoDetails.textContent, /A practical breakdown/);
     assert.match(overlay.videoDetails.textContent, /A practical breakdown of a travel product\. 中文/);
@@ -2562,7 +2676,7 @@ describe("TikTok caption content", () => {
     assert.equal(storageArea.values.tiktokCaptionDisplayMode, "chinese");
   });
 
-  it("classifies Mid and Low potential from hourly play rate", async () => {
+  it("classifies potential from hourly like rate", async () => {
     const {
       createCaptionOverlay,
       ingestTikTokApiPayload,
@@ -2576,19 +2690,36 @@ describe("TikTok caption content", () => {
         {
           createTime: String(Math.floor((now - 12 * 60 * 60 * 1000) / 1000)),
           id: "2234567890",
-          stats: { diggCount: 300, playCount: 30000 },
+          stats: { diggCount: 120000, playCount: 1200 },
           textLanguage: "eng-US",
           video: {
-            subtitleInfos: [{ Url: "https://example.test/mid.vtt" }],
+            subtitleInfos: [{ Url: "https://example.test/high-likes.vtt" }],
           },
         },
         {
           createTime: String(Math.floor((now - 12 * 60 * 60 * 1000) / 1000)),
           id: "3234567890",
-          stats: { diggCount: 20, playCount: 1200 },
+          stats: { diggCount: 72000, playCount: 1200000 },
           textLanguage: "eng-US",
           video: {
-            subtitleInfos: [{ Url: "https://example.test/low.vtt" }],
+            subtitleInfos: [{ Url: "https://example.test/mid-likes.vtt" }],
+          },
+        },
+        {
+          createTime: String(Math.floor((now - 12 * 60 * 60 * 1000) / 1000)),
+          id: "4234567891",
+          stats: { diggCount: 48000, playCount: 1200000 },
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/low-likes.vtt" }],
+          },
+        },
+        {
+          id: "5234567892",
+          stats: { diggCount: 120000, playCount: 1200000 },
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/unknown-likes.vtt" }],
           },
         },
       ],
@@ -2597,8 +2728,10 @@ describe("TikTok caption content", () => {
     const overlay = createCaptionOverlay({
       document,
       fetchCaption: createFetchCaption({
-        "https://example.test/mid.vtt": createVtt("Mid subtitle."),
-        "https://example.test/low.vtt": createVtt("Low subtitle."),
+        "https://example.test/high-likes.vtt": createVtt("High subtitle."),
+        "https://example.test/mid-likes.vtt": createVtt("Mid subtitle."),
+        "https://example.test/low-likes.vtt": createVtt("Low subtitle."),
+        "https://example.test/unknown-likes.vtt": createVtt("Unknown subtitle."),
       }),
       getRoot: () => createRootHarness(),
       getSourceKey: () => `https://www.tiktok.com/@user/video/${activeVideoId}|blob:https://www.tiktok.com/current`,
@@ -2611,14 +2744,33 @@ describe("TikTok caption content", () => {
     await overlay.ready;
     await overlay.refreshCaptions();
 
-    assert.equal(overlay.videoInfo.textContent.startsWith("中"), true);
-    assert.equal(overlay.potentialBadge.classList.contains("is-mid"), true);
+    assert.equal(overlay.videoInfo.textContent.startsWith("高"), true);
+    assert.equal(overlay.videoInfo.textContent.includes("♥ 1万/h"), true);
+    assert.equal(overlay.potentialBadge.classList.contains("is-high"), true);
 
     activeVideoId = "3234567890";
     await overlay.refreshCaptions({ ignoreScriptCaptions: true });
 
+    assert.equal(overlay.videoInfo.textContent.startsWith("中"), true);
+    assert.equal(overlay.videoInfo.textContent.includes("♥ 6千/h"), true);
+    assert.equal(overlay.potentialBadge.classList.contains("is-mid"), true);
+
+    activeVideoId = "4234567891";
+    await overlay.refreshCaptions({ ignoreScriptCaptions: true });
+
     assert.equal(overlay.videoInfo.textContent.startsWith("低"), true);
+    assert.equal(overlay.videoInfo.textContent.includes("♥ 4千/h"), true);
     assert.equal(overlay.potentialBadge.classList.contains("is-low"), true);
+
+    activeVideoId = "5234567892";
+    await overlay.refreshCaptions({ ignoreScriptCaptions: true });
+
+    assert.equal(overlay.videoInfo.textContent.startsWith("—"), true);
+    assert.equal(overlay.videoInfo.textContent.includes("♥ —"), true);
+    assert.equal(overlay.potentialBadge.textContent, "—");
+    assert.equal(overlay.potentialBadge.classList.contains("is-high"), false);
+    assert.equal(overlay.potentialBadge.classList.contains("is-mid"), false);
+    assert.equal(overlay.potentialBadge.classList.contains("is-low"), false);
   });
 
   it("hides non-English warning when the setting is disabled", async () => {
@@ -2658,8 +2810,140 @@ describe("TikTok caption content", () => {
     await overlay.ready;
     await overlay.refreshCaptions();
 
-    assert.equal(overlay.languageWarning.textContent, "");
-    assert.equal(overlay.languageWarning.classList.contains("is-visible"), false);
+    assert.equal(overlay.warningBadges.textContent, "");
+    assert.equal(overlay.warningBadges.classList.contains("is-visible"), false);
+  });
+
+  it("renders warning badges for non-English, short duration, and videos older than one day", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const now = Date.UTC(2026, 5, 2, 12, 0, 0);
+    let activeVideoId = "5234567890";
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          createTime: String(Math.floor((now - 25 * 60 * 60 * 1000) / 1000)),
+          id: "5234567890",
+          stats: { diggCount: 1000, playCount: 2000 },
+          textLanguage: "zh-Hans",
+          video: {
+            duration: 59,
+            subtitleInfos: [{ Url: "https://example.test/warnings.vtt" }],
+          },
+        },
+        {
+          createTime: String(Math.floor((now - 24 * 60 * 60 * 1000) / 1000)),
+          id: "6234567890",
+          stats: { diggCount: 1000, playCount: 2000 },
+          textLanguage: "eng-US",
+          video: {
+            duration: 60,
+            subtitleInfos: [{ Url: "https://example.test/no-warnings.vtt" }],
+          },
+        },
+        {
+          id: "7234567890",
+          stats: { diggCount: 1000, playCount: 2000 },
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/missing-warning-data.vtt" }],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      fetchCaption: createFetchCaption({
+        "https://example.test/warnings.vtt": createVtt("Warning subtitle."),
+        "https://example.test/no-warnings.vtt": createVtt("No warning subtitle."),
+        "https://example.test/missing-warning-data.vtt": createVtt("Missing warning data subtitle."),
+      }),
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => `https://www.tiktok.com/@user/video/${activeVideoId}`,
+      now: () => now,
+      setInterval: null,
+      storageArea: createStorageArea(),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+
+    assert.match(overlay.warningBadges.textContent, /非英内容/);
+    assert.match(overlay.warningBadges.textContent, /时长<1分/);
+    assert.match(overlay.warningBadges.textContent, /发布>1天/);
+    assert.equal(overlay.warningBadges.classList.contains("is-visible"), true);
+
+    activeVideoId = "6234567890";
+    await overlay.refreshCaptions({ ignoreScriptCaptions: true });
+
+    assert.equal(overlay.warningBadges.textContent, "");
+    assert.equal(overlay.warningBadges.classList.contains("is-visible"), false);
+
+    activeVideoId = "7234567890";
+    await overlay.refreshCaptions({ ignoreScriptCaptions: true });
+
+    assert.equal(overlay.warningBadges.textContent, "");
+    assert.equal(overlay.warningBadges.classList.contains("is-visible"), false);
+  });
+
+  it("scales the whole caption panel text and persists the selected scale", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const storageArea = createStorageArea();
+    const overlay = createCaptionOverlay({
+      document,
+      setInterval: null,
+      storageArea,
+    });
+
+    await overlay.ready;
+
+    assert.equal(overlay.panel.style.fontSize, "100%");
+
+    await overlay.fontIncreaseButton.click();
+    assert.equal(overlay.panel.style.fontSize, "110%");
+    assert.equal(storageArea.values.tiktokCaptionFontScale, 110);
+
+    await overlay.fontDecreaseButton.click();
+    await overlay.fontDecreaseButton.click();
+    assert.equal(overlay.panel.style.fontSize, "90%");
+    assert.equal(storageArea.values.tiktokCaptionFontScale, 90);
+
+    for (let index = 0; index < 4; index += 1) {
+      await overlay.fontDecreaseButton.click();
+    }
+
+    assert.equal(overlay.panel.style.fontSize, "80%");
+    assert.equal(storageArea.values.tiktokCaptionFontScale, 80);
+
+    for (let index = 0; index < 10; index += 1) {
+      await overlay.fontIncreaseButton.click();
+    }
+
+    assert.equal(overlay.panel.style.fontSize, "160%");
+    assert.equal(storageArea.values.tiktokCaptionFontScale, 160);
+  });
+
+  it("restores the saved caption panel font scale", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const overlay = createCaptionOverlay({
+      document,
+      setInterval: null,
+      storageArea: createStorageArea({
+        tiktokCaptionFontScale: 130,
+      }),
+    });
+
+    await overlay.ready;
+
+    assert.equal(overlay.panel.style.fontSize, "130%");
   });
 
   it("uses hint-matched recommendation item for captions, details, and metrics", async () => {

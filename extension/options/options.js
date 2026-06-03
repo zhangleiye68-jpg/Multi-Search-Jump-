@@ -21,6 +21,7 @@ import {
 import { openShortcutSettings } from "../src/shortcutSettings.js";
 
 const TIKTOK_NON_ENGLISH_WARNING_KEY = "tiktokCaptionNonEnglishWarningEnabled";
+const TIKTOK_AUTO_OPEN_KEY = "tiktokCaptionAutoOpenEnabled";
 const storageArea = chrome.storage.local;
 const allSearchHistory = document.querySelector("#all-search-history");
 const allSearchHistoryEmpty = document.querySelector("#all-search-history-empty");
@@ -42,6 +43,7 @@ const showPopupHistoryToggle = document.querySelector("#show-popup-history-toggl
 const sidePanelButton = document.querySelector("#side-panel-button");
 const localToolkitFloatingIconToggle = document.querySelector("#local-toolkit-floating-icon-toggle");
 const targetOrderList = document.querySelector("#target-order-list");
+const tiktokAutoOpenToggle = document.querySelector("#tiktok-auto-open-toggle");
 const tiktokNonEnglishWarningToggle = document.querySelector("#tiktok-non-english-warning-toggle");
 const translateChineseToggle = document.querySelector("#translate-chinese-toggle");
 const statusMessage = document.querySelector("#status-message");
@@ -55,6 +57,7 @@ let persistToken = 0;
 let optionsSearchUi = null;
 let allHistoryRecords = [];
 let showPopupSearchHistory = true;
+let tiktokCaptionAutoOpenEnabled = false;
 let tiktokCaptionNonEnglishWarningEnabled = true;
 let localToolkitFloatingIconEnabled = true;
 
@@ -155,11 +158,27 @@ async function getTikTokNonEnglishWarningEnabled() {
   return result[TIKTOK_NON_ENGLISH_WARNING_KEY] !== false;
 }
 
+async function getTikTokAutoOpenEnabled() {
+  const result = await storageArea.get(TIKTOK_AUTO_OPEN_KEY);
+
+  return result[TIKTOK_AUTO_OPEN_KEY] === true;
+}
+
 async function saveTikTokNonEnglishWarningEnabled(enabled) {
   const normalizedEnabled = Boolean(enabled);
 
   await storageArea.set({
     [TIKTOK_NON_ENGLISH_WARNING_KEY]: normalizedEnabled,
+  });
+
+  return normalizedEnabled;
+}
+
+async function saveTikTokAutoOpenEnabled(enabled) {
+  const normalizedEnabled = Boolean(enabled);
+
+  await storageArea.set({
+    [TIKTOK_AUTO_OPEN_KEY]: normalizedEnabled,
   });
 
   return normalizedEnabled;
@@ -462,6 +481,7 @@ function render() {
   googleRecent24hToggle.checked = settings.googleRecent24Hours;
   localToolkitFloatingIconToggle.checked = localToolkitFloatingIconEnabled;
   showPopupHistoryToggle.checked = showPopupSearchHistory;
+  tiktokAutoOpenToggle.checked = tiktokCaptionAutoOpenEnabled;
   tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
   translateChineseToggle.checked = settings.translateChineseToEnglish;
   renderTargetList();
@@ -499,6 +519,19 @@ showPopupHistoryToggle.addEventListener("change", async () => {
   } catch (error) {
     console.error(error);
     showPopupHistoryToggle.checked = showPopupSearchHistory;
+    setStatus("设置保存失败，请重新尝试。", "error");
+  }
+});
+
+tiktokAutoOpenToggle.addEventListener("change", async () => {
+  try {
+    tiktokCaptionAutoOpenEnabled =
+      await saveTikTokAutoOpenEnabled(tiktokAutoOpenToggle.checked);
+    tiktokAutoOpenToggle.checked = tiktokCaptionAutoOpenEnabled;
+    setStatus("设置已保存。");
+  } catch (error) {
+    console.error(error);
+    tiktokAutoOpenToggle.checked = tiktokCaptionAutoOpenEnabled;
     setStatus("设置保存失败，请重新尝试。", "error");
   }
 });
@@ -662,6 +695,7 @@ initCloseLastSearchGroupButton(closeLastSearchGroupButton, statusMessage);
 initOptionsNavigation();
 
 showPopupSearchHistory = await getShowPopupSearchHistory(storageArea);
+tiktokCaptionAutoOpenEnabled = await getTikTokAutoOpenEnabled();
 tiktokCaptionNonEnglishWarningEnabled = await getTikTokNonEnglishWarningEnabled();
 localToolkitFloatingIconEnabled = await getLocalToolkitFloatingIconEnabled(storageArea);
 settings = await getSearchSettings(storageArea);

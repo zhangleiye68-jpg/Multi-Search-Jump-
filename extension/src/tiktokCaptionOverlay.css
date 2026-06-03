@@ -63,6 +63,7 @@
   padding: 10px;
   background: #ffffff;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  font-size: 100%;
   overflow: hidden;
 }
 
@@ -108,7 +109,7 @@
   background: transparent;
   color: #5f6d68;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 0.6875em;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 24px;
@@ -128,7 +129,7 @@
   background: transparent;
   color: #5f6d68;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 1.125em;
   line-height: 1;
 }
 
@@ -138,7 +139,7 @@
   align-items: center;
   gap: 5px;
   color: #263331;
-  font-size: 12px;
+  font-size: 0.75em;
   font-weight: 800;
   line-height: 1.35;
   word-break: break-word;
@@ -196,17 +197,25 @@
   text-overflow: ellipsis;
 }
 
-.msj-tiktok-language-warning {
+.msj-tiktok-warning-badges {
   display: none;
-  margin: 0;
-  font-size: 12px;
-  font-weight: 900;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 0;
+  font-size: 0.75em;
   line-height: 1.35;
 }
 
-.msj-tiktok-language-warning.is-visible {
-  display: block;
+.msj-tiktok-warning-badges.is-visible {
+  display: flex;
+}
+
+.msj-tiktok-warning-badge {
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #fff5f3;
   color: #d92d20;
+  font-weight: 900;
 }
 
 .msj-tiktok-video-details {
@@ -250,7 +259,7 @@
 
 .msj-tiktok-video-details p {
   color: #263331;
-  font-size: 12px;
+  font-size: 0.75em;
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
@@ -260,7 +269,7 @@
   min-height: 16px;
   margin: 0;
   color: #5f6d68;
-  font-size: 12px;
+  font-size: 0.75em;
   line-height: 1.35;
 }
 
@@ -284,7 +293,7 @@
 .msj-tiktok-caption-list p {
   margin: 0;
   color: #263331;
-  font-size: 13px;
+  font-size: 0.8125em;
   line-height: 1.55;
   word-break: break-word;
 }
@@ -323,20 +332,32 @@
   white-space: nowrap;
 }
 
-.msj-tiktok-caption-action-button {
+.msj-tiktok-caption-action-button,
+.msj-tiktok-caption-font-button {
   flex: 0 0 auto;
-  min-width: 58px;
   height: 28px;
   border: 1px solid #cfd8d3;
   border-radius: 7px;
   background: #ffffff;
   color: #263331;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 0.75em;
   font-weight: 750;
 }
 
-.msj-tiktok-caption-action-button:hover {
+.msj-tiktok-caption-action-button {
+  min-width: 58px;
+}
+
+.msj-tiktok-caption-font-button {
+  flex: 0 0 auto;
+  width: 28px;
+  min-width: 28px;
+  padding: 0;
+}
+
+.msj-tiktok-caption-action-button:hover,
+.msj-tiktok-caption-font-button:hover {
   background: #edf3f0;
 }
 

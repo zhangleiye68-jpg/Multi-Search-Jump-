@@ -9,7 +9,8 @@ describe("TikTok caption overlay style", () => {
 
     assert.match(css, /\.msj-tiktok-caption-translation\s*{[\s\S]*color:\s*#000000/);
     assert.match(css, /\.msj-tiktok-caption-translation\s*{[\s\S]*font-weight:\s*800/);
-    assert.match(css, /\.msj-tiktok-language-warning\.is-visible\s*{[\s\S]*color:\s*#d92d20/);
+    assert.match(css, /\.msj-tiktok-warning-badges\.is-visible\s*{[\s\S]*display:\s*flex/);
+    assert.match(css, /\.msj-tiktok-warning-badge\s*{[\s\S]*color:\s*#d92d20/);
     assert.match(css, /\.msj-tiktok-potential\.is-high\s*{[\s\S]*color:\s*#d92d20/);
     assert.match(css, /\.msj-tiktok-potential\.is-mid\s*{[\s\S]*color:\s*#15803d/);
     assert.match(css, /\.msj-tiktok-potential\.is-low\s*{[\s\S]*color:\s*#6b7280/);
@@ -26,9 +27,14 @@ describe("TikTok caption overlay style", () => {
     assert.match(css, /\.msj-tiktok-caption-actions\s*{[\s\S]*bottom:\s*10px/);
     assert.match(css, /\.msj-tiktok-caption-actions \.msj-tiktok-caption-status\s*{[\s\S]*text-overflow:\s*ellipsis/);
     assert.match(css, /\.msj-tiktok-caption-action-button\s*{[\s\S]*flex:\s*0 0 auto/);
+    assert.match(css, /\.msj-tiktok-caption-font-button\s*{[\s\S]*flex:\s*0 0 auto/);
     assert.match(css, /\.msj-tiktok-caption-list\s*{[\s\S]*padding:\s*10px 10px 58px/);
     assert.match(css, /\.msj-tiktok-caption-list\s*{[\s\S]*scroll-padding-bottom:\s*58px/);
-    assert.match(source, /⚠ 非英内容/);
+    assert.match(source, /非英内容/);
+    assert.match(source, /时长<1分/);
+    assert.match(source, /发布>1天/);
+    assert.match(source, /tiktokCaptionAutoOpenEnabled/);
+    assert.match(source, /tiktokCaptionFontScale/);
     assert.match(source, /tiktokCaptionDisplayMode/);
     assert.match(source, /tiktokCaptionDetailsHeight/);
     assert.match(source, /tiktokCaptionPanelFrame/);

@@ -52,6 +52,8 @@ describe("options markup", () => {
     );
     assert.doesNotMatch(html, /<button id="side-panel-button"/);
     assert.match(html, /侧边栏显示/);
+    assert.match(html, /id="tiktok-auto-open-toggle"/);
+    assert.match(html, /自动打开字幕板/);
     assert.match(html, /id="tiktok-non-english-warning-toggle"/);
     assert.match(html, /非英语警示/);
     assert.match(html, /非英内容/);
@@ -145,8 +147,12 @@ describe("options markup", () => {
     assert.match(source, /#local-toolkit-floating-icon-toggle/);
     assert.match(source, /getLocalToolkitFloatingIconEnabled/);
     assert.match(source, /saveLocalToolkitFloatingIconEnabled/);
+    assert.match(source, /#tiktok-auto-open-toggle/);
+    assert.match(source, /TIKTOK_AUTO_OPEN_KEY/);
+    assert.match(source, /tiktokCaptionAutoOpenEnabled/);
     assert.match(source, /#tiktok-non-english-warning-toggle/);
     assert.match(source, /result\[TIKTOK_NON_ENGLISH_WARNING_KEY\] !== false/);
+    assert.match(source, /result\[TIKTOK_AUTO_OPEN_KEY\] === true/);
     assert.doesNotMatch(source, /initLocalToolkitButton/);
     assert.match(source, /tiktokCaptionNonEnglishWarningEnabled/);
     assert.match(source, /initPinButton/);

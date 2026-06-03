@@ -51,11 +51,18 @@
   });
   const DISPLAY_MODE_STORAGE_KEY = "tiktokCaptionDisplayMode";
   const NON_ENGLISH_WARNING_STORAGE_KEY = "tiktokCaptionNonEnglishWarningEnabled";
+  const AUTO_OPEN_STORAGE_KEY = "tiktokCaptionAutoOpenEnabled";
+  const FONT_SCALE_STORAGE_KEY = "tiktokCaptionFontScale";
   const BUTTON_POSITION_STORAGE_KEY = "tiktokCaptionButtonPosition";
   const PANEL_FRAME_STORAGE_KEY = "tiktokCaptionPanelFrame";
   const DETAILS_HEIGHT_STORAGE_KEY = "tiktokCaptionDetailsHeight";
   const DEFAULT_DISPLAY_MODE = DISPLAY_MODES.bilingual;
   const DEFAULT_NON_ENGLISH_WARNING_ENABLED = true;
+  const DEFAULT_AUTO_OPEN_ENABLED = false;
+  const DEFAULT_FONT_SCALE = 100;
+  const MIN_FONT_SCALE = 80;
+  const MAX_FONT_SCALE = 160;
+  const FONT_SCALE_STEP = 10;
   const MIN_PANEL_WIDTH = 280;
   const MIN_PANEL_HEIGHT = 260;
   const DEFAULT_PANEL_WIDTH = 360;
@@ -66,8 +73,8 @@
   const LONG_CAPTION_DETAILS_LINE_THRESHOLD = 4;
   const BUTTON_SIZE = 44;
   const DRAG_THRESHOLD_PX = 6;
-  const HIGH_POTENTIAL_K_PER_HOUR = 50 / 12;
-  const MID_POTENTIAL_K_PER_HOUR = 2.5;
+  const HIGH_POTENTIAL_LIKES_PER_HOUR = 10000;
+  const MID_POTENTIAL_LIKES_PER_HOUR = 5000;
   const UNKNOWN_METRIC_LABEL = "—";
   const SUBTITLE_FILE_IGNORED_LINE_PATTERN =
     /^(?:WEBVTT|NOTE\b|STYLE\b|REGION\b|\d+|[\d:,.]+\s+-->\s+[\d:,.]+.*)$/u;
@@ -882,6 +889,52 @@
     return numericCreateTime > 100000000000 ? numericCreateTime : numericCreateTime * 1000;
   }
 
+  function getFirstPositiveNumber(...values) {
+    for (const value of values) {
+      const numericValue = Number(value);
+
+      if (Number.isFinite(numericValue) && numericValue > 0) {
+        return numericValue;
+      }
+    }
+
+    return 0;
+  }
+
+  function getTikTokItemDurationSeconds(item) {
+    const explicitSeconds = getFirstPositiveNumber(
+      item?.video?.durationSeconds,
+      item?.video?.duration_seconds,
+      item?.video?.durationSecond,
+      item?.video?.duration_second,
+      item?.durationSeconds,
+      item?.duration_seconds,
+      item?.durationSecond,
+      item?.duration_second,
+    );
+
+    if (explicitSeconds > 0) {
+      return explicitSeconds;
+    }
+
+    const explicitMilliseconds = getFirstPositiveNumber(
+      item?.video?.durationMs,
+      item?.video?.duration_ms,
+      item?.video?.durationMillis,
+      item?.video?.duration_millis,
+      item?.durationMs,
+      item?.duration_ms,
+      item?.durationMillis,
+      item?.duration_millis,
+    );
+
+    if (explicitMilliseconds > 0) {
+      return explicitMilliseconds / 1000;
+    }
+
+    return getFirstPositiveNumber(item?.video?.duration, item?.duration);
+  }
+
   function getTikTokTextValue(value) {
     if (typeof value === "string") {
       return normalizeCaptionText(value);
@@ -1633,12 +1686,16 @@
     return `${formatMetricNumber(elapsedDays)}天`;
   }
 
-  function getPotential(rateKPerHour) {
-    if (rateKPerHour >= HIGH_POTENTIAL_K_PER_HOUR) {
+  function getPotential(likesPerHour) {
+    if (!Number.isFinite(likesPerHour)) {
+      return { className: "", label: UNKNOWN_METRIC_LABEL };
+    }
+
+    if (likesPerHour >= HIGH_POTENTIAL_LIKES_PER_HOUR) {
       return { className: "is-high", label: "高" };
     }
 
-    if (rateKPerHour >= MID_POTENTIAL_K_PER_HOUR) {
+    if (likesPerHour >= MID_POTENTIAL_LIKES_PER_HOUR) {
       return { className: "is-mid", label: "中" };
     }
 
@@ -1651,11 +1708,15 @@
     return {
       description: getTikTokItemDescription(item),
       durationLabel: UNKNOWN_METRIC_LABEL,
+      durationSeconds: 0,
+      elapsedHours: 0,
       language: getTikTokItemLanguage(item),
+      likeRate: null,
       likeRateLabel: UNKNOWN_METRIC_LABEL,
       playCountLabel: playCount > 0 ? formatMetric(playCount) : UNKNOWN_METRIC_LABEL,
+      playRate: null,
       playRateLabel: UNKNOWN_METRIC_LABEL,
-      potential: { className: "is-low", label: UNKNOWN_METRIC_LABEL },
+      potential: { className: "", label: UNKNOWN_METRIC_LABEL },
     };
   }
 
@@ -1667,19 +1728,26 @@
     const playCount = getTikTokItemPlayCount(item);
     const likeCount = getTikTokItemLikeCount(item);
     const createTimeMs = getTikTokItemCreateTimeMs(item);
+    const durationSeconds = getTikTokItemDurationSeconds(item);
     const elapsedMs = createTimeMs > 0 ? Math.max(0, nowMs - createTimeMs) : 0;
     const elapsedHours = elapsedMs > 0 ? elapsedMs / 3600000 : 0;
+    const hasRate = createTimeMs > 0;
     const rateHours = Math.max(1, elapsedHours);
-    const playKPerHour = playCount / rateHours / 1000;
-    const potential = getPotential(playKPerHour);
+    const likeRate = hasRate ? likeCount / rateHours : null;
+    const playRate = hasRate ? playCount / rateHours : null;
+    const potential = getPotential(likeRate);
 
     return {
       description: getTikTokItemDescription(item),
-      durationLabel: formatDurationDays(elapsedHours),
+      durationLabel: hasRate ? formatDurationDays(elapsedHours) : UNKNOWN_METRIC_LABEL,
+      durationSeconds,
+      elapsedHours,
       language: getTikTokItemLanguage(item),
-      likeRateLabel: `${formatMetric(likeCount / rateHours)}/h`,
+      likeRate,
+      likeRateLabel: hasRate ? `${formatMetric(likeRate)}/h` : UNKNOWN_METRIC_LABEL,
       playCountLabel: formatMetric(playCount),
-      playRateLabel: `${formatMetric(playCount / rateHours)}/h`,
+      playRate,
+      playRateLabel: hasRate ? `${formatMetric(playRate)}/h` : UNKNOWN_METRIC_LABEL,
       potential,
     };
   }
@@ -1970,12 +2038,26 @@
     return typeof value === "boolean" ? value : fallback;
   }
 
+  function normalizeFontScale(value) {
+    const numericValue = Number(value);
+
+    if (!Number.isFinite(numericValue)) {
+      return DEFAULT_FONT_SCALE;
+    }
+
+    const clampedValue = clampNumber(numericValue, MIN_FONT_SCALE, MAX_FONT_SCALE);
+
+    return Math.round(clampedValue / FONT_SCALE_STEP) * FONT_SCALE_STEP;
+  }
+
   async function getStoredOverlaySettings(storageArea) {
     if (!storageArea?.get) {
       return {
+        autoOpenEnabled: DEFAULT_AUTO_OPEN_ENABLED,
         buttonPosition: null,
         detailsHeight: DEFAULT_DETAILS_HEIGHT,
         displayMode: DEFAULT_DISPLAY_MODE,
+        fontScale: DEFAULT_FONT_SCALE,
         nonEnglishWarningEnabled: DEFAULT_NON_ENGLISH_WARNING_ENABLED,
         panelFrame: null,
       };
@@ -1985,14 +2067,21 @@
       BUTTON_POSITION_STORAGE_KEY,
       DETAILS_HEIGHT_STORAGE_KEY,
       DISPLAY_MODE_STORAGE_KEY,
+      AUTO_OPEN_STORAGE_KEY,
+      FONT_SCALE_STORAGE_KEY,
       NON_ENGLISH_WARNING_STORAGE_KEY,
       PANEL_FRAME_STORAGE_KEY,
     ]);
 
     return {
+      autoOpenEnabled: normalizeBooleanSetting(
+        values?.[AUTO_OPEN_STORAGE_KEY],
+        DEFAULT_AUTO_OPEN_ENABLED,
+      ),
       buttonPosition: values?.[BUTTON_POSITION_STORAGE_KEY] ?? null,
       detailsHeight: normalizeDetailsHeight(values?.[DETAILS_HEIGHT_STORAGE_KEY]),
       displayMode: normalizeDisplayMode(values?.[DISPLAY_MODE_STORAGE_KEY]),
+      fontScale: normalizeFontScale(values?.[FONT_SCALE_STORAGE_KEY]),
       nonEnglishWarningEnabled: normalizeBooleanSetting(
         values?.[NON_ENGLISH_WARNING_STORAGE_KEY],
         DEFAULT_NON_ENGLISH_WARNING_ENABLED,
@@ -2210,7 +2299,7 @@
     const chineseModeButton = createDisplayModeButton(documentRef, DISPLAY_MODES.chinese);
     const closeButton = documentRef.createElement("button");
     const videoInfo = documentRef.createElement("div");
-    const languageWarning = documentRef.createElement("p");
+    const warningBadges = documentRef.createElement("div");
     const potentialBadge = documentRef.createElement("span");
     const metricList = documentRef.createElement("span");
     const videoDetails = documentRef.createElement("section");
@@ -2220,6 +2309,8 @@
     const status = documentRef.createElement("p");
     const captionList = documentRef.createElement("div");
     const actions = documentRef.createElement("div");
+    const fontDecreaseButton = documentRef.createElement("button");
+    const fontIncreaseButton = documentRef.createElement("button");
     const refreshButton = documentRef.createElement("button");
     const copyButton = documentRef.createElement("button");
     const resizeHandles = {
@@ -2241,8 +2332,8 @@
     closeButton.textContent = "×";
     closeButton.setAttribute("aria-label", "关闭字幕看板");
     videoInfo.className = "msj-tiktok-video-info";
-    languageWarning.className = "msj-tiktok-language-warning";
-    languageWarning.setAttribute("aria-live", "polite");
+    warningBadges.className = "msj-tiktok-warning-badges";
+    warningBadges.setAttribute("aria-live", "polite");
     potentialBadge.className = "msj-tiktok-potential is-low";
     metricList.className = "msj-tiktok-video-metrics";
     videoDetails.className = "msj-tiktok-video-details";
@@ -2260,6 +2351,16 @@
     status.setAttribute("role", "status");
     captionList.className = "msj-tiktok-caption-list";
     actions.className = "msj-tiktok-caption-actions";
+    fontDecreaseButton.type = "button";
+    fontDecreaseButton.className = "msj-tiktok-caption-font-button";
+    fontDecreaseButton.textContent = "-";
+    fontDecreaseButton.title = "缩小字幕板文字";
+    fontDecreaseButton.setAttribute("aria-label", "缩小字幕板文字");
+    fontIncreaseButton.type = "button";
+    fontIncreaseButton.className = "msj-tiktok-caption-font-button";
+    fontIncreaseButton.textContent = "+";
+    fontIncreaseButton.title = "放大字幕板文字";
+    fontIncreaseButton.setAttribute("aria-label", "放大字幕板文字");
     refreshButton.type = "button";
     refreshButton.className = "msj-tiktok-caption-action-button";
     refreshButton.textContent = "刷新字幕";
@@ -2277,11 +2378,11 @@
     header.append(headerDragArea, closeButton);
     videoInfo.append(potentialBadge, metricList);
     videoDetails.append(detailsOriginal, detailsTranslation);
-    actions.append(status, modeGroup, refreshButton, copyButton);
+    actions.append(status, modeGroup, fontDecreaseButton, fontIncreaseButton, refreshButton, copyButton);
     panel.append(
       header,
       videoInfo,
-      languageWarning,
+      warningBadges,
       videoDetails,
       detailsResizeHandle,
       captionList,
@@ -2300,8 +2401,9 @@
       detailsResizeHandle,
       detailsOriginal,
       detailsTranslation,
+      fontDecreaseButton,
+      fontIncreaseButton,
       header,
-      languageWarning,
       metricList,
       modeGroup,
       modeButtons: {
@@ -2317,6 +2419,7 @@
       status,
       videoDetails,
       videoInfo,
+      warningBadges,
     };
   }
 
@@ -2382,7 +2485,9 @@
     const root = documentRef.createElement("div");
     const button = createButton(documentRef);
     const panelParts = createPanel(documentRef);
+    let autoOpenEnabled = DEFAULT_AUTO_OPEN_ENABLED;
     let displayMode = DEFAULT_DISPLAY_MODE;
+    let fontScale = DEFAULT_FONT_SCALE;
     let nonEnglishWarningEnabled = DEFAULT_NON_ENGLISH_WARNING_ENABLED;
     let buttonPosition = normalizeButtonPosition(null, documentRef);
     let panelFrame = normalizePanelFrame(null, documentRef);
@@ -2402,6 +2507,7 @@
     let panelDragState = null;
     let panelResizeState = null;
     let suppressNextButtonClick = false;
+    let autoOpenSuppressed = false;
 
     root.classList.add(ROOT_CLASS);
     root.append(button, panelParts.panel);
@@ -2428,6 +2534,13 @@
       panelParts.videoDetails.style.maxHeight = `${activeDetailsHeight}px`;
     }
 
+    function applyFontScale(nextScale) {
+      fontScale = normalizeFontScale(nextScale);
+      panelParts.panel.style.fontSize = `${fontScale}%`;
+      panelParts.fontDecreaseButton.disabled = fontScale <= MIN_FONT_SCALE;
+      panelParts.fontIncreaseButton.disabled = fontScale >= MAX_FONT_SCALE;
+    }
+
     function applyDetailsHeightForCaptionCount(captionCount) {
       const shouldUseStoredHeight = captionCount > LONG_CAPTION_DETAILS_LINE_THRESHOLD;
       applyDetailsHeight(shouldUseStoredHeight ? savedDetailsHeight : DEFAULT_DETAILS_HEIGHT);
@@ -2445,17 +2558,26 @@
     async function loadSettings() {
       const storedSettings = await getStoredOverlaySettings(storageArea);
 
+      autoOpenEnabled = storedSettings.autoOpenEnabled;
       displayMode = storedSettings.displayMode;
+      fontScale = storedSettings.fontScale;
       nonEnglishWarningEnabled = storedSettings.nonEnglishWarningEnabled;
       savedDetailsHeight = storedSettings.detailsHeight;
       applyButtonPosition(storedSettings.buttonPosition);
       applyPanelFrame(storedSettings.panelFrame);
+      applyFontScale(fontScale);
       applyDetailsHeightForCaptionCount(currentDisplayLines.length);
       updateModeButtons();
+
+      if (autoOpenEnabled) {
+        startAutoRefresh();
+        await probeAutoOpenIfReady();
+      }
     }
 
     applyButtonPosition(buttonPosition);
     applyPanelFrame(panelFrame);
+    applyFontScale(fontScale);
     applyDetailsHeight(DEFAULT_DETAILS_HEIGHT);
     updateModeButtons();
     const ready = loadSettings();
@@ -2476,6 +2598,46 @@
       setStatus(message);
     }
 
+    function createWarningBadge(label) {
+      const badge = documentRef.createElement("span");
+
+      badge.className = "msj-tiktok-warning-badge";
+      badge.textContent = label;
+
+      return badge;
+    }
+
+    function renderWarningBadges(metrics) {
+      const labels = [];
+
+      if (
+        nonEnglishWarningEnabled &&
+        metrics.language &&
+        normalizeLanguageKey(metrics.language) !== "en"
+      ) {
+        labels.push("非英内容");
+      }
+
+      if (metrics.durationSeconds > 0 && metrics.durationSeconds < 60) {
+        labels.push("时长<1分");
+      }
+
+      if (metrics.elapsedHours > 24) {
+        labels.push("发布>1天");
+      }
+
+      panelParts.warningBadges.textContent = "";
+      if (Array.isArray(panelParts.warningBadges.children)) {
+        panelParts.warningBadges.children.length = 0;
+      }
+
+      for (const label of labels) {
+        panelParts.warningBadges.append(createWarningBadge(label));
+      }
+
+      panelParts.warningBadges.classList.toggle("is-visible", labels.length > 0);
+    }
+
     function renderVideoInfo(metrics, detailsTranslation) {
       const metricItems = [
         { icon: "♥", label: "每小时点赞量", value: metrics.likeRateLabel },
@@ -2486,7 +2648,9 @@
 
       panelParts.potentialBadge.textContent = metrics.potential.label;
       panelParts.potentialBadge.classList.remove("is-high", "is-mid", "is-low");
-      panelParts.potentialBadge.classList.add(metrics.potential.className);
+      if (metrics.potential.className) {
+        panelParts.potentialBadge.classList.add(metrics.potential.className);
+      }
       panelParts.metricList.textContent = "";
       if (Array.isArray(panelParts.metricList.children)) {
         panelParts.metricList.children.length = 0;
@@ -2497,18 +2661,7 @@
       }
       panelParts.detailsOriginal.textContent = metrics.description || "暂无视频详情。";
       panelParts.detailsTranslation.textContent = detailsTranslation || "";
-
-      if (
-        nonEnglishWarningEnabled &&
-        metrics.language &&
-        normalizeLanguageKey(metrics.language) !== "en"
-      ) {
-        panelParts.languageWarning.textContent = "⚠ 非英内容";
-        panelParts.languageWarning.classList.add("is-visible");
-      } else {
-        panelParts.languageWarning.textContent = "";
-        panelParts.languageWarning.classList.remove("is-visible");
-      }
+      renderWarningBadges(metrics);
     }
 
     async function refreshVideoInfo(item, sourceKey, requestId) {
@@ -2545,7 +2698,11 @@
       return translateCaptionLines(lines, translateCaption, displayMode);
     }
 
-    async function refreshCaptions({ ignoreScriptCaptions = false } = {}) {
+    async function refreshCaptions({
+      ignoreScriptCaptions = false,
+      openWhenComplete = false,
+      requireCompleteSource = false,
+    } = {}) {
       const requestId = ++refreshRequestId;
       const nextSourceKey = getSourceKey();
       const nextHintKey = getHintKey();
@@ -2614,6 +2771,10 @@
         });
         applyDetailsHeightForCaptionCount(displayLines.length);
 
+        if (openWhenComplete && hasDisplayLines) {
+          applyOpenState(true);
+        }
+
         if (sourceChanged) {
           panelParts.captionList.scrollTop = 0;
           panelParts.videoDetails.scrollTop = 0;
@@ -2641,7 +2802,7 @@
 
     function refreshCaptionsIfSourceChanged() {
       if (panelParts.panel.hidden) {
-        return Promise.resolve();
+        return probeAutoOpenIfReady();
       }
 
       const nextSourceKey = getSourceKey();
@@ -2707,16 +2868,43 @@
       autoRefreshTimer = null;
     }
 
-    function setOpen(isOpen) {
+    function applyOpenState(isOpen) {
       panelParts.panel.hidden = !isOpen;
       root.classList.toggle(OPEN_CLASS, isOpen);
+    }
 
+    function probeAutoOpenIfReady() {
+      if (!autoOpenEnabled || autoOpenSuppressed || !panelParts.panel.hidden) {
+        return Promise.resolve();
+      }
+
+      pendingAutoRefreshAttempts = Math.max(
+        pendingAutoRefreshAttempts,
+        autoRefreshRetryAttempts,
+      );
+
+      return refreshCaptions({
+        openWhenComplete: true,
+        requireCompleteSource: true,
+      });
+    }
+
+    function setOpen(isOpen, { suppressAutoOpen = false } = {}) {
+      applyOpenState(isOpen);
       if (isOpen) {
+        autoOpenSuppressed = false;
         startAutoRefresh();
         return refreshCaptionsWithRetryWindow();
       }
 
-      stopAutoRefresh();
+      if (suppressAutoOpen) {
+        autoOpenSuppressed = true;
+      }
+
+      if (!autoOpenEnabled || autoOpenSuppressed) {
+        stopAutoRefresh();
+      }
+
       return Promise.resolve();
     }
 
@@ -2763,7 +2951,7 @@
 
     function refreshAfterTikTokApiPayload() {
       if (panelParts.panel.hidden) {
-        return Promise.resolve();
+        return probeAutoOpenIfReady();
       }
 
       if (currentDisplayLines.length > 0 && !hasIncompleteVideoInfo()) {
@@ -2807,6 +2995,11 @@
           ? `已读取 ${currentDisplayLines.length} 条字幕。`
           : "未检测到可读取字幕。",
       );
+    }
+
+    async function updateFontScale(delta) {
+      applyFontScale(fontScale + delta);
+      await saveStoredOverlayValue(storageArea, FONT_SCALE_STORAGE_KEY, fontScale);
     }
 
     function getPointerDistance(state, event) {
@@ -3081,12 +3274,16 @@
         return Promise.resolve();
       }
 
-      return setOpen(panelParts.panel.hidden);
+      return setOpen(panelParts.panel.hidden, {
+        suppressAutoOpen: !panelParts.panel.hidden,
+      });
     });
     for (const [mode, modeButton] of Object.entries(panelParts.modeButtons)) {
       modeButton.addEventListener("click", () => updateDisplayMode(mode));
     }
-    panelParts.closeButton.addEventListener("click", () => setOpen(false));
+    panelParts.closeButton.addEventListener("click", () => setOpen(false, { suppressAutoOpen: true }));
+    panelParts.fontDecreaseButton.addEventListener("click", () => updateFontScale(-FONT_SCALE_STEP));
+    panelParts.fontIncreaseButton.addEventListener("click", () => updateFontScale(FONT_SCALE_STEP));
     panelParts.refreshButton.addEventListener("click", refreshCaptionsWithRetryWindow);
     panelParts.copyButton.addEventListener("click", copyCaptions);
     button.addEventListener("pointerdown", beginButtonDrag);
@@ -3122,7 +3319,9 @@
       closeButton: panelParts.closeButton,
       copyButton: panelParts.copyButton,
       detailsResizeHandle: panelParts.detailsResizeHandle,
-      languageWarning: panelParts.languageWarning,
+      fontDecreaseButton: panelParts.fontDecreaseButton,
+      fontIncreaseButton: panelParts.fontIncreaseButton,
+      languageWarning: panelParts.warningBadges,
       modeButtons: panelParts.modeButtons,
       destroy() {
         stopAutoRefresh();
@@ -3148,6 +3347,7 @@
       actions: panelParts.actions,
       modeGroup: panelParts.modeGroup,
       videoInfo: panelParts.videoInfo,
+      warningBadges: panelParts.warningBadges,
     };
 
     activeTikTokCaptionOverlays.add(overlay);
