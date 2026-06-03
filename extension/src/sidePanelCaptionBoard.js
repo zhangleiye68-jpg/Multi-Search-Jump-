@@ -7,6 +7,8 @@ export const CAPTION_BOARD_MESSAGE_TYPES = Object.freeze({
 });
 
 const DISPLAY_MODES = new Set(["original", "bilingual", "chinese"]);
+const CONNECTING_STATUS = "正在连接 TikTok 字幕看板。";
+const RECOVERING_STATUS = "字幕看板连接恢复中。";
 
 function normalizeCaptionState(value = {}) {
   return {
@@ -55,7 +57,7 @@ function isTransientEmptyState(state) {
 export function isTikTokTab(tab) {
   try {
     const url = new URL(tab?.url ?? "");
-    return url.hostname === "tiktok.com" || url.hostname.endsWith(".tiktok.com");
+    return url.protocol === "https:" && url.hostname === "www.tiktok.com";
   } catch {
     return false;
   }
@@ -190,16 +192,24 @@ export function initCaptionBoardUi({
   clearInterval: clearIntervalRef = globalThis.clearInterval?.bind(globalThis),
   tabsApi = chrome.tabs,
 } = {}) {
-  let activeTabId = null;
+  let connectedTabId = null;
   let currentState = normalizeCaptionState();
   let intervalId = null;
 
-  async function sendToActiveTab(message) {
-    if (!activeTabId) {
+  async function sendToTab(tabId, message) {
+    if (!Number.isInteger(tabId)) {
       return { ok: false, error: "No active TikTok tab" };
     }
 
-    return runtimeApi.sendMessage(activeTabId, message);
+    return runtimeApi.sendMessage(tabId, message);
+  }
+
+  function assertOkResponse(response) {
+    if (!response?.ok) {
+      throw new Error(response?.error ?? "Unable to read TikTok captions");
+    }
+
+    return response;
   }
 
   function applyCaptionState(stateValue, { preserveRenderable = false } = {}) {
@@ -217,50 +227,65 @@ export function initCaptionBoardUi({
     return currentState;
   }
 
-  async function readCaptionState(options) {
-    const response = await sendToActiveTab({
-      type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE,
-    });
+  function showConnectionPendingStatus() {
+    elements.section.hidden = false;
+    elements.unavailable.hidden = true;
+    setText(
+      elements.status,
+      hasRenderableCaptionState(currentState) ? RECOVERING_STATUS : CONNECTING_STATUS,
+    );
 
-    if (!response?.ok) {
-      throw new Error(response?.error ?? "Unable to read TikTok captions");
-    }
+    return currentState;
+  }
+
+  async function readCaptionStateFromTab(tabId, options) {
+    const response = assertOkResponse(await sendToTab(tabId, {
+      type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE,
+    }));
+
+    connectedTabId = tabId;
 
     return applyCaptionState(response.state, options);
   }
 
+  async function readConnectedCaptionState(options) {
+    return readCaptionStateFromTab(connectedTabId, options);
+  }
+
+  async function sendCommandToConnectedTab(message) {
+    return assertOkResponse(await sendToTab(connectedTabId, message));
+  }
+
   async function runCommand(message) {
-    await sendToActiveTab(message);
-    return readCaptionState({ preserveRenderable: true });
+    try {
+      await sendCommandToConnectedTab(message);
+      return await readConnectedCaptionState({ preserveRenderable: true });
+    } catch {
+      return showConnectionPendingStatus();
+    }
   }
 
   async function syncActiveTab() {
     const [activeTab] = await tabsApi.query({ active: true, currentWindow: true });
 
     if (!isTikTokTab(activeTab)) {
-      activeTabId = null;
+      connectedTabId = null;
+      currentState = normalizeCaptionState();
       hideCaptionBoard(elements);
       return null;
     }
 
-    if (activeTabId !== activeTab.id) {
-      currentState = normalizeCaptionState();
-    }
-
-    activeTabId = activeTab.id;
     elements.section.hidden = false;
     elements.unavailable.hidden = true;
 
     try {
-      await readCaptionState();
-      await sendToActiveTab({
+      await readCaptionStateFromTab(activeTab.id);
+      await sendCommandToConnectedTab({
         type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED,
       });
-      return readCaptionState({ preserveRenderable: true });
-    } catch (error) {
-      console.error(error);
-      setText(elements.status, "无法连接 TikTok 字幕看板。");
-      return null;
+      return readConnectedCaptionState({ preserveRenderable: true });
+    } catch {
+      return showConnectionPendingStatus();
     }
   }
 

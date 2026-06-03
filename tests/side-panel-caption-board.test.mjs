@@ -134,7 +134,8 @@ function createCaptionState(overrides = {}) {
 describe("side panel caption board", () => {
   it("detects TikTok tabs without matching unrelated pages", () => {
     assert.equal(isTikTokTab({ url: "https://www.tiktok.com/@demo/video/123" }), true);
-    assert.equal(isTikTokTab({ url: "https://ads.tiktok.com/i18n/home" }), true);
+    assert.equal(isTikTokTab({ url: "https://ads.tiktok.com/i18n/home" }), false);
+    assert.equal(isTikTokTab({ url: "https://tiktok.com/@demo/video/123" }), false);
     assert.equal(isTikTokTab({ url: "https://www.google.com/search?q=tiktok" }), false);
     assert.equal(isTikTokTab({ url: "chrome://extensions" }), false);
   });
@@ -220,6 +221,37 @@ describe("side panel caption board", () => {
     assert.deepEqual(copied, ["Fresh subtitle\n新鲜字幕"]);
   });
 
+  it("shows a connecting status when the TikTok content script is temporarily unavailable", async () => {
+    const elements = createElements();
+    const messages = [];
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      runtimeApi: {
+        async sendMessage(tabId, message) {
+          messages.push({ message, tabId });
+          throw new Error("Receiving end does not exist.");
+        },
+      },
+      setInterval: null,
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123" }];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+
+    assert.equal(elements.section.hidden, false);
+    assert.equal(elements.unavailable.hidden, true);
+    assert.deepEqual(messages, [
+      { message: { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE }, tabId: 42 },
+    ]);
+    assert.equal(elements.status.textContent, "正在连接 TikTok 字幕看板。");
+    assert.doesNotMatch(elements.status.textContent, /无法连接/);
+  });
+
   it("renders existing overlay captions before refreshing and keeps them during transient empty states", async () => {
     const elements = createElements();
     const messages = [];
@@ -268,6 +300,188 @@ describe("side panel caption board", () => {
     assert.equal(elements.detailsOriginal.textContent, "A practical breakdown.");
     assert.equal(elements.metrics.textContent, "♥ 1万/h");
     assert.equal(elements.warnings.textContent, "非英内容");
+  });
+
+  it("keeps rendered captions when a later sync loses the content-script connection", async () => {
+    const elements = createElements();
+    let shouldFail = false;
+    const board = initCaptionBoardUi({
+      clipboard: {
+        async writeText(value) {
+          this.value = value;
+        },
+      },
+      document: createDocument(),
+      elements,
+      runtimeApi: {
+        async sendMessage(_tabId, message) {
+          if (shouldFail) {
+            throw new Error("Extension context invalidated.");
+          }
+
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return { ok: true, state: createCaptionState() };
+          }
+
+          return { ok: true };
+        },
+      },
+      setInterval: null,
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123" }];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+    shouldFail = true;
+    await board.syncActiveTab();
+
+    assert.equal(elements.status.textContent, "字幕看板连接恢复中。");
+    assert.equal(elements.captionList.children[0].textContent, "Fresh subtitle新鲜字幕");
+    assert.equal(elements.detailsOriginal.textContent, "A practical breakdown.");
+    assert.equal(elements.metrics.textContent, "♥ 1万/h");
+    assert.equal(elements.warnings.textContent, "非英内容");
+
+    await elements.copyButton.click();
+
+    assert.equal(elements.status.textContent, "字幕已复制。");
+  });
+
+  it("does not switch away from the last connected TikTok tab until the candidate tab responds", async () => {
+    const elements = createElements();
+    const sent = [];
+    let activeTab = { id: 42, url: "https://www.tiktok.com/@demo/video/123" };
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      runtimeApi: {
+        async sendMessage(tabId, message) {
+          sent.push({ message, tabId });
+
+          if (tabId === 99) {
+            throw new Error("No receiver on candidate tab.");
+          }
+
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return { ok: true, state: createCaptionState() };
+          }
+
+          return { ok: true };
+        },
+      },
+      setInterval: null,
+      tabsApi: {
+        async query() {
+          return [activeTab];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+    activeTab = { id: 99, url: "https://www.tiktok.com/search?q=demo" };
+    await board.syncActiveTab();
+    await elements.refreshButton.click();
+
+    assert.equal(elements.status.textContent, "已读取 1 条字幕。");
+    assert.deepEqual(
+      sent.map(({ tabId, message }) => [tabId, message.type]),
+      [
+        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+        [99, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.REFRESH],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+      ],
+    );
+  });
+
+  it("keeps existing captions when manual board commands cannot reach the content script", async () => {
+    const elements = createElements();
+    let shouldFail = false;
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      runtimeApi: {
+        async sendMessage(_tabId, message) {
+          if (shouldFail) {
+            return { error: "No receiver", ok: false };
+          }
+
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return { ok: true, state: createCaptionState() };
+          }
+
+          return { ok: true };
+        },
+      },
+      setInterval: null,
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123" }];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+    shouldFail = true;
+    await elements.refreshButton.click();
+    await elements.modeButtons.original.click();
+    await elements.fontIncreaseButton.click();
+
+    assert.equal(elements.status.textContent, "字幕看板连接恢复中。");
+    assert.equal(elements.captionList.children[0].textContent, "Fresh subtitle新鲜字幕");
+    assert.equal(elements.detailsOriginal.textContent, "A practical breakdown.");
+    assert.equal(elements.metrics.textContent, "♥ 1万/h");
+  });
+
+  it("renders the latest caption state after a failed connection recovers", async () => {
+    const elements = createElements();
+    let state = "fail";
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      runtimeApi: {
+        async sendMessage(_tabId, message) {
+          if (state === "fail") {
+            throw new Error("No receiver yet.");
+          }
+
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return {
+              ok: true,
+              state: createCaptionState({
+                copyText: "Recovered subtitle\n恢复字幕",
+                lines: [{ original: "Recovered subtitle", translation: "恢复字幕" }],
+                status: "已读取 1 条字幕。",
+                videoDetails: {
+                  original: "Recovered details.",
+                  translation: "恢复详情。",
+                },
+              }),
+            };
+          }
+
+          return { ok: true };
+        },
+      },
+      setInterval: null,
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123" }];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+    state = "ok";
+    await board.syncActiveTab();
+
+    assert.equal(elements.status.textContent, "已读取 1 条字幕。");
+    assert.equal(elements.captionList.children[0].textContent, "Recovered subtitle恢复字幕");
+    assert.equal(elements.detailsOriginal.textContent, "Recovered details.");
   });
 
   it("hides the caption board outside TikTok", async () => {
