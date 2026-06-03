@@ -14,6 +14,10 @@ import {
   openSearchForText,
   resetSelectionContextMenu,
 } from "./selectionSearch.js";
+import {
+  handleTikTokCaptionBackgroundMessage,
+  isTikTokCaptionBackgroundMessage,
+} from "./tiktokCaptionBackgroundBridge.js";
 
 installLocalToolkitDownloadNaming(chrome.downloads);
 
@@ -76,6 +80,25 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse({
           error: error instanceof Error ? error.message : String(error),
           success: false,
+        });
+      });
+
+    return true;
+  }
+
+  if (isTikTokCaptionBackgroundMessage(message)) {
+    handleTikTokCaptionBackgroundMessage({
+      message,
+      scriptingApi: chrome.scripting,
+    })
+      .then((result) => {
+        sendResponse(result);
+      })
+      .catch((error) => {
+        console.error(error);
+        sendResponse({
+          error: error instanceof Error ? error.message : String(error),
+          ok: false,
         });
       });
 

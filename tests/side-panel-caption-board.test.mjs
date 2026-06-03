@@ -8,6 +8,8 @@ import {
   isTikTokTab,
 } from "../extension/src/sidePanelCaptionBoard.js";
 
+const TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE = "MSJ_TIKTOK_CAPTION_BACKGROUND_COMMAND";
+
 function createClassList() {
   const values = new Set();
 
@@ -252,6 +254,66 @@ describe("side panel caption board", () => {
     assert.doesNotMatch(elements.status.textContent, /无法连接/);
   });
 
+  it("falls back to the background bridge when direct content script messaging fails", async () => {
+    const elements = createElements();
+    const directMessages = [];
+    const backgroundMessages = [];
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      extensionRuntimeApi: {
+        async sendMessage(message) {
+          backgroundMessages.push(message);
+
+          if (message.command.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return { ok: true, state: createCaptionState() };
+          }
+
+          return { ok: true };
+        },
+      },
+      runtimeApi: {
+        async sendMessage(tabId, message) {
+          directMessages.push({ message, tabId });
+          throw new Error("Receiving end does not exist.");
+        },
+      },
+      setInterval: null,
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123" }];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+
+    assert.equal(elements.status.textContent, "已读取 1 条字幕。");
+    assert.equal(elements.captionList.children[0].textContent, "Fresh subtitle新鲜字幕");
+    assert.equal(elements.detailsOriginal.textContent, "A practical breakdown.");
+    assert.equal(elements.metrics.textContent, "♥ 1万/h");
+    assert.deepEqual(
+      directMessages.map(({ tabId, message }) => [tabId, message.type]),
+      [
+        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+      ],
+    );
+    assert.deepEqual(
+      backgroundMessages.map((message) => [message.type, message.tabId, message.command.type]),
+      [
+        [TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE, 42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+        [
+          TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE,
+          42,
+          CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED,
+        ],
+        [TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE, 42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+      ],
+    );
+  });
+
   it("renders existing overlay captions before refreshing and keeps them during transient empty states", async () => {
     const elements = createElements();
     const messages = [];
@@ -435,6 +497,67 @@ describe("side panel caption board", () => {
     assert.equal(elements.captionList.children[0].textContent, "Fresh subtitle新鲜字幕");
     assert.equal(elements.detailsOriginal.textContent, "A practical breakdown.");
     assert.equal(elements.metrics.textContent, "♥ 1万/h");
+  });
+
+  it("uses the background bridge for manual commands when direct messaging fails", async () => {
+    const elements = createElements();
+    const backgroundMessages = [];
+    let shouldFailDirect = false;
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      extensionRuntimeApi: {
+        async sendMessage(message) {
+          backgroundMessages.push(message);
+
+          if (message.command.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return {
+              ok: true,
+              state: createCaptionState({
+                copyText: "Fallback mode\n兜底模式",
+                lines: [{ original: "Fallback mode", translation: "兜底模式" }],
+                status: "已通过后台同步字幕。",
+              }),
+            };
+          }
+
+          return { ok: true };
+        },
+      },
+      runtimeApi: {
+        async sendMessage(_tabId, message) {
+          if (shouldFailDirect) {
+            return { error: "No receiver", ok: false };
+          }
+
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return { ok: true, state: createCaptionState() };
+          }
+
+          return { ok: true };
+        },
+      },
+      setInterval: null,
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123" }];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+    shouldFailDirect = true;
+    await elements.modeButtons.original.click();
+
+    assert.equal(elements.status.textContent, "已通过后台同步字幕。");
+    assert.equal(elements.captionList.children[0].textContent, "Fallback mode兜底模式");
+    assert.deepEqual(
+      backgroundMessages.map((message) => [message.command.type, message.command.displayMode]),
+      [
+        [CAPTION_BOARD_MESSAGE_TYPES.SET_DISPLAY_MODE, "original"],
+        [CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
+      ],
+    );
   });
 
   it("renders the latest caption state after a failed connection recovers", async () => {

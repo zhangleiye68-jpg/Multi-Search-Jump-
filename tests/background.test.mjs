@@ -44,4 +44,13 @@ describe("background worker", () => {
     assert.match(source, /isLocalToolkitMessage/);
     assert.match(source, /sendResponse\(result\)/);
   });
+
+  it("handles TikTok caption background bridge messages", async () => {
+    const source = await readFile("extension/src/background.js", "utf8");
+
+    assert.match(source, /handleTikTokCaptionBackgroundMessage/);
+    assert.match(source, /isTikTokCaptionBackgroundMessage/);
+    assert.match(source, /chrome\.scripting/);
+    assert.match(source, /sendResponse\(result\)/);
+  });
 });

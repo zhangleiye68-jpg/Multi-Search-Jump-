@@ -1,3 +1,5 @@
+import { TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE } from "./tiktokCaptionBackgroundBridge.js";
+
 export const CAPTION_BOARD_MESSAGE_TYPES = Object.freeze({
   ADJUST_FONT_SCALE: "MSJ_TIKTOK_CAPTION_ADJUST_FONT_SCALE",
   GET_STATE: "MSJ_TIKTOK_CAPTION_GET_STATE",
@@ -186,11 +188,12 @@ export function initCaptionBoardUi({
   clipboard = globalThis.navigator?.clipboard,
   document: documentRef = document,
   elements,
+  extensionRuntimeApi = globalThis.chrome?.runtime,
   intervalMs = 1200,
-  runtimeApi = chrome.tabs,
+  runtimeApi = globalThis.chrome?.tabs,
   setInterval: setIntervalRef = globalThis.setInterval?.bind(globalThis),
   clearInterval: clearIntervalRef = globalThis.clearInterval?.bind(globalThis),
-  tabsApi = chrome.tabs,
+  tabsApi = globalThis.chrome?.tabs,
 } = {}) {
   let connectedTabId = null;
   let currentState = normalizeCaptionState();
@@ -201,7 +204,36 @@ export function initCaptionBoardUi({
       return { ok: false, error: "No active TikTok tab" };
     }
 
-    return runtimeApi.sendMessage(tabId, message);
+    let directError = null;
+    let directResponse;
+
+    try {
+      directResponse = await runtimeApi?.sendMessage?.(tabId, message);
+    } catch (error) {
+      directError = error;
+    }
+
+    if (directResponse?.ok) {
+      return directResponse;
+    }
+
+    if (extensionRuntimeApi?.sendMessage) {
+      const backgroundResponse = await extensionRuntimeApi.sendMessage({
+        command: message,
+        tabId,
+        type: TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE,
+      });
+
+      if (backgroundResponse?.ok || !directResponse) {
+        return backgroundResponse;
+      }
+    }
+
+    if (directResponse) {
+      return directResponse;
+    }
+
+    throw directError ?? new Error("Unable to read TikTok captions");
   }
 
   function assertOkResponse(response) {
