@@ -2303,6 +2303,8 @@
     const potentialBadge = documentRef.createElement("span");
     const metricList = documentRef.createElement("span");
     const videoDetails = documentRef.createElement("section");
+    const detailsHeader = documentRef.createElement("div");
+    const detailsCopyButton = documentRef.createElement("button");
     const detailsResizeHandle = documentRef.createElement("span");
     const detailsOriginal = documentRef.createElement("p");
     const detailsTranslation = documentRef.createElement("p");
@@ -2337,6 +2339,10 @@
     potentialBadge.className = "msj-tiktok-potential is-low";
     metricList.className = "msj-tiktok-video-metrics";
     videoDetails.className = "msj-tiktok-video-details";
+    detailsHeader.className = "msj-tiktok-video-details-header";
+    detailsCopyButton.type = "button";
+    detailsCopyButton.className = "msj-tiktok-video-details-copy-button";
+    detailsCopyButton.textContent = "复制原文";
     detailsResizeHandle.className = "msj-tiktok-video-details-resize";
     detailsResizeHandle.title = "拖拽调整视频详情高度";
     detailsResizeHandle.setAttribute("aria-label", "拖拽调整视频详情高度");
@@ -2377,7 +2383,8 @@
     modeGroup.append(originalModeButton, bilingualModeButton, chineseModeButton);
     header.append(headerDragArea, closeButton);
     videoInfo.append(potentialBadge, metricList);
-    videoDetails.append(detailsOriginal, detailsTranslation);
+    detailsHeader.append(detailsCopyButton);
+    videoDetails.append(detailsHeader, detailsOriginal, detailsTranslation);
     actions.append(status, modeGroup, fontDecreaseButton, fontIncreaseButton, refreshButton, copyButton);
     panel.append(
       header,
@@ -2398,6 +2405,8 @@
       captionList,
       closeButton,
       copyButton,
+      detailsCopyButton,
+      detailsHeader,
       detailsResizeHandle,
       detailsOriginal,
       detailsTranslation,
@@ -2814,8 +2823,8 @@
       }
     }
 
-    function refreshCaptionsIfSourceChanged() {
-      if (panelParts.panel.hidden) {
+    function refreshCaptionsIfSourceChanged({ force = false } = {}) {
+      if (panelParts.panel.hidden && !force) {
         return probeAutoOpenIfReady();
       }
 
@@ -2835,6 +2844,14 @@
         if (currentDisplayLines.length > 0) {
           lastHintKey = nextHintKey;
           return Promise.resolve();
+        }
+
+        if (force && currentDisplayLines.length === 0) {
+          pendingAutoRefreshAttempts = Math.max(
+            pendingAutoRefreshAttempts,
+            autoRefreshRetryAttempts,
+          );
+          return refreshCaptions({ ignoreScriptCaptions: true });
         }
 
         if (nextHintKey && nextHintKey !== lastHintKey) {
@@ -2990,6 +3007,28 @@
       } catch (error) {
         console.error(error);
         setStatus("复制失败，请手动选择字幕。");
+      }
+    }
+
+    async function copyVideoDetailsOriginal() {
+      const copyText = panelParts.detailsOriginal.textContent.trim();
+
+      if (!copyText || copyText === "暂无视频详情。") {
+        setStatus("没有可复制的视频介绍。");
+        return;
+      }
+
+      if (!navigatorRef.clipboard?.writeText) {
+        setStatus("复制失败，请手动选择视频介绍。");
+        return;
+      }
+
+      try {
+        await navigatorRef.clipboard.writeText(copyText);
+        setStatus("视频介绍原文已复制。");
+      } catch (error) {
+        console.error(error);
+        setStatus("复制失败，请手动选择视频介绍。");
       }
     }
 
@@ -3343,6 +3382,7 @@
     panelParts.fontIncreaseButton.addEventListener("click", () => updateFontScale(FONT_SCALE_STEP));
     panelParts.refreshButton.addEventListener("click", refreshCaptionsWithRetryWindow);
     panelParts.copyButton.addEventListener("click", copyCaptions);
+    panelParts.detailsCopyButton.addEventListener("click", copyVideoDetailsOriginal);
     button.addEventListener("pointerdown", beginButtonDrag);
     button.addEventListener("pointermove", moveButtonDrag);
     button.addEventListener("pointerup", endButtonDrag);
@@ -3403,6 +3443,7 @@
       status: panelParts.status,
       videoDetails: panelParts.videoDetails,
       detailsOriginal: panelParts.detailsOriginal,
+      detailsCopyButton: panelParts.detailsCopyButton,
       detailsTranslation: panelParts.detailsTranslation,
       actions: panelParts.actions,
       modeGroup: panelParts.modeGroup,

@@ -207,6 +207,26 @@ body {
   background: #ffffff;
 }
 
+.caption-board-details-header {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.caption-board-details-copy-button {
+  height: 24px;
+  border: 1px solid #cfd8d3;
+  border-radius: 6px;
+  padding: 0 8px;
+  background: #ffffff;
+  color: #263331;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.caption-board-details-copy-button:hover {
+  background: #edf3f0;
+}
+
 .caption-board-details p {
   margin: 0;
   color: #263331;

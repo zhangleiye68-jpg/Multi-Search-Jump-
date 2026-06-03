@@ -53,7 +53,7 @@
     }
 
     if (message.type === CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED) {
-      await overlay.refreshCaptionsIfSourceChanged();
+      await overlay.refreshCaptionsIfSourceChanged({ force: message.force === true });
     }
 
     if (message.type === CAPTION_BOARD_MESSAGE_TYPES.SET_DISPLAY_MODE) {

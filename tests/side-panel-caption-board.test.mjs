@@ -52,6 +52,7 @@ function createElement(tagName = "div") {
     disabled: false,
     hidden: false,
     lang: "",
+    style: {},
     tagName,
     title: "",
     get textContent() {
@@ -87,6 +88,7 @@ function createElements() {
   return {
     captionList: createElement(),
     copyButton: createElement("button"),
+    detailsCopyButton: createElement("button"),
     detailsOriginal: createElement("p"),
     detailsTranslation: createElement("p"),
     fontDecreaseButton: createElement("button"),
@@ -195,6 +197,7 @@ describe("side panel caption board", () => {
     assert.equal(elements.status.textContent, "已读取 1 条字幕。");
     assert.equal(elements.captionList.children[0].textContent, "Fresh subtitle新鲜字幕");
     assert.equal(elements.modeButtons.bilingual.classList.contains("is-active"), true);
+    assert.equal(elements.section.style.fontSize, "110%");
     assert.equal(elements.fontDecreaseButton.disabled, false);
     assert.equal(elements.fontIncreaseButton.disabled, false);
     assert.equal(elements.detailsOriginal.textContent, "A practical breakdown.");
@@ -210,7 +213,7 @@ describe("side panel caption board", () => {
       messages.map(({ message }) => message),
       [
         { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE },
-        { type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED },
+        { force: true, type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED },
         { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE },
         { type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH },
         { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE },
@@ -301,15 +304,21 @@ describe("side panel caption board", () => {
       ],
     );
     assert.deepEqual(
-      backgroundMessages.map((message) => [message.type, message.tabId, message.command.type]),
+      backgroundMessages.map((message) => [
+        message.type,
+        message.tabId,
+        message.command.type,
+        message.command.force,
+      ]),
       [
-        [TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE, 42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+        [TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE, 42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
         [
           TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE,
           42,
           CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED,
+          true,
         ],
-        [TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE, 42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE],
+        [TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE, 42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
       ],
     );
   });
@@ -354,7 +363,7 @@ describe("side panel caption board", () => {
 
     assert.deepEqual(messages, [
       { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE },
-      { type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED },
+      { force: true, type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED },
       { type: CAPTION_BOARD_MESSAGE_TYPES.GET_STATE },
     ]);
     assert.equal(elements.status.textContent, "已读取 1 条字幕。");
@@ -605,6 +614,102 @@ describe("side panel caption board", () => {
     assert.equal(elements.status.textContent, "已读取 1 条字幕。");
     assert.equal(elements.captionList.children[0].textContent, "Recovered subtitle恢复字幕");
     assert.equal(elements.detailsOriginal.textContent, "Recovered details.");
+  });
+
+  it("polls TikTok captions at the overlay auto-refresh cadence", () => {
+    const elements = createElements();
+    const intervals = [];
+    const cleared = [];
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      setInterval(handler, intervalMs) {
+        intervals.push({ handler, intervalMs });
+        return 7;
+      },
+      clearInterval(intervalId) {
+        cleared.push(intervalId);
+      },
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123" }];
+        },
+      },
+    });
+
+    assert.equal(intervals.length, 1);
+    assert.equal(intervals[0].intervalMs, 800);
+
+    board.destroy();
+
+    assert.deepEqual(cleared, [7]);
+  });
+
+  it("applies side panel caption font scale from state and commands", async () => {
+    const elements = createElements();
+    let fontScale = 100;
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      runtimeApi: {
+        async sendMessage(_tabId, message) {
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.ADJUST_FONT_SCALE) {
+            fontScale += message.delta;
+          }
+
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return {
+              ok: true,
+              state: createCaptionState({ fontScale }),
+            };
+          }
+
+          return { ok: true };
+        },
+      },
+      setInterval: null,
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123" }];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+    assert.equal(elements.section.style.fontSize, "100%");
+
+    await elements.fontIncreaseButton.click();
+    assert.equal(elements.section.style.fontSize, "110%");
+
+    await elements.fontDecreaseButton.click();
+    await elements.fontDecreaseButton.click();
+    assert.equal(elements.section.style.fontSize, "90%");
+  });
+
+  it("copies only the original video details from the side panel", async () => {
+    const elements = createElements();
+    const copied = [];
+    const board = initCaptionBoardUi({
+      clipboard: {
+        async writeText(value) {
+          copied.push(value);
+        },
+      },
+      document: createDocument(),
+      elements,
+      setInterval: null,
+    });
+
+    board.renderState(createCaptionState({
+      videoDetails: {
+        original: "Original video description.",
+        translation: "视频介绍中文翻译。",
+      },
+    }));
+    await elements.detailsCopyButton.click();
+
+    assert.deepEqual(copied, ["Original video description."]);
+    assert.equal(elements.status.textContent, "视频介绍原文已复制。");
   });
 
   it("hides the caption board outside TikTok", async () => {

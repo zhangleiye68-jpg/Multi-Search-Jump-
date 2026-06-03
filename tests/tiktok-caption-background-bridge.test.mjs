@@ -88,8 +88,8 @@ describe("TikTok caption background bridge", () => {
       refreshCaptions() {
         calls.push(["refresh"]);
       },
-      refreshCaptionsIfSourceChanged() {
-        calls.push(["refresh-if-source"]);
+      refreshCaptionsIfSourceChanged(options) {
+        calls.push(["refresh-if-source", options]);
       },
       setDisplayMode(displayMode) {
         calls.push(["mode", displayMode]);
@@ -103,6 +103,7 @@ describe("TikTok caption background bridge", () => {
       );
       assert.deepEqual(
         await runTikTokCaptionOverlayCommand({
+          force: true,
           type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED,
         }),
         { ok: true, state },
@@ -126,7 +127,7 @@ describe("TikTok caption background bridge", () => {
     assert.deepEqual(calls, [
       ["refresh"],
       ["state"],
-      ["refresh-if-source"],
+      ["refresh-if-source", { force: true }],
       ["state"],
       ["mode", "original"],
       ["state"],

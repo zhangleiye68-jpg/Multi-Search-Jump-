@@ -847,6 +847,55 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.captionList.children.length, 0);
   });
 
+  it("force-refreshes captions while the floating board is hidden", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    let activeVideoId = "1111111111";
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "1111111111",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/first-hidden.vtt" }],
+          },
+        },
+        {
+          id: "2222222222",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/second-hidden.vtt" }],
+          },
+        },
+      ],
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      fetchCaption: createFetchCaption({
+        "https://example.test/first-hidden.vtt": createVtt("First hidden subtitle."),
+        "https://example.test/second-hidden.vtt": createVtt("Second hidden subtitle."),
+      }),
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => `https://www.tiktok.com/@demo/video/${activeVideoId}`,
+      setInterval: null,
+      storageArea: createStorageArea(),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    activeVideoId = "2222222222";
+    await overlay.refreshCaptionsIfSourceChanged({ force: true });
+
+    assert.equal(overlay.panel.hidden, true);
+    assert.equal(overlay.captionList.children[0].children[0].textContent, "Second hidden subtitle.");
+    assert.match(overlay.status.textContent, /已读取 1 条字幕/);
+  });
+
   it("auto-opens when enabled and a complete WebVTT source is readable", async () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();
@@ -2635,6 +2684,54 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.panelHeader.children.includes(overlay.modeGroup), false);
     assert.equal(overlay.actions.children.indexOf(overlay.modeGroup) > overlay.actions.children.indexOf(overlay.status), true);
     assert.equal(overlay.actions.children.indexOf(overlay.modeGroup) < overlay.actions.children.indexOf(overlay.refreshButton), true);
+  });
+
+  it("copies only the original video details from the floating board", async () => {
+    const {
+      createCaptionOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const copied = [];
+
+    ingestTikTokApiPayload({
+      itemInfo: {
+        itemStruct: {
+          desc: "Original detail text only.",
+          id: "1734567890",
+          textLanguage: "eng-US",
+          video: {
+            subtitleInfos: [{ Url: "https://example.test/details-copy.vtt" }],
+          },
+        },
+      },
+    });
+
+    const overlay = createCaptionOverlay({
+      document,
+      fetchCaption: createFetchCaption({
+        "https://example.test/details-copy.vtt": createVtt("Caption line."),
+      }),
+      getRoot: () => createRootHarness(),
+      getSourceKey: () => "https://www.tiktok.com/@user/video/1734567890",
+      navigator: {
+        clipboard: {
+          async writeText(value) {
+            copied.push(value);
+          },
+        },
+      },
+      setInterval: null,
+      storageArea: createStorageArea(),
+      translateCaption: async (line) => `${line} 中文`,
+    });
+
+    await overlay.ready;
+    await overlay.refreshCaptions();
+    await overlay.detailsCopyButton.click();
+
+    assert.deepEqual(copied, ["Original detail text only."]);
+    assert.equal(overlay.status.textContent, "视频介绍原文已复制。");
   });
 
   it("switches between original, bilingual, and Chinese-only captions", async () => {

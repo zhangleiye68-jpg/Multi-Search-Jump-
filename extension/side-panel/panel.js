@@ -19,6 +19,7 @@ const captionBoard = initCaptionBoardUi({
   elements: {
     captionList: document.querySelector("#caption-board-list"),
     copyButton: document.querySelector("#caption-board-copy-button"),
+    detailsCopyButton: document.querySelector("#caption-board-details-copy-button"),
     detailsOriginal: document.querySelector("#caption-board-details-original"),
     detailsTranslation: document.querySelector("#caption-board-details-translation"),
     fontDecreaseButton: document.querySelector("#caption-board-font-decrease-button"),

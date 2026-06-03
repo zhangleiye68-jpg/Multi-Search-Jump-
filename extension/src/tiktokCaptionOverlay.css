@@ -230,6 +230,27 @@
   background: #ffffff;
 }
 
+.msj-tiktok-video-details-header {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.msj-tiktok-video-details-copy-button {
+  height: 24px;
+  border: 1px solid #cfd8d3;
+  border-radius: 6px;
+  padding: 0 8px;
+  background: #ffffff;
+  color: #263331;
+  cursor: pointer;
+  font-size: 0.75em;
+  font-weight: 750;
+}
+
+.msj-tiktok-video-details-copy-button:hover {
+  background: #edf3f0;
+}
+
 .msj-tiktok-video-details-resize {
   display: flex;
   align-items: center;

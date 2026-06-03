@@ -53,7 +53,7 @@ export async function runTikTokCaptionOverlayCommand(command = {}) {
   }
 
   if (command.type === messageTypes.REFRESH_IF_SOURCE_CHANGED) {
-    await overlay.refreshCaptionsIfSourceChanged();
+    await overlay.refreshCaptionsIfSourceChanged({ force: command.force === true });
   }
 
   if (command.type === messageTypes.SET_DISPLAY_MODE) {

@@ -22,6 +22,7 @@ describe("side panel markup", () => {
     assert.match(html, /<button[^>]+id="options-button"[^>]+class="header-icon-button"[^>]+aria-label="打开设置"/);
     assert.match(html, /class="panel-content"/);
     assert.match(html, /id="caption-board-section"/);
+    assert.match(html, /id="caption-board-details-copy-button"/);
     assert.match(html, /id="caption-board-list"/);
     assert.match(html, /id="caption-board-refresh-button"/);
     assert.match(html, /id="caption-board-copy-button"/);
@@ -36,6 +37,7 @@ describe("side panel markup", () => {
     assert.match(css, /\.panel-search-area\s*{[\s\S]*position:\s*sticky;[\s\S]*top:\s*0;/);
     assert.match(css, /\.panel-content\s*{[\s\S]*min-height:\s*0;[\s\S]*overflow:\s*hidden;/);
     assert.match(css, /\.caption-board-section\s*{/);
+    assert.match(css, /\.caption-board-details-copy-button\s*{/);
     assert.match(css, /\.caption-board-list\s*{/);
     assert.doesNotMatch(script, /historyList/);
   });

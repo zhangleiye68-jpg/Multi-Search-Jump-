@@ -9,6 +9,7 @@ export const CAPTION_BOARD_MESSAGE_TYPES = Object.freeze({
 });
 
 const DISPLAY_MODES = new Set(["original", "bilingual", "chinese"]);
+const AUTO_REFRESH_INTERVAL_MS = 800;
 const CONNECTING_STATUS = "正在连接 TikTok 字幕看板。";
 const RECOVERING_STATUS = "字幕看板连接恢复中。";
 
@@ -143,6 +144,9 @@ export function renderCaptionBoardState(elements, stateValue, documentRef = docu
 
   elements.section.hidden = false;
   elements.unavailable.hidden = true;
+  if (elements.section.style) {
+    elements.section.style.fontSize = `${state.fontScale}%`;
+  }
   setText(elements.status, state.status);
   setText(elements.detailsOriginal, state.videoDetails.original ?? "");
   setText(elements.detailsTranslation, state.videoDetails.translation ?? "");
@@ -189,7 +193,7 @@ export function initCaptionBoardUi({
   document: documentRef = document,
   elements,
   extensionRuntimeApi = globalThis.chrome?.runtime,
-  intervalMs = 1200,
+  intervalMs = AUTO_REFRESH_INTERVAL_MS,
   runtimeApi = globalThis.chrome?.tabs,
   setInterval: setIntervalRef = globalThis.setInterval?.bind(globalThis),
   clearInterval: clearIntervalRef = globalThis.clearInterval?.bind(globalThis),
@@ -313,6 +317,7 @@ export function initCaptionBoardUi({
     try {
       await readCaptionStateFromTab(activeTab.id);
       await sendCommandToConnectedTab({
+        force: true,
         type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED,
       });
       return readConnectedCaptionState({ preserveRenderable: true });
@@ -358,6 +363,22 @@ export function initCaptionBoardUi({
     } catch (error) {
       console.error(error);
       setText(elements.status, "复制失败，请手动选择字幕。");
+    }
+  });
+  elements.detailsCopyButton?.addEventListener("click", async () => {
+    const originalDetails = currentState.videoDetails.original.trim();
+
+    if (!originalDetails || originalDetails === "暂无视频详情。") {
+      setText(elements.status, "没有可复制的视频介绍。");
+      return;
+    }
+
+    try {
+      await clipboard?.writeText?.(originalDetails);
+      setText(elements.status, "视频介绍原文已复制。");
+    } catch (error) {
+      console.error(error);
+      setText(elements.status, "复制失败，请手动选择视频介绍。");
     }
   });
 
