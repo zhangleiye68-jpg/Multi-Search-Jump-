@@ -22,7 +22,7 @@ describe("options markup", () => {
     );
     assert.match(
       html,
-      /subsection-index">1\.1<[\s\S]*id="options-search-heading"[\s\S]*subsection-index">1\.2<[\s\S]*id="search-behavior-heading"[\s\S]*subsection-index">1\.3<[\s\S]*id="google-search-heading"[\s\S]*subsection-index">2\.1<[\s\S]*id="popup-display-heading"[\s\S]*subsection-index">2\.2<[\s\S]*id="side-panel-heading"[\s\S]*subsection-index">2\.3<[\s\S]*id="tiktok-caption-heading"[\s\S]*subsection-index">3\.1<[\s\S]*id="selection-shortcut-heading"[\s\S]*subsection-index">4\.1<[\s\S]*id="target-order-heading"[\s\S]*subsection-index">5\.1<[\s\S]*id="history-management-heading"[\s\S]*subsection-index">6\.1<[\s\S]*id="usage-guide-heading"/,
+      /subsection-index">1\.1<[\s\S]*id="options-search-heading"[\s\S]*subsection-index">1\.2<[\s\S]*id="search-behavior-heading"[\s\S]*subsection-index">1\.3<[\s\S]*id="google-search-heading"[\s\S]*subsection-index">2\.1<[\s\S]*id="popup-display-heading"[\s\S]*subsection-index">2\.2<[\s\S]*id="side-panel-heading"[\s\S]*subsection-index">2\.3<[\s\S]*id="tiktok-caption-heading"[\s\S]*subsection-index">2\.4<[\s\S]*id="download-sites-heading"[\s\S]*subsection-index">3\.1<[\s\S]*id="selection-shortcut-heading"[\s\S]*subsection-index">4\.1<[\s\S]*id="target-order-heading"[\s\S]*subsection-index">5\.1<[\s\S]*id="history-management-heading"[\s\S]*subsection-index">6\.1<[\s\S]*id="usage-guide-heading"/,
     );
     assert.match(html, /id="settings-search"/);
     assert.match(html, /id="settings-display"/);
@@ -55,10 +55,23 @@ describe("options markup", () => {
     assert.match(html, /id="tiktok-non-english-warning-toggle"/);
     assert.match(html, /非英语警示/);
     assert.match(html, /非英内容/);
-    assert.match(html, /id="local-toolkit-page-button"/);
+    assert.doesNotMatch(html, /id="local-toolkit-page-button"/);
     assert.match(html, /id="local-toolkit-floating-icon-toggle"/);
-    assert.match(html, /工具箱图标/);
-    assert.match(html, /绿色工具箱/);
+    assert.match(html, /下载浮窗图标/);
+    assert.match(html, /支持下载的网站/);
+    assert.match(html, /TikTok/);
+    assert.match(html, /Douyin/);
+    assert.match(html, /Instagram/);
+    assert.match(html, /X \/ Twitter/);
+    assert.match(html, /Facebook/);
+    assert.match(html, /Bilibili/);
+    assert.match(html, /小红书/);
+    assert.match(html, /Kwai/);
+    assert.match(html, /快手/);
+    assert.match(html, /新片场/);
+    assert.match(html, /Vimeo/);
+    assert.doesNotMatch(html, /绿色工具箱/);
+    assert.doesNotMatch(html, /打开工具箱/);
     assert.doesNotMatch(html, />Local Toolkit</);
     assert.doesNotMatch(html, />固定</);
     assert.match(html, /id="shortcut-settings-button"/);
@@ -128,12 +141,12 @@ describe("options markup", () => {
     assert.match(source, /getShowPopupSearchHistory/);
     assert.match(source, /saveShowPopupSearchHistory/);
     assert.match(source, /#side-panel-button/);
-    assert.match(source, /#local-toolkit-page-button/);
+    assert.doesNotMatch(source, /#local-toolkit-page-button/);
     assert.match(source, /#local-toolkit-floating-icon-toggle/);
     assert.match(source, /getLocalToolkitFloatingIconEnabled/);
     assert.match(source, /saveLocalToolkitFloatingIconEnabled/);
     assert.match(source, /#tiktok-non-english-warning-toggle/);
-    assert.match(source, /initLocalToolkitButton/);
+    assert.doesNotMatch(source, /initLocalToolkitButton/);
     assert.match(source, /tiktokCaptionNonEnglishWarningEnabled/);
     assert.match(source, /initPinButton/);
     assert.match(source, /closeOnSuccess: false/);

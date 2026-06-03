@@ -37,9 +37,6 @@ const BASE_EXTENSION_FILES = Object.freeze([
 ]);
 
 const LOCAL_TOOLKIT_FILES = Object.freeze([
-  "local-toolkit/local-toolkit.html",
-  "local-toolkit/local-toolkit.css",
-  "local-toolkit/local-toolkit.js",
   "rules/localToolkitBackendBlock.json",
   "src/localToolkit/localToolkitBackground.js",
   "src/localToolkit/localToolkitContent.js",

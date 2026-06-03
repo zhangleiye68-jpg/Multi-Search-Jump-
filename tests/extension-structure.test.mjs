@@ -20,7 +20,7 @@ describe("Chrome extension structure", () => {
     assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionContent.js"));
     assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionBridge.js"));
     assert.ok(EXTENSION_FILES.includes("src/tiktokCaptionOverlay.css"));
-    assert.ok(EXTENSION_FILES.includes("local-toolkit/local-toolkit.html"));
+    assert.ok(!EXTENSION_FILES.includes("local-toolkit/local-toolkit.html"));
     assert.ok(EXTENSION_FILES.includes("src/localToolkit/localToolkitContent.js"));
     assert.ok(EXTENSION_FILES.includes("src/localToolkit/platforms/platformTikTok.js"));
     assert.ok(EXTENSION_FILES.includes("rules/localToolkitBackendBlock.json"));

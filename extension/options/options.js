@@ -16,7 +16,6 @@ import { initPinButton, initSearchUi } from "../src/searchUi.js";
 import { initCloseLastSearchGroupButton } from "../src/searchSessionUi.js";
 import {
   getLocalToolkitFloatingIconEnabled,
-  initLocalToolkitButton,
   saveLocalToolkitFloatingIconEnabled,
 } from "../src/localToolkitUi.js";
 import { openShortcutSettings } from "../src/shortcutSettings.js";
@@ -41,7 +40,6 @@ const optionsNavLinks = [...document.querySelectorAll("[data-options-nav]")];
 const shortcutSettingsButton = document.querySelector("#shortcut-settings-button");
 const showPopupHistoryToggle = document.querySelector("#show-popup-history-toggle");
 const sidePanelButton = document.querySelector("#side-panel-button");
-const localToolkitPageButton = document.querySelector("#local-toolkit-page-button");
 const localToolkitFloatingIconToggle = document.querySelector("#local-toolkit-floating-icon-toggle");
 const targetOrderList = document.querySelector("#target-order-list");
 const tiktokNonEnglishWarningToggle = document.querySelector("#tiktok-non-english-warning-toggle");
@@ -661,7 +659,6 @@ shortcutSettingsButton.addEventListener("click", async () => {
 
 initPinButton(sidePanelButton, statusMessage, { closeOnSuccess: false });
 initCloseLastSearchGroupButton(closeLastSearchGroupButton, statusMessage);
-initLocalToolkitButton(localToolkitPageButton);
 initOptionsNavigation();
 
 showPopupSearchHistory = await getShowPopupSearchHistory(storageArea);

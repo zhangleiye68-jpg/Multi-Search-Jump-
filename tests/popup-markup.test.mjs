@@ -13,15 +13,15 @@ describe("popup markup", () => {
     assert.match(html, /<header[^>]+class="popup-header"[\s\S]*id="options-button"[\s\S]*<\/header>/);
     assert.doesNotMatch(html, /<div[^>]+class="search-input-shell"[\s\S]*id="options-button"[\s\S]*<\/div>/);
     assert.match(html, /<button[^>]+id="side-panel-button"[^>]+aria-label="打开侧边栏"/);
-    assert.match(html, /<button[^>]+id="local-toolkit-button"[^>]+aria-label="打开绿色工具箱"/);
     assert.match(html, /<button[^>]+id="options-button"[^>]+aria-label="打开设置"/);
-    assert.match(html, /class="popup-quick-actions"/);
-    assert.match(html, /id="local-toolkit-quick-button"/);
-    assert.match(html, /绿色工具箱/);
-    assert.match(html, /class="toolkit-site-links"/);
-    assert.match(html, /href="https:\/\/www\.tiktok\.com\/"/);
-    assert.match(html, /href="https:\/\/www\.youtube\.com\/"/);
-    assert.match(html, /href="https:\/\/www\.xiaohongshu\.com\/explore"/);
+    assert.doesNotMatch(html, /id="local-toolkit-button"/);
+    assert.doesNotMatch(html, /class="popup-quick-actions"/);
+    assert.doesNotMatch(html, /id="local-toolkit-quick-button"/);
+    assert.doesNotMatch(html, /绿色工具箱/);
+    assert.doesNotMatch(html, /class="toolkit-site-links"/);
+    assert.doesNotMatch(html, /href="https:\/\/www\.tiktok\.com\/"/);
+    assert.doesNotMatch(html, /href="https:\/\/www\.youtube\.com\/"/);
+    assert.doesNotMatch(html, /href="https:\/\/www\.xiaohongshu\.com\/explore"/);
     assert.match(html, /⚙/);
     assert.doesNotMatch(html, /id="show-history-toggle"/);
     assert.doesNotMatch(html, /显示历史/);
@@ -40,10 +40,10 @@ describe("popup markup", () => {
 
     assert.match(popupScript, /initSearchUi/);
     assert.match(popupScript, /initPinButton/);
-    assert.match(popupScript, /initLocalToolkitButton/);
+    assert.doesNotMatch(popupScript, /initLocalToolkitButton/);
     assert.match(popupScript, /#side-panel-button/);
-    assert.match(popupScript, /#local-toolkit-button/);
-    assert.match(popupScript, /#local-toolkit-quick-button/);
+    assert.doesNotMatch(popupScript, /#local-toolkit-button/);
+    assert.doesNotMatch(popupScript, /#local-toolkit-quick-button/);
     assert.match(popupScript, /#search-history/);
     assert.match(popupScript, /useHistoryVisibilityPreference: true/);
     assert.doesNotMatch(popupScript, /#show-history-toggle/);
@@ -60,11 +60,10 @@ describe("popup markup", () => {
 
     assert.match(css, /\.popup-header\s*{[\s\S]*justify-content: space-between/);
     assert.match(css, /\.popup-actions\s*{/);
-    assert.match(css, /\.popup-quick-actions\s*{/);
-    assert.match(css, /\.quick-action-button\s*{/);
-    assert.match(css, /\.quick-action-button\.is-toolkit\s*{/);
-    assert.match(css, /\.toolkit-site-links\s*{/);
-    assert.match(css, /\.toolkit-site-link\s*{/);
+    assert.doesNotMatch(css, /\.popup-quick-actions\s*{/);
+    assert.doesNotMatch(css, /\.quick-action-button\s*{/);
+    assert.doesNotMatch(css, /\.toolkit-site-links\s*{/);
+    assert.doesNotMatch(css, /\.toolkit-site-link\s*{/);
     assert.ok(headerButtonRule?.groups?.body);
     assert.doesNotMatch(headerButtonRule.groups.body, /position: absolute/);
     assert.match(css, /\.header-icon-button\s*{[\s\S]*width: 32px/);

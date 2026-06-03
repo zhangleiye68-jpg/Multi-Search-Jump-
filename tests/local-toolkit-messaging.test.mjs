@@ -30,7 +30,7 @@ describe("local toolkit background messaging", () => {
     assert.equal(isLocalToolkitMessage({ type: "OPEN_SEARCH_GROUP" }), false);
   });
 
-  it("opens the local toolkit page when the floating toolkit icon requests the popup", async () => {
+  it("opens the unified download sites settings when the floating icon requests the popup", async () => {
     const createdTabs = [];
     const result = await handleLocalToolkitMessage(
       { name: LOCAL_TOOLKIT_MESSAGE_NAME, body: { action: "openPopup", data: {} } },
@@ -52,7 +52,7 @@ describe("local toolkit background messaging", () => {
     assert.deepEqual(createdTabs, [
       {
         active: true,
-        url: "chrome-extension://abc/local-toolkit/local-toolkit.html",
+        url: "chrome-extension://abc/options/options.html#settings-download-sites",
       },
     ]);
     assert.deepEqual(result, { success: true });

@@ -3,10 +3,6 @@ import { readFile, stat } from "node:fs/promises";
 import { describe, it } from "node:test";
 
 const LOCAL_TOOLKIT_FILES = Object.freeze([
-  "extension/local-toolkit/local-toolkit.html",
-  "extension/local-toolkit/local-toolkit.css",
-  "extension/local-toolkit/local-toolkit.js",
-  "extension/local-toolkit/local-toolkit-brand.js",
   "extension/src/localToolkitDownloadNames.js",
   "extension/src/localToolkitUi.js",
   "extension/src/localToolkit/localToolkitBackground.js",
@@ -77,7 +73,7 @@ describe("local toolkit structure", () => {
     }
   });
 
-  it("declares the local toolkit page and platform scripts in the manifest", async () => {
+  it("declares the local toolkit platform scripts in the manifest", async () => {
     const manifest = JSON.parse(await readFile("extension/manifest.json", "utf8"));
     const manifestFiles = flattenManifestContentScriptFiles(manifest);
 
@@ -189,7 +185,6 @@ describe("local toolkit structure", () => {
     const filesToCheck = [
       "extension/manifest.json",
       "extension/src/background.js",
-      "extension/local-toolkit/local-toolkit.html",
       "scripts/check-extension-structure.mjs",
     ];
 
@@ -207,9 +202,6 @@ describe("local toolkit structure", () => {
       "extension/popup/popup.html",
       "extension/options/options.html",
       "extension/side-panel/panel.html",
-      "extension/local-toolkit/local-toolkit.html",
-      "extension/local-toolkit/local-toolkit.css",
-      "extension/local-toolkit/local-toolkit-brand.js",
     ];
 
     for (const file of filesToCheck) {
@@ -219,17 +211,25 @@ describe("local toolkit structure", () => {
     }
   });
 
-  it("keeps local toolkit settings in the unified options page", async () => {
-    const html = await readFile("extension/local-toolkit/local-toolkit.html", "utf8");
-    const css = await readFile("extension/local-toolkit/local-toolkit.css", "utf8");
+  it("does not ship a standalone local toolkit page surface", async () => {
+    for (const file of [
+      "extension/local-toolkit/local-toolkit.html",
+      "extension/local-toolkit/local-toolkit.css",
+      "extension/local-toolkit/local-toolkit.js",
+      "extension/local-toolkit/local-toolkit-brand.js",
+    ]) {
+      assert.equal(await fileExists(file), false, `${file} should not be shipped`);
+    }
+  });
 
-    assert.match(html, /<title>Multi Search Jump 绿色工具箱<\/title>/);
-    assert.match(html, /src="local-toolkit-brand\.js"/);
-    assert.doesNotMatch(html, /DataTool/);
-    assert.match(css, /\.popup-wrapper\s+\.setting-section\s*{[\s\S]*display:\s*none/);
-    assert.match(css, /\.popup-wrapper\s+\.footer-section\s*{[\s\S]*display:\s*none/);
-    assert.match(css, /\.popup-wrapper\s+\.header-title::after\s*{[\s\S]*绿色工具箱/);
-    assert.match(css, /\.popup-wrapper\s+\.header-bar\s*{[\s\S]*#176b63/);
+  it("keeps download support information in the unified options page", async () => {
+    const html = await readFile("extension/options/options.html", "utf8");
+
+    assert.match(html, /id="settings-download-sites"/);
+    assert.match(html, /支持下载的网站/);
+    assert.match(html, /下载浮窗图标/);
+    assert.doesNotMatch(html, /绿色工具箱/);
+    assert.doesNotMatch(html, /打开工具箱/);
   });
 
   it("removes cloud-only speech-to-text buttons from the local toolkit surface", async () => {

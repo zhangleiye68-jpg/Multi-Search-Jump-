@@ -2,7 +2,7 @@ import { normalizeLocalToolkitDownloadFilename } from "./localToolkitDownloadNam
 
 export const LOCAL_TOOLKIT_MESSAGE_NAME = "datatool_background_trans";
 
-const LOCAL_TOOLKIT_PAGE_PATH = "local-toolkit/local-toolkit.html";
+const DOWNLOAD_SITES_OPTIONS_PAGE_PATH = "options/options.html#settings-download-sites";
 
 const LOCAL_USER = Object.freeze({
   id: "local-free",
@@ -189,7 +189,8 @@ export async function handleLocalToolkitMessage(message, apis = {}) {
     case "openPopup":
       await tabsApi?.create?.({
         active: true,
-        url: runtimeApi?.getURL?.(LOCAL_TOOLKIT_PAGE_PATH) || LOCAL_TOOLKIT_PAGE_PATH,
+        url: runtimeApi?.getURL?.(DOWNLOAD_SITES_OPTIONS_PAGE_PATH) ||
+          DOWNLOAD_SITES_OPTIONS_PAGE_PATH,
       });
       return { success: true };
 
