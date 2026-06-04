@@ -1,12 +1,14 @@
 (() => {
   const MESSAGE_TYPE = "msj-tiktok-api-response";
   const TIKTOK_API_PATTERNS = [
-    "/api/item/detail/",
+    "/api/item/detail",
     "/api/recommend/item_list/",
     "/api/preload/item_list/",
     "/api/post/item_list/",
+    "/api/repost/item_list",
     "/api/creator/item_list/",
     "/api/related/item_list/",
+    "/api/search/general/full",
     "/api/search/item/full/",
     "/api/favorite/item_list",
     "/api/collection/item_list",

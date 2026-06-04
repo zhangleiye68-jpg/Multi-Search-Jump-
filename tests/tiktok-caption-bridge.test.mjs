@@ -116,4 +116,37 @@ describe("TikTok caption bridge", () => {
       ],
     );
   });
+
+  it("forwards TikTok API payloads used by card data detail surfaces", async () => {
+    const bridge = await loadBridge({
+      responseText: JSON.stringify({
+        itemList: [
+          {
+            id: "2345678901",
+            stats: {
+              playCount: 1000,
+            },
+          },
+        ],
+      }),
+    });
+
+    try {
+      await bridge.window.fetch("https://www.tiktok.com/api/search/general/full/?keyword=demo");
+      await bridge.window.fetch("https://www.tiktok.com/api/repost/item_list?cursor=0");
+      await bridge.window.fetch("https://www.tiktok.com/api/item/detail?itemId=2345678901");
+    } finally {
+      bridge.restore();
+    }
+
+    assert.equal(bridge.messages.length, 3);
+    assert.deepEqual(
+      bridge.messages.map((message) => message.url),
+      [
+        "https://www.tiktok.com/api/search/general/full/?keyword=demo",
+        "https://www.tiktok.com/api/repost/item_list?cursor=0",
+        "https://www.tiktok.com/api/item/detail?itemId=2345678901",
+      ],
+    );
+  });
 });

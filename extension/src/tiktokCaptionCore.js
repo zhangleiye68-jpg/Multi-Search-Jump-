@@ -1,6 +1,7 @@
 (() => {
   const ROOT_CLASS = "msj-tiktok-caption-root";
   const OPEN_CLASS = "is-open";
+  const CARD_METRICS_ROOT_CLASS = "msj-tiktok-card-metrics";
   const GOOGLE_TRANSLATE_URL = "https://translate.googleapis.com/translate_a/single";
   const CAPTION_TEXT_SELECTOR = [
     "[data-e2e*='subtitle' i]",
@@ -39,6 +40,36 @@
   const TIKTOK_API_MESSAGE_TYPE = "msj-tiktok-api-response";
   const TIKTOK_REHYDRATION_SCRIPT_ID = "__UNIVERSAL_DATA_FOR_REHYDRATION__";
   const TIKTOK_API_HINT_ITEM_LIMIT = 16;
+  const TIKTOK_CARD_METRIC_SCAN_INTERVAL_MS = 1000;
+  const TIKTOK_CARD_METRIC_PROFILE_SELECTORS = Object.freeze([
+    "div[class*='-DivItemContainerV2'] div[class*='-DivWrapper'] a[href*='com/@']",
+  ]);
+  const TIKTOK_CARD_METRIC_SURFACE_SELECTORS = Object.freeze({
+    collection: TIKTOK_CARD_METRIC_PROFILE_SELECTORS,
+    liked: TIKTOK_CARD_METRIC_PROFILE_SELECTORS,
+    music: [
+      "[data-e2e='music-item-list'] [data-e2e='music-item']",
+    ],
+    profile: TIKTOK_CARD_METRIC_PROFILE_SELECTORS,
+    search: [
+      "div[class*='-DivPanelContainer'] > div[class*='-DivThreeColumnContainer'] > [data-e2e='search_top-item-list'] > div[id*='grid-item-container-0'] [data-e2e='search_top-item']",
+      "[data-e2e='search_top-item-list'] [data-e2e='search_top-item']",
+      "[data-e2e='search_video-item-list'] [data-e2e='search_video-item']",
+    ],
+    tag: [
+      "[data-e2e='challenge-item-list'] [data-e2e='challenge-item']",
+    ],
+  });
+  const TIKTOK_CARD_METRIC_TAB_SELECTOR = [
+    "[aria-selected='true']",
+    "[aria-current='page']",
+    "[data-e2e*='liked' i]",
+    "[data-e2e*='favorite' i]",
+    "[data-e2e*='collection' i]",
+    "[id*='liked' i]",
+    "[id*='favorite' i]",
+    "[id*='collection' i]",
+  ].join(",");
   const DISPLAY_MODES = Object.freeze({
     bilingual: "bilingual",
     chinese: "chinese",
@@ -112,6 +143,7 @@
   ].join(",");
   const tikTokApiItemCache = new Map();
   const activeTikTokCaptionOverlays = new Set();
+  const activeTikTokCardMetricsOverlays = new Set();
 
   function normalizeCaptionText(value) {
     return String(value ?? "")
@@ -1788,6 +1820,7 @@
       language: getTikTokItemLanguage(item),
       likeRate: null,
       likeRateLabel: UNKNOWN_METRIC_LABEL,
+      playCount,
       playCountLabel: playCount > 0 ? formatMetric(playCount) : UNKNOWN_METRIC_LABEL,
       playRate: null,
       playRateLabel: UNKNOWN_METRIC_LABEL,
@@ -1821,11 +1854,154 @@
       language: getTikTokItemLanguage(item),
       likeRate,
       likeRateLabel: hasRate ? `${formatMetric(likeRate)}/h` : UNKNOWN_METRIC_LABEL,
+      playCount,
       playCountLabel: formatMetric(playCount),
       playRate,
       playRateLabel: hasRate ? `${formatMetric(playRate)}/h` : UNKNOWN_METRIC_LABEL,
       potential,
     };
+  }
+
+  function getTikTokVideoMetricItems(metrics) {
+    return [
+      { icon: "♥", key: "like-rate", label: "每小时点赞量", value: metrics.likeRateLabel },
+      { icon: "↗", key: "play-rate", label: "每小时播放量", value: metrics.playRateLabel },
+      { icon: "▶", key: "play-count", label: "总播放量", value: metrics.playCountLabel },
+      { icon: "⏱", key: "age", label: "天数", value: metrics.durationLabel },
+    ];
+  }
+
+  function getTikTokWarningLabels(metrics, { nonEnglishWarningEnabled = true } = {}) {
+    const labels = [];
+
+    if (
+      nonEnglishWarningEnabled &&
+      metrics.language &&
+      normalizeLanguageKey(metrics.language) !== "en"
+    ) {
+      labels.push("非英内容");
+    }
+
+    if (metrics.durationSeconds > 0 && metrics.durationSeconds < 60) {
+      labels.push("时长<1分");
+    }
+
+    if (metrics.elapsedHours > 24) {
+      labels.push("发布>1天");
+    }
+
+    return labels;
+  }
+
+  function formatTikTokCardCompactNumber(value) {
+    const numericValue = Math.max(0, Number(value) || 0);
+    const units = [
+      { label: "B", value: 1000000000 },
+      { label: "M", value: 1000000 },
+      { label: "K", value: 1000 },
+    ];
+
+    for (const unit of units) {
+      if (numericValue >= unit.value) {
+        return `${formatMetricNumber(numericValue / unit.value)}${unit.label}`;
+      }
+    }
+
+    return formatMetricNumber(numericValue);
+  }
+
+  function formatTikTokCardRate(value) {
+    if (!Number.isFinite(value)) {
+      return UNKNOWN_METRIC_LABEL;
+    }
+
+    return `${formatTikTokCardCompactNumber(value)}/h`;
+  }
+
+  function formatTikTokCardElapsedDays(elapsedHours) {
+    if (!Number.isFinite(elapsedHours)) {
+      return UNKNOWN_METRIC_LABEL;
+    }
+
+    const elapsedDays = Math.max(0, elapsedHours) / 24;
+
+    if (elapsedDays > 0 && elapsedDays < 0.1) {
+      return "<0.1d";
+    }
+
+    return `${formatMetricNumber(elapsedDays)}d`;
+  }
+
+  function formatTikTokCardPotentialLabel(potential) {
+    if (potential?.className === "is-high") {
+      return "High";
+    }
+
+    if (potential?.className === "is-mid") {
+      return "Mid";
+    }
+
+    if (potential?.className === "is-low") {
+      return "Low";
+    }
+
+    return UNKNOWN_METRIC_LABEL;
+  }
+
+  function getTikTokCardVideoMetricItems(metrics) {
+    return [
+      {
+        icon: "potential",
+        key: "potential",
+        label: "权重评价",
+        value: formatTikTokCardPotentialLabel(metrics.potential),
+      },
+      {
+        icon: "♥",
+        key: "like-rate",
+        label: "每小时点赞量",
+        value: formatTikTokCardRate(metrics.likeRate),
+      },
+      {
+        icon: "▶",
+        key: "play-count",
+        label: "总播放量",
+        value: formatTikTokCardCompactNumber(metrics.playCount),
+      },
+      {
+        icon: "↗",
+        key: "play-rate",
+        label: "每小时播放量",
+        value: formatTikTokCardRate(metrics.playRate),
+      },
+      {
+        icon: "⏱",
+        key: "age",
+        label: "视频已发布时长",
+        value: formatTikTokCardElapsedDays(metrics.elapsedHours),
+      },
+    ];
+  }
+
+  function getTikTokCardWarningLabels(metrics) {
+    const labels = [];
+
+    if (metrics.durationSeconds > 0 && metrics.durationSeconds < 60) {
+      labels.push("!<1m");
+    }
+
+    if (metrics.elapsedHours > 24) {
+      labels.push("!>1d");
+    }
+
+    if (
+      metrics.language &&
+      normalizeLanguageKey(metrics.language) !== "en"
+    ) {
+      labels.push("!Non-EN");
+    }
+
+    return labels;
   }
 
   function collectScriptCaptionEntries(root, entries, seen) {
@@ -2300,9 +2476,500 @@
     return queryMatch?.[1] ?? "";
   }
 
+  function setElementClassName(element, className) {
+    element.className = className;
+    element.classList?.add?.(...className.split(/\s+/u).filter(Boolean));
+  }
+
+  function getDocumentLocationHref(documentRef) {
+    return normalizeCaptionText(
+      documentRef?.location?.href || globalThis.location?.href || "",
+    );
+  }
+
+  function getTikTokMetricsSurfaceFromMarker(value) {
+    const marker = normalizeCaptionText(value).toLocaleLowerCase();
+
+    if (!marker) {
+      return "";
+    }
+
+    if (/\bliked?\b|liked-tab|favorite-like/u.test(marker)) {
+      return "liked";
+    }
+
+    if (/\bfavorites?\b|collection|collect/u.test(marker)) {
+      return "collection";
+    }
+
+    return "";
+  }
+
+  function getTikTokMetricsSurfaceFromUrl(value) {
+    const text = String(value ?? "");
+
+    if (!/\/@[^/?#]+/u.test(text)) {
+      return "";
+    }
+
+    const lowerText = text.toLocaleLowerCase();
+
+    if (/(?:[?&#/]|%2f)(?:tab|showtab|type|section|surface)?=?liked(?:[&#/]|$)/u.test(lowerText)) {
+      return "liked";
+    }
+
+    if (/(?:[?&#/]|%2f)(?:tab|showtab|type|section|surface)?=?(?:collection|collect|favorites)(?:[&#/]|$)/u.test(lowerText)) {
+      return "collection";
+    }
+
+    return "";
+  }
+
+  function isTikTokProfilePage(documentRef, rootRef) {
+    const href = getDocumentLocationHref(documentRef);
+
+    if (href) {
+      return /\/@[^/?#]+/u.test(href);
+    }
+
+    return Boolean(rootRef?.querySelector?.("a[href*='/@']"));
+  }
+
+  function getTikTokTabNodeMarker(node) {
+    return [
+      node?.getAttribute?.("id"),
+      node?.id,
+      node?.getAttribute?.("data-e2e"),
+      node?.getAttribute?.("aria-label"),
+      node?.getAttribute?.("title"),
+      node?.getAttribute?.("href"),
+      node?.href,
+      node?.getAttribute?.("class"),
+      node?.className,
+      node?.textContent,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  function isLikelyActiveTikTokTabNode(node) {
+    const activeMarker = normalizeCaptionText(
+      [
+        node?.getAttribute?.("aria-selected"),
+        node?.getAttribute?.("aria-current"),
+        node?.getAttribute?.("data-active"),
+        node?.getAttribute?.("data-state"),
+        node?.getAttribute?.("tabindex"),
+        node?.getAttribute?.("class"),
+        node?.className,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    ).toLocaleLowerCase();
+
+    return (
+      /\btrue\b|\bpage\b|\bactive\b|\bselected\b/u.test(activeMarker) ||
+      activeMarker === "0"
+    );
+  }
+
+  function getTikTokPagePathname(documentRef) {
+    const href = getDocumentLocationHref(documentRef);
+
+    if (!href) {
+      return "";
+    }
+
+    try {
+      return new URL(href).pathname;
+    } catch {
+      return "";
+    }
+  }
+
+  function getTikTokActiveProfileMetricSurface(rootRef) {
+    for (const node of rootRef?.querySelectorAll?.(TIKTOK_CARD_METRIC_TAB_SELECTOR) ?? []) {
+      if (isHiddenNode(node) || !isLikelyActiveTikTokTabNode(node)) {
+        continue;
+      }
+
+      const nodeSurface = getTikTokMetricsSurfaceFromMarker(getTikTokTabNodeMarker(node));
+
+      if (nodeSurface) {
+        return nodeSurface;
+      }
+    }
+
+    return "";
+  }
+
+  function getTikTokCardMetricsSurface(documentRef, rootRef = documentRef) {
+    const pathname = getTikTokPagePathname(documentRef);
+
+    if (/^\/search(?:\/|$)/u.test(pathname)) {
+      return "search";
+    }
+
+    if (/^\/tag\/[^/]+/u.test(pathname)) {
+      return "tag";
+    }
+
+    if (/^\/music\/[^/]+/u.test(pathname)) {
+      return "music";
+    }
+
+    if (/^\/@[^/]+\/collection(?:\/|$)/u.test(pathname)) {
+      return "collection";
+    }
+
+    if (/^\/@[^/]+\/(?:video|photo)\/\d{5,}/u.test(pathname)) {
+      return "";
+    }
+
+    if (!isTikTokProfilePage(documentRef, rootRef)) {
+      return "";
+    }
+
+    const urlSurface = getTikTokMetricsSurfaceFromUrl(getDocumentLocationHref(documentRef));
+
+    if (urlSurface) {
+      return urlSurface;
+    }
+
+    return getTikTokActiveProfileMetricSurface(rootRef) || "profile";
+  }
+
+  function getTikTokCardMetricTargetHref(target) {
+    return normalizeCaptionText(target?.href || target?.getAttribute?.("href") || "");
+  }
+
+  function findTikTokCardMetricLink(target) {
+    if (extractTikTokVideoId(getTikTokCardMetricTargetHref(target))) {
+      return target;
+    }
+
+    return target?.querySelector?.(
+      "a[href*='com/@'], a[href*='/video/'], a[href*='/photo/']",
+    ) ?? null;
+  }
+
+  function collectTikTokCardMetricTargets(rootRef, surface) {
+    const targets = [];
+    const seen = new Set();
+    const selectors = TIKTOK_CARD_METRIC_SURFACE_SELECTORS[surface] ?? [];
+
+    for (const selector of selectors) {
+      for (const target of rootRef?.querySelectorAll?.(selector) ?? []) {
+        const link = findTikTokCardMetricLink(target);
+        const href = normalizeCaptionText(link?.href || link?.getAttribute?.("href") || "");
+        const itemId = extractTikTokVideoId(href);
+
+        if (!itemId || seen.has(target)) {
+          continue;
+        }
+
+        seen.add(target);
+        targets.push({
+          itemId,
+          link,
+          target,
+        });
+      }
+    }
+
+    return targets;
+  }
+
+  function collectAllTikTokCardMetricTargets(rootRef) {
+    const targets = [];
+    const seen = new Set();
+
+    for (const surface of Object.keys(TIKTOK_CARD_METRIC_SURFACE_SELECTORS)) {
+      for (const target of collectTikTokCardMetricTargets(rootRef, surface)) {
+        if (seen.has(target.target)) {
+          continue;
+        }
+
+        seen.add(target.target);
+        targets.push(target);
+      }
+    }
+
+    return targets;
+  }
+
+  function findTikTokCardMetricsRoot(cardTarget) {
+    const directMatch = Array.from(cardTarget?.children ?? []).find((child) =>
+      child?.classList?.contains?.(CARD_METRICS_ROOT_CLASS),
+    );
+
+    return directMatch || cardTarget?.querySelector?.(`.${CARD_METRICS_ROOT_CLASS}`) || null;
+  }
+
+  function clearTikTokCardMetricTargetState(cardTarget) {
+    if (!cardTarget?.dataset) {
+      return;
+    }
+
+    delete cardTarget.dataset.msjTikTokCardMetricsRendered;
+    delete cardTarget.dataset.msjTikTokCardMetricsSignature;
+  }
+
+  function removeTikTokCardMetricsRoot(cardTarget) {
+    const metricsRoot = findTikTokCardMetricsRoot(cardTarget);
+
+    if (!metricsRoot) {
+      clearTikTokCardMetricTargetState(cardTarget);
+      return;
+    }
+
+    clearTikTokCardMetricTargetState(cardTarget);
+
+    if (Array.isArray(cardTarget?.children)) {
+      const index = cardTarget.children.indexOf(metricsRoot);
+
+      if (index >= 0) {
+        cardTarget.children.splice(index, 1);
+        return;
+      }
+    }
+
+    metricsRoot.remove?.();
+  }
+
+  function clearTikTokCardMetrics(rootRef) {
+    let removedCount = 0;
+
+    for (const target of collectAllTikTokCardMetricTargets(rootRef)) {
+      if (findTikTokCardMetricsRoot(target.target)) {
+        removeTikTokCardMetricsRoot(target.target);
+        removedCount += 1;
+      }
+    }
+
+    return removedCount;
+  }
+
+  function appendTikTokCardMetric(metrics, metric) {
+    if (!metric.value) {
+      return;
+    }
+
+    metrics.push(metric);
+  }
+
+  function getTikTokCardMetricGroups(item, nowMs) {
+    const metrics = getVideoMetrics(item, nowMs);
+    const metricItems = getTikTokCardVideoMetricItems(metrics);
+    const warningLabels = getTikTokCardWarningLabels(metrics);
+    const left = [];
+    const right = [];
+
+    for (const metric of metricItems) {
+      appendTikTokCardMetric(left, metric);
+    }
+
+    for (const label of warningLabels) {
+      appendTikTokCardMetric(right, {
+        icon: "",
+        key: `warning-${label}`,
+        label,
+        value: label,
+      });
+    }
+
+    return { left, right };
+  }
+
+  function clearElementChildren(element) {
+    element.textContent = "";
+
+    if (Array.isArray(element.children)) {
+      element.children.length = 0;
+    }
+  }
+
+  function createTikTokCardMetricBadge(documentRef, metric) {
+    const badge = documentRef.createElement("span");
+    const value = documentRef.createElement("span");
+
+    setElementClassName(badge, "msj-tiktok-card-metric");
+    setElementClassName(value, "msj-tiktok-card-metric-value");
+    badge.dataset.metric = metric.key;
+    badge.title = metric.label;
+    value.textContent = metric.value;
+
+    if (metric.icon) {
+      const icon = documentRef.createElement("span");
+
+      setElementClassName(icon, "msj-tiktok-card-metric-icon");
+      icon.dataset.icon = metric.icon;
+      icon.setAttribute("aria-hidden", "true");
+      badge.append(icon);
+    }
+
+    badge.append(value);
+
+    return badge;
+  }
+
+  function createTikTokCardMetricColumn(documentRef, className, metrics) {
+    const column = documentRef.createElement("div");
+
+    setElementClassName(column, className);
+
+    for (const metric of metrics) {
+      column.append(createTikTokCardMetricBadge(documentRef, metric));
+    }
+
+    return column;
+  }
+
+  function getTikTokCardMetricSignature(item, surface, metricGroups) {
+    return [
+      surface,
+      getTikTokItemId(item),
+      ...metricGroups.left.map((metric) => `${metric.key}:${metric.value}`),
+      ...metricGroups.right.map((metric) => `${metric.key}:${metric.value}`),
+    ].join("|");
+  }
+
+  function renderTikTokCardMetrics(cardTarget, item, surface, documentRef, nowMs) {
+    const metricGroups = getTikTokCardMetricGroups(item, nowMs);
+    const hasMetrics = metricGroups.left.length > 0 || metricGroups.right.length > 0;
+
+    if (!hasMetrics) {
+      removeTikTokCardMetricsRoot(cardTarget);
+      return false;
+    }
+
+    const signature = getTikTokCardMetricSignature(item, surface, metricGroups);
+    const existingMetricsRoot = findTikTokCardMetricsRoot(cardTarget);
+
+    if (
+      existingMetricsRoot?.dataset?.signature === signature &&
+      cardTarget?.dataset?.msjTikTokCardMetricsSignature === signature
+    ) {
+      return true;
+    }
+
+    const metricsRoot = existingMetricsRoot || documentRef.createElement("div");
+
+    setElementClassName(metricsRoot, CARD_METRICS_ROOT_CLASS);
+    metricsRoot.dataset.signature = signature;
+    metricsRoot.dataset.surface = surface;
+    metricsRoot.dataset.videoId = getTikTokItemId(item);
+    metricsRoot.setAttribute("aria-label", "TikTok 数据指标");
+    clearElementChildren(metricsRoot);
+    metricsRoot.append(
+      createTikTokCardMetricColumn(documentRef, "msj-tiktok-card-metrics-left", metricGroups.left),
+      createTikTokCardMetricColumn(documentRef, "msj-tiktok-card-metrics-right", metricGroups.right),
+    );
+
+    if (cardTarget?.dataset) {
+      cardTarget.dataset.msjTikTokCardMetricsRendered = "true";
+      cardTarget.dataset.msjTikTokCardMetricsSignature = signature;
+    }
+
+    if (!existingMetricsRoot) {
+      if (!cardTarget.style?.position) {
+        cardTarget.style.position = "relative";
+      }
+
+      cardTarget.append(metricsRoot);
+    }
+
+    return true;
+  }
+
+  function refreshTikTokCardMetrics(documentRef, rootRef, nowMs) {
+    const surface = getTikTokCardMetricsSurface(documentRef, rootRef);
+
+    if (!surface) {
+      clearTikTokCardMetrics(rootRef);
+      return 0;
+    }
+
+    let renderedCount = 0;
+
+    for (const { itemId, target } of collectTikTokCardMetricTargets(rootRef, surface)) {
+      const item = getCachedTikTokItem(itemId);
+
+      if (!item) {
+        removeTikTokCardMetricsRoot(target);
+        continue;
+      }
+
+      if (renderTikTokCardMetrics(target, item, surface, documentRef, nowMs)) {
+        renderedCount += 1;
+      }
+    }
+
+    return renderedCount;
+  }
+
+  function createTikTokCardMetricsOverlay({
+    document: documentRef = document,
+    getRoot = () => documentRef,
+    now = () => Date.now(),
+    setInterval: setIntervalRef = getDefaultSetInterval(),
+    clearInterval: clearIntervalRef = getDefaultClearInterval(),
+    scanIntervalMs = TIKTOK_CARD_METRIC_SCAN_INTERVAL_MS,
+  } = {}) {
+    if (documentRef.__msjTikTokCardMetricsOverlay) {
+      return documentRef.__msjTikTokCardMetricsOverlay;
+    }
+
+    let refreshTimer = null;
+    let destroyed = false;
+
+    function refresh() {
+      if (destroyed) {
+        return 0;
+      }
+
+      return refreshTikTokCardMetrics(documentRef, getRoot(), now());
+    }
+
+    function start() {
+      refresh();
+
+      if (setIntervalRef && scanIntervalMs > 0) {
+        refreshTimer = setIntervalRef(refresh, scanIntervalMs);
+      }
+    }
+
+    function destroy() {
+      destroyed = true;
+      if (refreshTimer !== null) {
+        clearIntervalRef?.(refreshTimer);
+      }
+      clearTikTokCardMetrics(getRoot());
+      activeTikTokCardMetricsOverlays.delete(overlay);
+      if (documentRef.__msjTikTokCardMetricsOverlay === overlay) {
+        delete documentRef.__msjTikTokCardMetricsOverlay;
+      }
+    }
+
+    const overlay = {
+      destroy,
+      refresh,
+      refreshAfterTikTokApiPayload: refresh,
+    };
+
+    documentRef.__msjTikTokCardMetricsOverlay = overlay;
+    activeTikTokCardMetricsOverlays.add(overlay);
+    start();
+
+    return overlay;
+  }
+
   function refreshTikTokCaptionOverlaysAfterApiPayload() {
     return Promise.all(
-      Array.from(activeTikTokCaptionOverlays, (overlay) =>
+      Array.from(new Set([
+        ...activeTikTokCaptionOverlays,
+        ...activeTikTokCardMetricsOverlays,
+      ]), (overlay) =>
         overlay.refreshAfterTikTokApiPayload?.() ?? Promise.resolve(),
       ),
     );
@@ -2716,25 +3383,7 @@
     }
 
     function getWarningLabels(metrics) {
-      const labels = [];
-
-      if (
-        nonEnglishWarningEnabled &&
-        metrics.language &&
-        normalizeLanguageKey(metrics.language) !== "en"
-      ) {
-        labels.push("非英内容");
-      }
-
-      if (metrics.durationSeconds > 0 && metrics.durationSeconds < 60) {
-        labels.push("时长<1分");
-      }
-
-      if (metrics.elapsedHours > 24) {
-        labels.push("发布>1天");
-      }
-
-      return labels;
+      return getTikTokWarningLabels(metrics, { nonEnglishWarningEnabled });
     }
 
     function renderWarningBadges(metrics) {
@@ -2753,12 +3402,7 @@
     }
 
     function getVideoMetricItems(metrics) {
-      return [
-        { icon: "♥", label: "每小时点赞量", value: metrics.likeRateLabel },
-        { icon: "↗", label: "每小时播放量", value: metrics.playRateLabel },
-        { icon: "▶", label: "总播放量", value: metrics.playCountLabel },
-        { icon: "⏱", label: "天数", value: metrics.durationLabel },
-      ];
+      return getTikTokVideoMetricItems(metrics);
     }
 
     function renderAuthorInfo(author) {
@@ -3594,6 +4238,7 @@
 
   globalThis.MultiSearchJumpTikTokCaptions = {
     createCaptionOverlay,
+    createTikTokCardMetricsOverlay,
     extractCaptionLines,
     extractTikTokVideoId,
     getCaptionSourceKey,

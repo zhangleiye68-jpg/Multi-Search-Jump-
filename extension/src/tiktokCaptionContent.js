@@ -10,11 +10,15 @@
     Object.values(CAPTION_BOARD_MESSAGE_TYPES),
   );
   let captionOverlay = null;
+  let cardMetricsOverlay = null;
 
   function initTikTokCaptionOverlay() {
     captionOverlay =
       globalThis.MultiSearchJumpTikTokCaptions?.createCaptionOverlay?.() ??
       captionOverlay;
+    cardMetricsOverlay =
+      globalThis.MultiSearchJumpTikTokCaptions?.createTikTokCardMetricsOverlay?.() ??
+      cardMetricsOverlay;
   }
 
   function waitForDocumentReady() {

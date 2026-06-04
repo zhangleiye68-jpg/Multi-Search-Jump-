@@ -472,6 +472,99 @@
   cursor: ew-resize;
 }
 
+.msj-tiktok-card-metrics {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  color: #0f7a3d;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.msj-tiktok-card-metrics-left,
+.msj-tiktok-card-metrics-right {
+  position: absolute;
+  bottom: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.msj-tiktok-card-metrics-left {
+  left: 7px;
+  align-items: flex-start;
+  max-width: min(118px, calc(100% - 18px));
+}
+
+.msj-tiktok-card-metrics-right {
+  right: 7px;
+  align-items: flex-end;
+  max-width: min(76px, calc(100% - 18px));
+}
+
+.msj-tiktok-card-metric {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 22px;
+  gap: 4px;
+  border: 1px solid rgba(22, 163, 74, 0.22);
+  border-radius: 6px;
+  padding: 3px 6px;
+  background: rgba(236, 253, 245, 0.88);
+  box-shadow: 0 5px 14px rgba(10, 83, 45, 0.16);
+  color: #0f7a3d;
+  white-space: nowrap;
+  backdrop-filter: blur(5px);
+}
+
+.msj-tiktok-card-metric-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  color: #16a34a;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.msj-tiktok-card-metric-value {
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.msj-tiktok-card-metric-icon[data-icon="potential"]::before {
+  content: "◆";
+}
+
+.msj-tiktok-card-metric-icon[data-icon="♥"]::before {
+  content: "♥";
+}
+
+.msj-tiktok-card-metric-icon[data-icon="↗"]::before {
+  content: "↗";
+}
+
+.msj-tiktok-card-metric-icon[data-icon="▶"]::before {
+  content: "▶";
+}
+
+.msj-tiktok-card-metric-icon[data-icon="⏱"]::before {
+  content: "⏱";
+}
+
+.msj-tiktok-card-metric-icon[data-icon="warning"]::before {
+  content: "!";
+}
+
 @media (max-width: 560px) {
   .msj-tiktok-caption-root {
     right: 8px;

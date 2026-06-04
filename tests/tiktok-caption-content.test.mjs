@@ -363,6 +363,135 @@ function createDocumentHarness() {
   };
 }
 
+function createMetricsTabNode(surface) {
+  return {
+    hidden: false,
+    textContent: surface === "collection" ? "Favorites" : "Liked",
+    getAttribute(name) {
+      const values = {
+        "aria-selected": "true",
+        "data-e2e": surface === "collection" ? "favorites-tab" : "liked-tab",
+        id: surface === "collection" ? "favorite-tab" : "liked-tab",
+      };
+
+      return values[name] ?? null;
+    },
+  };
+}
+
+function createCardLinkHarness(href) {
+  const link = createElementHarness("a");
+
+  link.href = href;
+  link.getAttribute = (name) => (name === "href" ? href : link.attributes[name] ?? null);
+
+  return link;
+}
+
+function createMetricCardContainerHarness(href, dataE2e) {
+  const card = createElementHarness("div");
+  const link = createCardLinkHarness(href);
+
+  card.children.push(link);
+  card.getAttribute = (name) => {
+    if (name === "data-e2e") {
+      return dataE2e;
+    }
+
+    return card.attributes[name] ?? null;
+  };
+  card.querySelector = (selector) => {
+    if (
+      selector.includes("a[href*='com/@']") ||
+      selector.includes("a[href*=\"com/@\"]") ||
+      selector.includes("a[href*='/video/']") ||
+      selector.includes("a[href*=\"/video/\"]") ||
+      selector.includes("a[href*='/photo/']") ||
+      selector.includes("a[href*=\"/photo/\"]")
+    ) {
+      return link;
+    }
+
+    return card.children.find((child) => child.matches?.(selector)) ?? null;
+  };
+
+  return { card, link };
+}
+
+function createMetricsDocumentHarness({ cards = [], surface = "liked" } = {}) {
+  const document = createDocumentHarness();
+  const links = cards.map((href) => createCardLinkHarness(href));
+
+  document.location = {
+    href: surface === "none"
+      ? "https://www.tiktok.com/foryou"
+      : `https://www.tiktok.com/@demo?tab=${surface}`,
+  };
+  document.querySelectorAll = (selector) => {
+    if (
+      selector.includes("a[href*='/video/']") ||
+      selector.includes("a[href*='/photo/']") ||
+      selector.includes("a[href*='com/@']")
+    ) {
+      return links;
+    }
+
+    if (selector.includes("aria-selected") || selector.includes("data-e2e") || selector.includes("liked")) {
+      return surface === "none" ? [] : [createMetricsTabNode(surface)];
+    }
+
+    return [];
+  };
+
+  return { document, links };
+}
+
+function createMetricsSurfaceDocumentHarness({ cards = [], surface }) {
+  const document = createDocumentHarness();
+  const dataE2eBySurface = {
+    music: "music-item",
+    search: "search_video-item",
+    tag: "challenge-item",
+  };
+  const locationPathBySurface = {
+    music: "/music/demo-song-123",
+    search: "/search/video?q=demo",
+    tag: "/tag/demo",
+  };
+  const cardEntries = cards.map((href) =>
+    createMetricCardContainerHarness(href, dataE2eBySurface[surface]),
+  );
+
+  document.location = {
+    href: `https://www.tiktok.com${locationPathBySurface[surface]}`,
+  };
+  document.querySelectorAll = (selector) => {
+    if (
+      (surface === "search" && selector.includes("search_video-item")) ||
+      (surface === "tag" && selector.includes("challenge-item")) ||
+      (surface === "music" && selector.includes("music-item"))
+    ) {
+      return cardEntries.map((entry) => entry.card);
+    }
+
+    if (
+      selector.includes("a[href*='/video/']") ||
+      selector.includes("a[href*='/photo/']") ||
+      selector.includes("a[href*='com/@']")
+    ) {
+      return cardEntries.map((entry) => entry.link);
+    }
+
+    return [];
+  };
+
+  return {
+    cards: cardEntries.map((entry) => entry.card),
+    document,
+    links: cardEntries.map((entry) => entry.link),
+  };
+}
+
 function createStorageArea(initialValues = {}) {
   return {
     values: { ...initialValues },
@@ -3740,5 +3869,310 @@ describe("TikTok caption content", () => {
     assert.equal(state.metrics[2].value, "5万");
     assert.equal(state.metrics[3].value, "0.5天");
     assert.deepEqual(state.warnings, ["非英内容"]);
+  });
+
+  it("renders only detail-panel metrics and warnings on liked profile cards", async () => {
+    const {
+      createTikTokCardMetricsOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const createTime = Math.floor(Date.UTC(2026, 4, 23, 12, 0, 0) / 1000);
+    const now = Date.UTC(2026, 4, 24, 0, 0, 0);
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          authorStats: {
+            followerCount: 7000000,
+          },
+          createTime,
+          id: "1234567890",
+          language: "fr",
+          stats: {
+            collectCount: 15300,
+            commentCount: 211,
+            diggCount: 360100,
+            playCount: 2000000,
+            shareCount: 7153,
+          },
+          video: {
+            duration: 11,
+            VQScore: 74.39,
+          },
+        },
+      ],
+    });
+
+    const { document, links } = createMetricsDocumentHarness({
+      cards: ["https://www.tiktok.com/@demo/video/1234567890"],
+      surface: "liked",
+    });
+    const overlay = createTikTokCardMetricsOverlay({
+      document,
+      mutationObserverClass: null,
+      now: () => now,
+      setInterval: null,
+    });
+
+    assert.equal(overlay.refresh(), 1);
+    assert.equal(overlay.refresh(), 1);
+
+    const metricsRoot = links[0].children.find((child) =>
+      child.classList.contains("msj-tiktok-card-metrics"),
+    );
+
+    assert.ok(metricsRoot);
+    assert.equal(metricsRoot.dataset.surface, "liked");
+    assert.equal(
+      metricsRoot.textContent,
+      "High30K/h2M166.7K/h0.5d!<1m!Non-EN",
+    );
+    const likedLeftColumn = metricsRoot.children.find((child) =>
+      child.classList.contains("msj-tiktok-card-metrics-left"),
+    );
+    const likedRightColumn = metricsRoot.children.find((child) =>
+      child.classList.contains("msj-tiktok-card-metrics-right"),
+    );
+
+    assert.equal(likedLeftColumn.children.length, 5);
+    assert.equal(likedLeftColumn.textContent, "High30K/h2M166.7K/h0.5d");
+    assert.equal(likedRightColumn.children.length, 2);
+    assert.equal(likedRightColumn.textContent, "!<1m!Non-EN");
+    assert.equal(metricsRoot.textContent.includes("211"), false);
+    assert.equal(metricsRoot.textContent.includes("15.3k"), false);
+    assert.equal(metricsRoot.textContent.includes("7153"), false);
+    assert.equal(metricsRoot.textContent.includes("74.39"), false);
+    assert.equal(metricsRoot.textContent.includes("7M"), false);
+    assert.equal(metricsRoot.textContent.includes("2026/05/23"), false);
+    assert.equal(metricsRoot.textContent.includes("百万"), false);
+    assert.equal(metricsRoot.textContent.includes("万"), false);
+    assert.equal(
+      links[0].children.filter((child) => child.classList.contains("msj-tiktok-card-metrics")).length,
+      1,
+    );
+  });
+
+  it("renders detail-panel metrics on collection profile cards", async () => {
+    const {
+      createTikTokCardMetricsOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const createTime = Math.floor(Date.UTC(2026, 4, 24, 12, 0, 0) / 1000);
+    const now = Date.UTC(2026, 4, 26, 0, 0, 0);
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          authorStats: {
+            followerCount: "1.2M",
+          },
+          createTime,
+          id: "2345678901",
+          statsV2: {
+            collectCount: "12,000",
+            commentCount: 30,
+            diggCount: 42000,
+            playCount: 100000,
+            shareCount: 120,
+          },
+          video: {
+            durationSeconds: 75,
+          },
+        },
+      ],
+    });
+
+    const { document, links } = createMetricsDocumentHarness({
+      cards: ["https://www.tiktok.com/@demo/video/2345678901"],
+      surface: "collection",
+    });
+    const overlay = createTikTokCardMetricsOverlay({
+      document,
+      mutationObserverClass: null,
+      now: () => now,
+      setInterval: null,
+    });
+
+    assert.equal(overlay.refresh(), 1);
+
+    const metricsRoot = links[0].children.find((child) =>
+      child.classList.contains("msj-tiktok-card-metrics"),
+    );
+
+    assert.ok(metricsRoot);
+    assert.equal(metricsRoot.dataset.surface, "collection");
+    assert.equal(metricsRoot.textContent, "Low1.2K/h100K2.8K/h1.5d!>1d");
+  });
+
+  it("does not create a full-page MutationObserver for TikTok card metrics", async () => {
+    const { createTikTokCardMetricsOverlay } = await loadCaptionCore();
+    const { document } = createMetricsDocumentHarness({
+      cards: ["https://www.tiktok.com/@demo/video/4567890123"],
+      surface: "liked",
+    });
+    let observerCount = 0;
+
+    class MutationObserverHarness {
+      constructor() {
+        observerCount += 1;
+      }
+
+      disconnect() {}
+      observe() {}
+    }
+
+    createTikTokCardMetricsOverlay({
+      document,
+      mutationObserverClass: MutationObserverHarness,
+      setInterval: null,
+    });
+
+    assert.equal(observerCount, 0);
+  });
+
+  it("does not rebuild unchanged TikTok card metrics on repeated scans", async () => {
+    const {
+      createTikTokCardMetricsOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "4567890123",
+          stats: {
+            diggCount: 1000,
+            playCount: 10000,
+          },
+          video: {
+            duration: 9,
+          },
+        },
+      ],
+    });
+
+    const { document, links } = createMetricsDocumentHarness({
+      cards: ["https://www.tiktok.com/@demo/video/4567890123"],
+      surface: "liked",
+    });
+    const overlay = createTikTokCardMetricsOverlay({
+      document,
+      mutationObserverClass: null,
+      setInterval: null,
+    });
+    const firstElementCount = document.elements.length;
+    const firstMetricsRoot = links[0].children.find((child) =>
+      child.classList.contains("msj-tiktok-card-metrics"),
+    );
+
+    assert.equal(overlay.refresh(), 1);
+    assert.equal(document.elements.length, firstElementCount);
+    assert.equal(
+      links[0].children.find((child) => child.classList.contains("msj-tiktok-card-metrics")),
+      firstMetricsRoot,
+    );
+  });
+
+  it("renders TikTok card metrics on search, tag, and music result cards", async () => {
+    const {
+      createTikTokCardMetricsOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "1111111111",
+          stats: {
+            diggCount: 10000,
+            playCount: 20000,
+          },
+          video: {
+            duration: 8,
+          },
+        },
+        {
+          id: "2222222222",
+          stats: {
+            diggCount: 20000,
+            playCount: 40000,
+          },
+          video: {
+            duration: 9,
+          },
+        },
+        {
+          id: "3333333333",
+          stats: {
+            diggCount: 30000,
+            playCount: 60000,
+          },
+          video: {
+            duration: 10,
+          },
+        },
+      ],
+    });
+
+    for (const [surface, id] of [
+      ["search", "1111111111"],
+      ["tag", "2222222222"],
+      ["music", "3333333333"],
+    ]) {
+      const { cards, document } = createMetricsSurfaceDocumentHarness({
+        cards: [`https://www.tiktok.com/@demo/video/${id}`],
+        surface,
+      });
+      const overlay = createTikTokCardMetricsOverlay({
+        document,
+        mutationObserverClass: null,
+        setInterval: null,
+      });
+
+      assert.equal(overlay.refresh(), 1);
+      assert.equal(
+        cards[0].children.some((child) => child.classList.contains("msj-tiktok-card-metrics")),
+        true,
+        `${surface} should render card metrics`,
+      );
+    }
+  });
+
+  it("does not render TikTok card metrics outside supported TikTok card surfaces", async () => {
+    const {
+      createTikTokCardMetricsOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "3456789012",
+          stats: {
+            diggCount: 10,
+            playCount: 100,
+          },
+          video: {
+            duration: 9,
+          },
+        },
+      ],
+    });
+
+    const { document, links } = createMetricsDocumentHarness({
+      cards: ["https://www.tiktok.com/@demo/video/3456789012"],
+      surface: "none",
+    });
+    const overlay = createTikTokCardMetricsOverlay({
+      document,
+      mutationObserverClass: null,
+      setInterval: null,
+    });
+
+    assert.equal(overlay.refresh(), 0);
+    assert.equal(
+      links[0].children.some((child) => child.classList.contains("msj-tiktok-card-metrics")),
+      false,
+    );
   });
 });
