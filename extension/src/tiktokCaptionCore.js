@@ -129,6 +129,32 @@
     ["createTime", "发布时间（新到旧）"],
     ["age", "已发布时长（短到长）"],
   ]);
+  const TIKTOK_CARD_FILTER_NUMBER_FIELDS = Object.freeze({
+    minDiggCount: {
+      bareMultiplier: 10000,
+      displayDivisor: 10000,
+      helpText: "默认单位 万；可输入 5k / 1.2M / 500万。",
+      placeholder: "如 5 = 5万",
+    },
+    minLikeRate: {
+      bareMultiplier: 1000,
+      displayDivisor: 1000,
+      helpText: "默认单位 K；可输入 5k / 1.2M / 500万。",
+      placeholder: "如 5 = 5K/h",
+    },
+    minPlayCount: {
+      bareMultiplier: 10000,
+      displayDivisor: 10000,
+      helpText: "默认单位 万；可输入 5k / 1.2M / 500万。",
+      placeholder: "如 5 = 5万",
+    },
+    minPlayRate: {
+      bareMultiplier: 10000,
+      displayDivisor: 10000,
+      helpText: "默认单位 万；可输入 5k / 1.2M / 500万。",
+      placeholder: "如 5 = 5万/h",
+    },
+  });
   const UNKNOWN_METRIC_LABEL = "—";
   const SUBTITLE_FILE_IGNORED_LINE_PATTERN =
     /^(?:WEBVTT|NOTE\b|STYLE\b|REGION\b|\d+|[\d:,.]+\s+-->\s+[\d:,.]+.*)$/u;
@@ -166,6 +192,7 @@
   const tikTokApiItemCache = new Map();
   const activeTikTokCaptionOverlays = new Set();
   const activeTikTokCardMetricsOverlays = new Set();
+  const tikTokCardFilterOriginalOrderState = new WeakMap();
 
   function normalizeCaptionText(value) {
     return String(value ?? "")
@@ -2830,7 +2857,7 @@
     };
   }
 
-  function normalizeTikTokCardFilterNumber(value) {
+  function normalizeTikTokCardFilterNumber(value, options = {}) {
     if (value === "" || value === null || typeof value === "undefined") {
       return null;
     }
@@ -2839,6 +2866,7 @@
       return Number.isFinite(value) ? value : null;
     }
 
+    const bareMultiplier = Number(options.bareMultiplier) || 1;
     const normalizedValue = String(value)
       .trim()
       .replace(/,/gu, "")
@@ -2870,7 +2898,7 @@
 
     const numericValue = Number(normalizedValue);
 
-    return Number.isFinite(numericValue) ? numericValue : null;
+    return Number.isFinite(numericValue) ? numericValue * bareMultiplier : null;
   }
 
   function normalizeTikTokCardFilterDate(value) {
@@ -3175,7 +3203,31 @@
   }
 
   function getTikTokCardFilterDisplayTarget(target) {
-    return target?.closest?.(TIKTOK_CARD_FILTER_CARD_SELECTOR) || target;
+    const closestTarget = target?.closest?.(TIKTOK_CARD_FILTER_CARD_SELECTOR);
+
+    if (closestTarget) {
+      return closestTarget;
+    }
+
+    let parent = target?.parentNode ?? null;
+    let depth = 0;
+
+    while (parent && depth < 5) {
+      const tagName = normalizeCaptionText(parent.tagName).toLocaleLowerCase();
+
+      if (tagName === "body" || tagName === "html") {
+        break;
+      }
+
+      if (parent.style && parent.children) {
+        return parent;
+      }
+
+      parent = parent.parentNode ?? null;
+      depth += 1;
+    }
+
+    return target;
   }
 
   function setTikTokCardFilterVisibility(target, isVisible) {
@@ -3189,6 +3241,9 @@
   }
 
   function clearTikTokCardFilterState(rootRef) {
+    const entries = [];
+    const seenDisplayTargets = new Set();
+
     for (const { target } of collectAllTikTokCardMetricTargets(rootRef)) {
       setTikTokCardFilterVisibility(target, true);
       const displayTarget = getTikTokCardFilterDisplayTarget(target);
@@ -3196,7 +3251,22 @@
       if (displayTarget?.style) {
         displayTarget.style.order = "";
       }
+
+      if (displayTarget && !seenDisplayTargets.has(displayTarget)) {
+        seenDisplayTargets.add(displayTarget);
+        entries.push({
+          displayTarget,
+          originalIndex: getTikTokCardOriginalOrder(displayTarget.parentNode, displayTarget),
+          target,
+        });
+      }
     }
+
+    entries.sort((first, second) => first.originalIndex - second.originalIndex);
+    entries.forEach((entry, index) => {
+      entry.sortIndex = index;
+    });
+    reorderTikTokCardFilterEntries(entries);
   }
 
   function getTikTokCardSortValue(record, field) {
@@ -3281,11 +3351,56 @@
     return parent?.children?.[index] ?? parent?.children?.item?.(index) ?? null;
   }
 
+  function getTikTokCardOriginalOrder(parent, displayTarget) {
+    if (!parent || !displayTarget) {
+      return 0;
+    }
+
+    let state = tikTokCardFilterOriginalOrderState.get(parent);
+
+    if (!state) {
+      state = {
+        nextIndex: 0,
+        orders: new WeakMap(),
+      };
+
+      for (const child of getTikTokCardParentChildren(parent)) {
+        state.orders.set(child, state.nextIndex);
+        state.nextIndex += 1;
+      }
+
+      tikTokCardFilterOriginalOrderState.set(parent, state);
+    }
+
+    if (!state.orders.has(displayTarget)) {
+      state.orders.set(displayTarget, state.nextIndex);
+      state.nextIndex += 1;
+    }
+
+    return state.orders.get(displayTarget);
+  }
+
+  function compareTikTokCardFilterResultEntries(first, second, criteria, isActive) {
+    if (isActive && first.isVisible !== second.isVisible) {
+      return first.isVisible ? -1 : 1;
+    }
+
+    if (isActive) {
+      const sortResult = compareTikTokCardFilterEntries(first, second, criteria);
+
+      if (sortResult !== 0) {
+        return sortResult;
+      }
+    }
+
+    return (first.originalIndex ?? 0) - (second.originalIndex ?? 0);
+  }
+
   function reorderTikTokCardFilterEntries(entries) {
     const groups = new Map();
 
     for (const entry of entries) {
-      const displayTarget = getTikTokCardFilterDisplayTarget(entry.target);
+      const displayTarget = entry.displayTarget || getTikTokCardFilterDisplayTarget(entry.target);
       const parent = displayTarget?.parentNode;
 
       if (!parent?.insertBefore || getTikTokCardParentChildren(parent).length === 0) {
@@ -3340,11 +3455,21 @@
     let matchedCount = 0;
     let totalCount = 0;
     const entries = [];
+    const seenDisplayTargets = new Set();
 
     for (const { itemId, target } of collectTikTokCardMetricTargets(rootRef, surface)) {
       const item = getCachedTikTokItem(itemId);
       const record = item ? getTikTokCardFilterRecord(item, nowMs) : null;
       const isVisible = !isActive || (item && isTikTokCardMatchingFilter(item, nowMs, normalizedCriteria));
+      const displayTarget = getTikTokCardFilterDisplayTarget(target);
+
+      if (displayTarget && seenDisplayTargets.has(displayTarget)) {
+        continue;
+      }
+
+      if (displayTarget) {
+        seenDisplayTargets.add(displayTarget);
+      }
 
       totalCount += 1;
       if (isVisible) {
@@ -3352,16 +3477,18 @@
       }
 
       entries.push({
+        displayTarget,
         isVisible,
+        originalIndex: getTikTokCardOriginalOrder(displayTarget?.parentNode, displayTarget),
         record,
         target,
       });
     }
 
     entries
-      .sort((first, second) => compareTikTokCardFilterEntries(first, second, normalizedCriteria))
+      .sort((first, second) => compareTikTokCardFilterResultEntries(first, second, normalizedCriteria, isActive))
       .forEach((entry, index) => {
-        const displayTarget = getTikTokCardFilterDisplayTarget(entry.target);
+        const displayTarget = entry.displayTarget || getTikTokCardFilterDisplayTarget(entry.target);
 
         if (displayTarget?.style) {
           displayTarget.style.order = String(index);
@@ -3583,16 +3710,24 @@
     return label;
   }
 
+  function getTikTokCardFilterNumberFieldConfig(key) {
+    return TIKTOK_CARD_FILTER_NUMBER_FIELDS[key] ?? {};
+  }
+
   function createTikTokCardFilterNumberInput(documentRef, controls, key, labelText) {
     const input = documentRef.createElement("input");
+    const config = getTikTokCardFilterNumberFieldConfig(key);
 
     input.type = "text";
     input.inputMode = "decimal";
-    input.placeholder = "如 5000 / 5k / 500万";
+    input.placeholder = config.placeholder || "如 5000 / 5k / 500万";
+    input.dataset.bareMultiplier = String(config.bareMultiplier ?? 1);
+    input.dataset.displayDivisor = String(config.displayDivisor ?? 1);
     input.dataset.filterKey = key;
+    input.dataset.numberInput = "true";
     controls[key] = input;
 
-    return createTikTokCardFilterField(documentRef, labelText, input);
+    return createTikTokCardFilterField(documentRef, labelText, input, config.helpText);
   }
 
   function createTikTokCardFilterDateInput(documentRef, controls, key, labelText) {
@@ -3622,6 +3757,25 @@
     return createTikTokCardFilterField(documentRef, labelText, select);
   }
 
+  function formatTikTokCardFilterNumberControlValue(control, value) {
+    if (value === null || typeof value === "undefined") {
+      return "";
+    }
+
+    const numericValue = Number(value);
+
+    if (!Number.isFinite(numericValue)) {
+      return String(value);
+    }
+
+    const displayDivisor = Number(control?.dataset?.displayDivisor) || 1;
+    const displayValue = displayDivisor > 1 ? numericValue / displayDivisor : numericValue;
+
+    return Number.isInteger(displayValue)
+      ? String(displayValue)
+      : String(Number(displayValue.toFixed(4)));
+  }
+
   function setTikTokCardFilterControlValue(control, value) {
     if (!control) {
       return;
@@ -3632,11 +3786,18 @@
       return;
     }
 
+    if (control.dataset?.numberInput === "true") {
+      control.value = formatTikTokCardFilterNumberControlValue(control, value);
+      return;
+    }
+
     control.value = value === null || typeof value === "undefined" ? "" : String(value);
   }
 
   function readTikTokCardFilterControlNumber(control) {
-    return normalizeTikTokCardFilterNumber(control?.value);
+    return normalizeTikTokCardFilterNumber(control?.value, {
+      bareMultiplier: Number(control?.dataset?.bareMultiplier) || 1,
+    });
   }
 
   function formatTikTokCardDateInput(date) {
@@ -3894,7 +4055,9 @@
     function updateSummary({ matchedCount = 0, totalCount = 0 } = {}, criteria = {}) {
       summary.textContent = `已显示 ${matchedCount}/${totalCount}`;
       root.classList?.toggle?.("is-active", hasActiveTikTokCardFilter(criteria));
-      updateQuickState(criteria);
+      if (panel.hidden) {
+        updateQuickState(criteria);
+      }
     }
 
     controls.minCreateDate.addEventListener("input", setManualTimeMode);
@@ -3908,7 +4071,7 @@
         activePotential = key === "all" ? "" : key;
         const minLikeRate = getTikTokCardMinimumLikeRateForPotential(activePotential);
 
-        controls.minLikeRate.value = minLikeRate === null ? "" : String(minLikeRate);
+        controls.minLikeRate.value = formatTikTokCardFilterNumberControlValue(controls.minLikeRate, minLikeRate);
         updateQuickState(readCriteria());
       });
     }
@@ -4034,6 +4197,8 @@
         return;
       }
 
+      let shouldSyncCriteria = false;
+
       if (!filterParts) {
         filterParts = createTikTokCardFilterControl(documentRef, {
           onApply: setFilterCriteria,
@@ -4041,10 +4206,13 @@
           onReset: resetFilterCriteria,
         });
         documentRef.body?.append?.(filterParts.root);
+        shouldSyncCriteria = true;
       }
 
       filterParts.root.dataset.surface = surface;
-      filterParts.syncCriteria(filterCriteria);
+      if (shouldSyncCriteria) {
+        filterParts.syncCriteria(filterCriteria);
+      }
     }
 
     function updateFilterSummary(result) {

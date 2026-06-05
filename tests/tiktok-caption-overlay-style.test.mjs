@@ -58,6 +58,8 @@ describe("TikTok caption overlay style", () => {
     assert.match(source, /排序条件三/);
     assert.match(source, /最低每小时点赞量/);
     assert.match(source, /最低总点赞量/);
+    assert.match(source, /默认单位 K/);
+    assert.match(source, /默认单位 万/);
     assert.match(source, /加载更多/);
     assert.doesNotMatch(source, /加载更多并排序/);
     assert.match(source, /TIKTOK_CARD_SORT_FIELD_OPTIONS/);

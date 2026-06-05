@@ -4346,7 +4346,7 @@ describe("TikTok caption content", () => {
     assert.equal(links[1].style.display, "");
   });
 
-  it("filters shorthand like-rate input, hides whole cards, and sorts by selected fields", async () => {
+  it("filters shorthand like-rate input, moves matched cards first, and restores original order", async () => {
     const {
       createTikTokCardMetricsOverlay,
       ingestTikTokApiPayload,
@@ -4360,8 +4360,8 @@ describe("TikTok caption content", () => {
           createTime,
           id: "9511111111",
           stats: {
-            diggCount: 90000,
-            playCount: 2500000,
+            diggCount: 60000,
+            playCount: 1800000,
           },
           video: { duration: 70 },
         },
@@ -4369,8 +4369,8 @@ describe("TikTok caption content", () => {
           createTime,
           id: "9522222222",
           stats: {
-            diggCount: 210000,
-            playCount: 1800000,
+            diggCount: 90000,
+            playCount: 2500000,
           },
           video: { duration: 70 },
         },
@@ -4429,12 +4429,24 @@ describe("TikTok caption content", () => {
     assert.equal(cards[0].card.style.display, "");
     assert.equal(cards[1].card.style.display, "");
     assert.equal(cards[2].card.style.display, "none");
+    assert.notEqual(cards[2].link.style.display, "none");
+    assert.deepEqual(Array.from(grid.children).map((card) => card.children[0].href), [
+      "https://www.tiktok.com/@demo/video/9522222222",
+      "https://www.tiktok.com/@demo/video/9511111111",
+      "https://www.tiktok.com/@demo/video/9533333333",
+    ]);
+    assert.equal(overlay.filterSummary.textContent.includes("2/3"), true);
+
+    overlay.resetFilterCriteria();
+
+    assert.equal(cards[0].card.style.display, "");
+    assert.equal(cards[1].card.style.display, "");
+    assert.equal(cards[2].card.style.display, "");
     assert.deepEqual(Array.from(grid.children).map((card) => card.children[0].href), [
       "https://www.tiktok.com/@demo/video/9511111111",
       "https://www.tiktok.com/@demo/video/9522222222",
       "https://www.tiktok.com/@demo/video/9533333333",
     ]);
-    assert.equal(overlay.filterSummary.textContent.includes("2/3"), true);
   });
 
   it("uses a compact floating filter button with potential presets and selectable sort fields", async () => {
@@ -4501,10 +4513,18 @@ describe("TikTok caption content", () => {
     assert.match(overlay.filterRoot.textContent, /排序条件三/u);
     assert.match(overlay.filterRoot.textContent, /最低每小时点赞量/u);
     assert.match(overlay.filterRoot.textContent, /最低总点赞量/u);
+    assert.match(overlay.filterRoot.textContent, /默认单位 K/u);
+    assert.match(overlay.filterRoot.textContent, /默认单位 万/u);
     assert.match(overlay.filterRoot.textContent, /加载更多/u);
 
     findElementByText(document, "button", "高").click();
-    assert.equal(findControlByKey(document, "minLikeRate").value, "10000");
+    assert.equal(findControlByKey(document, "minLikeRate").value, "10");
+    overlay.refresh();
+    assert.equal(findControlByKey(document, "minLikeRate").value, "10");
+
+    findControlByKey(document, "minLikeRate").value = "12";
+    overlay.refresh();
+    assert.equal(findControlByKey(document, "minLikeRate").value, "12");
 
     findElementByText(document, "button", "全部").click();
     assert.equal(findControlByKey(document, "minLikeRate").value, "");
@@ -4517,6 +4537,72 @@ describe("TikTok caption content", () => {
     assert.equal(links[2].style.display, "none");
     assert.equal(overlay.filterSummary.textContent.includes("2/3"), true);
     assert.equal(overlay.filterPanel.hidden, true);
+  });
+
+  it("uses field default units for card filter number inputs without overriding explicit units", async () => {
+    const {
+      createTikTokCardMetricsOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+    const now = Date.UTC(2026, 4, 26, 0, 0, 0);
+    const createTime = Math.floor((now - 10 * 3600000) / 1000);
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          createTime,
+          id: "9811111111",
+          stats: {
+            diggCount: 60000,
+            playCount: 600000,
+          },
+          video: { duration: 70 },
+        },
+        {
+          createTime,
+          id: "9822222222",
+          stats: {
+            diggCount: 6000,
+            playCount: 6000000,
+          },
+          video: { duration: 70 },
+        },
+      ],
+    });
+
+    const { document, links } = createMetricsDocumentHarness({
+      cards: [
+        "https://www.tiktok.com/@demo/video/9811111111",
+        "https://www.tiktok.com/@demo/video/9822222222",
+      ],
+      surface: "liked",
+    });
+    const overlay = createTikTokCardMetricsOverlay({
+      document,
+      now: () => now,
+      setInterval: null,
+    });
+
+    overlay.refresh();
+    findElementByText(document, "button", "筛选").click();
+    findControlByKey(document, "minLikeRate").value = "5";
+    findControlByKey(document, "minDiggCount").value = "5";
+    findControlByKey(document, "minPlayCount").value = "5";
+    findControlByKey(document, "minPlayRate").value = "5";
+    findElementByText(document, "button", "应用筛选").click();
+
+    assert.equal(links[0].style.display, "");
+    assert.equal(links[1].style.display, "none");
+    assert.equal(overlay.filterSummary.textContent.includes("1/2"), true);
+
+    overlay.resetFilterCriteria();
+    findControlByKey(document, "minDiggCount").value = "5k";
+    findControlByKey(document, "minPlayCount").value = "500万";
+    findElementByText(document, "button", "应用筛选").click();
+
+    assert.equal(links[0].style.display, "none");
+    assert.equal(links[1].style.display, "");
+    assert.equal(overlay.filterSummary.textContent.includes("1/2"), true);
   });
 
   it("filters cards by an inclusive publish date range", async () => {
