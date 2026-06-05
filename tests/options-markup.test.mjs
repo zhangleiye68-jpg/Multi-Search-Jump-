@@ -10,26 +10,17 @@ describe("options markup", () => {
     assert.match(html, /<nav[^>]+class="options-sidebar"/);
     assert.match(
       html,
-      /href="#settings-search"[\s\S]*>搜索<[\s\S]*href="#settings-display"[\s\S]*>显示<[\s\S]*href="#settings-shortcuts"[\s\S]*>快捷键<[\s\S]*href="#settings-targets"[\s\S]*>搜索网站<[\s\S]*href="#settings-history"[\s\S]*>历史记录<[\s\S]*href="#settings-guide"[\s\S]*>使用说明</,
+      /href="#settings-search"[\s\S]*>搜索<[\s\S]*href="#settings-captions"[\s\S]*>字幕<[\s\S]*href="#settings-download"[\s\S]*>下载<[\s\S]*href="#settings-guide"[\s\S]*>使用说明</,
     );
-    assert.match(
-      html,
-      /options-nav-index">01<[\s\S]*options-nav-index">02<[\s\S]*options-nav-index">03<[\s\S]*options-nav-index">04<[\s\S]*options-nav-index">05<[\s\S]*options-nav-index">06</,
-    );
-    assert.match(
-      html,
-      /module-index">01<[\s\S]*id="settings-search-heading"[\s\S]*module-index">02<[\s\S]*id="settings-display-heading"[\s\S]*module-index">03<[\s\S]*id="settings-shortcuts-heading"[\s\S]*module-index">04<[\s\S]*id="settings-targets-heading"[\s\S]*module-index">05<[\s\S]*id="settings-history-heading"[\s\S]*module-index">06<[\s\S]*id="settings-guide-heading"/,
-    );
-    assert.match(
-      html,
-      /subsection-index">1\.1<[\s\S]*id="options-search-heading"[\s\S]*subsection-index">1\.2<[\s\S]*id="search-behavior-heading"[\s\S]*subsection-index">1\.3<[\s\S]*id="google-search-heading"[\s\S]*subsection-index">2\.1<[\s\S]*id="popup-display-heading"[\s\S]*subsection-index">2\.2<[\s\S]*id="side-panel-heading"[\s\S]*subsection-index">2\.3<[\s\S]*id="tiktok-caption-heading"[\s\S]*subsection-index">2\.4<[\s\S]*id="download-sites-heading"[\s\S]*subsection-index">3\.1<[\s\S]*id="selection-shortcut-heading"[\s\S]*subsection-index">4\.1<[\s\S]*id="target-order-heading"[\s\S]*subsection-index">5\.1<[\s\S]*id="history-management-heading"[\s\S]*subsection-index">6\.1<[\s\S]*id="usage-guide-heading"/,
-    );
+    assert.doesNotMatch(html, /options-nav-index|module-index|subsection-index/);
     assert.match(html, /id="settings-search"/);
-    assert.match(html, /id="settings-display"/);
-    assert.match(html, /id="settings-shortcuts"/);
-    assert.match(html, /id="settings-targets"/);
-    assert.match(html, /id="settings-history"/);
+    assert.match(html, /id="settings-captions"/);
+    assert.match(html, /id="settings-download"/);
     assert.match(html, /id="settings-guide"/);
+    assert.doesNotMatch(html, /id="settings-display"/);
+    assert.doesNotMatch(html, /id="settings-shortcuts"/);
+    assert.doesNotMatch(html, /id="settings-targets"/);
+    assert.doesNotMatch(html, /id="settings-history"/);
     assert.match(html, /id="options-search-form"/);
     assert.match(html, /<textarea[^>]+id="options-search-input"/);
     assert.doesNotMatch(html, /<input[^>]+id="options-search-input"/);
@@ -44,6 +35,10 @@ describe("options markup", () => {
     assert.match(html, /过去 24 小时/);
     assert.match(html, /id="translate-chinese-toggle"/);
     assert.match(html, /将中文翻译成英文后搜索/);
+    assert.match(
+      html,
+      /id="settings-search"[\s\S]*id="options-search-form"[\s\S]*id="auto-close-toggle"[\s\S]*id="target-order-list"[\s\S]*id="show-popup-history-toggle"[\s\S]*id="side-panel-button"[\s\S]*id="shortcut-settings-button"[\s\S]*id="all-search-history"[\s\S]*<\/section>[\s\S]*id="settings-captions"/,
+    );
     assert.match(html, /id="show-popup-history-toggle"/);
     assert.match(html, /显示历史/);
     assert.match(
@@ -52,12 +47,27 @@ describe("options markup", () => {
     );
     assert.doesNotMatch(html, /<button id="side-panel-button"/);
     assert.match(html, /侧边栏显示/);
+    assert.match(html, /id="shortcut-settings-button"/);
+    assert.match(html, /id="target-order-list"/);
+    assert.match(html, /历史记录/);
+    assert.match(html, /id="history-filter-input"/);
+    assert.match(html, /id="clear-history-button"/);
+    assert.match(html, /id="history-table-body"/);
+    assert.match(html, /id="all-search-history"/);
+    assert.match(
+      html,
+      /id="settings-captions"[\s\S]*id="tiktok-auto-open-toggle"[\s\S]*id="tiktok-non-english-warning-toggle"[\s\S]*<\/section>[\s\S]*id="settings-download"/,
+    );
     assert.match(html, /id="tiktok-auto-open-toggle"/);
     assert.match(html, /自动打开字幕板/);
     assert.match(html, /id="tiktok-non-english-warning-toggle"/);
     assert.match(html, /非英语警示/);
     assert.match(html, /非英内容/);
     assert.doesNotMatch(html, /id="local-toolkit-page-button"/);
+    assert.match(
+      html,
+      /id="settings-download"[\s\S]*id="local-toolkit-floating-icon-toggle"[\s\S]*id="settings-download-sites"[\s\S]*<\/section>[\s\S]*id="settings-guide"/,
+    );
     assert.match(html, /id="local-toolkit-floating-icon-toggle"/);
     assert.match(html, /下载悬浮图标/);
     assert.match(html, /支持下载的网站/);
@@ -76,25 +86,18 @@ describe("options markup", () => {
     assert.doesNotMatch(html, /打开工具箱/);
     assert.doesNotMatch(html, />Local Toolkit</);
     assert.doesNotMatch(html, />固定</);
-    assert.match(html, /id="shortcut-settings-button"/);
-    assert.match(html, /id="target-order-list"/);
-    assert.match(html, /历史记录/);
-    assert.match(html, /id="history-filter-input"/);
-    assert.match(html, /id="clear-history-button"/);
-    assert.match(html, /id="history-table-body"/);
-    assert.match(html, /id="all-search-history"/);
     assert.match(html, /直接搜索/);
     assert.match(html, /搜索行为/);
     assert.match(html, /Google 搜索类型/);
     assert.match(html, /小窗口/);
     assert.match(html, /侧边栏/);
     assert.match(html, /选中文字搜索/);
-    assert.match(html, /网站开关与排序/);
-    assert.match(html, /历史管理/);
+    assert.match(html, /搜索网站与顺序/);
+    assert.match(html, /历史记录/);
     assert.match(html, /新安装后，默认启用 TikTok、Google 图片、X 和 Facebook/);
     assert.match(html, /手动关闭上一次由插件打开的搜索结果标签组/);
     assert.match(html, /小窗口只显示最近 5 条/);
-    assert.match(html, /设置页底部会显示全部历史记录/);
+    assert.match(html, /「搜索」里的「历史记录」会显示全部历史记录/);
     assert.match(html, /浏览器内部页面/);
     assert.match(html, /class="setting-help"/);
     assert.match(html, /data-tooltip="开启后，搜索 B 前会自动关闭搜索 A 的标签组。"/);
@@ -107,18 +110,20 @@ describe("options markup", () => {
 
     assert.match(css, /\.options-layout\s*{[\s\S]*grid-template-columns: 168px minmax\(0, 1fr\)/);
     assert.match(css, /\.options-sidebar\s*{[\s\S]*position: sticky/);
-    assert.match(css, /\.options-nav-index/);
-    assert.match(css, /\.module-index/);
-    assert.match(css, /\.subsection-index/);
-    assert.match(css, /\.settings-subsection\s*{[\s\S]*padding-left: 24px/);
-    assert.match(css, /\.settings-subsection > :not\(\.subsection-heading\)\s*{[\s\S]*margin-left: 24px/);
-    assert.match(css, /\.subsection-heading\s*{[\s\S]*display: flex/);
+    assert.doesNotMatch(css, /\.options-nav-index/);
+    assert.doesNotMatch(css, /\.module-index/);
+    assert.doesNotMatch(css, /\.subsection-index/);
+    assert.doesNotMatch(css, /\.settings-subsection/);
+    assert.match(css, /\.settings-groups\s*{/);
+    assert.match(css, /\.settings-group\s*{/);
+    assert.match(css, /\.settings-group-heading\s*{/);
+    assert.match(css, /\.guide-module\s*{/);
     assert.match(css, /\.options-nav-link\.is-active/);
     assert.match(css, /\.settings-module\s*{[\s\S]*scroll-margin-top/);
     assert.match(css, /\.setting-help:hover::after/);
     assert.match(css, /\.setting-help:focus-visible::after/);
     assert.match(css, /\.usage-guide\s*{/);
-    assert.match(css, /\.usage-guide-block h4\s*{/);
+    assert.match(css, /\.usage-guide-block h3\s*{/);
     assert.match(css, /@media \(max-width: 760px\)/);
   });
 
