@@ -1090,7 +1090,7 @@ describe("TikTok caption content", () => {
     }
   });
 
-  it("responds to open messages before the caption refresh settles", async () => {
+  it("waits for open messages to finish before returning the caption state", async () => {
     const previousChrome = globalThis.chrome;
     const previousDocument = globalThis.document;
     const previousCaptions = globalThis.MultiSearchJumpTikTokCaptions;
@@ -1145,13 +1145,17 @@ describe("TikTok caption content", () => {
           response = nextResponse;
         },
       );
-      const responseBeforeRefreshSettles = await new Promise((resolve) => {
+      const responseBeforeOpenFinishes = await new Promise((resolve) => {
         setTimeout(() => resolve(response), 0);
       });
 
+      assert.equal(responseBeforeOpenFinishes, undefined);
       setOpenDeferred.resolve();
       assert.equal(handled, true);
-      assert.deepEqual(responseBeforeRefreshSettles, { ok: true, state });
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+      assert.deepEqual(response, { ok: true, state });
     } finally {
       if (previousChrome === undefined) {
         delete globalThis.chrome;

@@ -254,14 +254,13 @@ describe("side panel caption board", () => {
     assert.deepEqual(copied, ["Fresh subtitle\n新鲜字幕"]);
   });
 
-  it("opens the floating caption board from the side panel and closes the side panel after a short delay", async () => {
+  it("opens the floating caption board from the side panel, waits for state, then closes the side panel", async () => {
     const elements = createElements();
     const events = [];
     const messages = [];
     const closedPanels = [];
     const backgroundMessages = [];
     const board = initCaptionBoardUi({
-      closeDelayMs: 120,
       document: createDocument(),
       elements,
       extensionRuntimeApi: {
@@ -283,10 +282,6 @@ describe("side panel caption board", () => {
         },
       },
       setInterval: null,
-      setTimeout(callback, delayMs) {
-        events.push(["delay", delayMs]);
-        callback();
-      },
       sidePanelApi: {
         async close(options) {
           events.push(["close", options.windowId]);
@@ -311,11 +306,12 @@ describe("side panel caption board", () => {
         [42, CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED, undefined],
         [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
         [42, SET_OPEN_MESSAGE_TYPE, true],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
       ],
     );
     assert.deepEqual(events, [
       ["message", SET_OPEN_MESSAGE_TYPE, true],
-      ["delay", 120],
+      ["message", CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
       ["close", 9],
     ]);
     assert.deepEqual(closedPanels, [{ windowId: 9 }]);

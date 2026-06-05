@@ -151,7 +151,7 @@ describe("TikTok caption background bridge", () => {
     ]);
   });
 
-  it("responds to open commands before the caption refresh settles", async () => {
+  it("waits for open commands to finish before returning the caption state", async () => {
     const state = createCaptionState();
     let resolveSetOpen;
     const setOpenPromise = new Promise((resolve) => {
@@ -178,8 +178,8 @@ describe("TikTok caption background bridge", () => {
         }),
       ]);
 
+      assert.equal(result, "pending");
       resolveSetOpen();
-      assert.deepEqual(result, { ok: true, state });
       assert.deepEqual(await resultPromise, { ok: true, state });
     });
   });
