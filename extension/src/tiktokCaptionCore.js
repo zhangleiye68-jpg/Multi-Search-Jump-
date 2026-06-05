@@ -50,6 +50,7 @@
     "div[class*='-DivItemContainerV2']",
     "div[class*='-DivItemContainerForSearch']",
     "div[id*='grid-item-container']",
+    "[data-e2e='related-video-item']",
     "[data-e2e='search_top-item']",
     "[data-e2e='search_video-item']",
     "[data-e2e='challenge-item']",
@@ -60,6 +61,12 @@
   ]);
   const TIKTOK_CARD_METRIC_SURFACE_SELECTORS = Object.freeze({
     collection: TIKTOK_CARD_METRIC_PROFILE_SELECTORS,
+    detailRelated: [
+      "[data-e2e='related-video-item']",
+      "[data-e2e='related-video-list'] [data-e2e='related-video-item']",
+      "[data-e2e='recommend-list-item']",
+      "[data-e2e='recommend-item']",
+    ],
     liked: TIKTOK_CARD_METRIC_PROFILE_SELECTORS,
     music: [
       "[data-e2e='music-item-list'] [data-e2e='music-item']",
@@ -97,6 +104,7 @@
   const DISPLAY_MODE_STORAGE_KEY = "tiktokCaptionDisplayMode";
   const NON_ENGLISH_WARNING_STORAGE_KEY = "tiktokCaptionNonEnglishWarningEnabled";
   const AUTO_OPEN_STORAGE_KEY = "tiktokCaptionAutoOpenEnabled";
+  const CARD_METRICS_ENABLED_STORAGE_KEY = "tiktokCardMetricsEnabled";
   const FONT_SCALE_STORAGE_KEY = "tiktokCaptionFontScale";
   const BUTTON_POSITION_STORAGE_KEY = "tiktokCaptionButtonPosition";
   const PANEL_FRAME_STORAGE_KEY = "tiktokCaptionPanelFrame";
@@ -104,6 +112,7 @@
   const DEFAULT_DISPLAY_MODE = DISPLAY_MODES.bilingual;
   const DEFAULT_NON_ENGLISH_WARNING_ENABLED = true;
   const DEFAULT_AUTO_OPEN_ENABLED = false;
+  const DEFAULT_CARD_METRICS_ENABLED = true;
   const DEFAULT_FONT_SCALE = 100;
   const MIN_FONT_SCALE = 80;
   const MAX_FONT_SCALE = 160;
@@ -2397,6 +2406,19 @@
     };
   }
 
+  async function getStoredTikTokCardMetricsEnabled(storageArea) {
+    if (!storageArea?.get) {
+      return DEFAULT_CARD_METRICS_ENABLED;
+    }
+
+    const values = await storageArea.get(CARD_METRICS_ENABLED_STORAGE_KEY);
+
+    return normalizeBooleanSetting(
+      values?.[CARD_METRICS_ENABLED_STORAGE_KEY],
+      DEFAULT_CARD_METRICS_ENABLED,
+    );
+  }
+
   async function saveStoredOverlayValue(storageArea, key, value) {
     if (!storageArea?.set) {
       return;
@@ -2678,7 +2700,7 @@
     }
 
     if (/^\/@[^/]+\/(?:video|photo)\/\d{5,}/u.test(pathname)) {
-      return "";
+      return "detailRelated";
     }
 
     if (!isTikTokProfilePage(documentRef, rootRef)) {
@@ -4181,6 +4203,8 @@
     setInterval: setIntervalRef = getDefaultSetInterval(),
     clearInterval: clearIntervalRef = getDefaultClearInterval(),
     setTimeout: setTimeoutRef = getDefaultSetTimeout(),
+    storageArea = getDefaultStorageArea(),
+    cardMetricsEnabled = DEFAULT_CARD_METRICS_ENABLED,
     scanIntervalMs = TIKTOK_CARD_METRIC_SCAN_INTERVAL_MS,
   } = {}) {
     if (documentRef.__msjTikTokCardMetricsOverlay) {
@@ -4191,6 +4215,66 @@
     let destroyed = false;
     let filterCriteria = getDefaultTikTokCardFilterCriteria();
     let filterParts = null;
+    let isCardMetricsEnabled = cardMetricsEnabled !== false;
+    let removeStorageChangeListener = null;
+
+    function clearRenderedCardMetrics() {
+      const rootRef = getRoot();
+
+      clearTikTokCardFilterState(rootRef);
+      removeTikTokCardFilterControl(documentRef, filterParts);
+      filterParts = null;
+      clearTikTokCardMetrics(rootRef);
+    }
+
+    function setCardMetricsEnabled(enabled) {
+      isCardMetricsEnabled = enabled !== false;
+
+      if (!isCardMetricsEnabled) {
+        clearRenderedCardMetrics();
+        return 0;
+      }
+
+      return refresh();
+    }
+
+    function handleStorageChange(changes, areaName) {
+      if (areaName && areaName !== "local") {
+        return;
+      }
+
+      const change = changes?.[CARD_METRICS_ENABLED_STORAGE_KEY];
+
+      if (!change) {
+        return;
+      }
+
+      setCardMetricsEnabled(change.newValue !== false);
+    }
+
+    function bindStorageChangeListener() {
+      const onChanged = globalThis.chrome?.storage?.onChanged;
+
+      if (!onChanged?.addListener) {
+        return;
+      }
+
+      onChanged.addListener(handleStorageChange);
+      removeStorageChangeListener = () => {
+        onChanged.removeListener?.(handleStorageChange);
+      };
+    }
+
+    async function syncCardMetricsEnabledFromStorage() {
+      try {
+        return setCardMetricsEnabled(
+          await getStoredTikTokCardMetricsEnabled(storageArea),
+        );
+      } catch (error) {
+        console.error(error);
+        return refresh();
+      }
+    }
 
     function ensureFilterControl(surface) {
       if (!surface) {
@@ -4240,6 +4324,11 @@
         return 0;
       }
 
+      if (!isCardMetricsEnabled) {
+        clearRenderedCardMetrics();
+        return 0;
+      }
+
       const rootRef = getRoot();
       const nowMs = now();
       const surface = getTikTokCardMetricsSurface(documentRef, rootRef);
@@ -4254,12 +4343,26 @@
       return renderedCount;
     }
 
-    function start() {
-      refresh();
-
+    function startRefreshTimer() {
       if (setIntervalRef && scanIntervalMs > 0) {
         refreshTimer = setIntervalRef(refresh, scanIntervalMs);
       }
+    }
+
+    function start() {
+      bindStorageChangeListener();
+
+      if (storageArea?.get) {
+        syncCardMetricsEnabledFromStorage().finally(() => {
+          if (!destroyed) {
+            startRefreshTimer();
+          }
+        });
+        return;
+      }
+
+      refresh();
+      startRefreshTimer();
     }
 
     function destroy() {
@@ -4267,10 +4370,8 @@
       if (refreshTimer !== null) {
         clearIntervalRef?.(refreshTimer);
       }
-      clearTikTokCardFilterState(getRoot());
-      removeTikTokCardFilterControl(documentRef, filterParts);
-      filterParts = null;
-      clearTikTokCardMetrics(getRoot());
+      removeStorageChangeListener?.();
+      clearRenderedCardMetrics();
       activeTikTokCardMetricsOverlays.delete(overlay);
       if (documentRef.__msjTikTokCardMetricsOverlay === overlay) {
         delete documentRef.__msjTikTokCardMetricsOverlay;
@@ -4292,6 +4393,7 @@
       refreshAfterTikTokApiPayload: refresh,
       loadMore,
       resetFilterCriteria,
+      setCardMetricsEnabled,
       setFilterCriteria,
     };
 

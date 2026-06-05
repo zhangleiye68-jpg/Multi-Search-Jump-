@@ -22,6 +22,7 @@ import { openShortcutSettings } from "../src/shortcutSettings.js";
 
 const TIKTOK_NON_ENGLISH_WARNING_KEY = "tiktokCaptionNonEnglishWarningEnabled";
 const TIKTOK_AUTO_OPEN_KEY = "tiktokCaptionAutoOpenEnabled";
+const TIKTOK_CARD_METRICS_ENABLED_KEY = "tiktokCardMetricsEnabled";
 const storageArea = chrome.storage.local;
 const allSearchHistory = document.querySelector("#all-search-history");
 const allSearchHistoryEmpty = document.querySelector("#all-search-history-empty");
@@ -44,6 +45,7 @@ const sidePanelButton = document.querySelector("#side-panel-button");
 const localToolkitFloatingIconToggle = document.querySelector("#local-toolkit-floating-icon-toggle");
 const targetOrderList = document.querySelector("#target-order-list");
 const tiktokAutoOpenToggle = document.querySelector("#tiktok-auto-open-toggle");
+const tiktokCardMetricsToggle = document.querySelector("#tiktok-card-metrics-toggle");
 const tiktokNonEnglishWarningToggle = document.querySelector("#tiktok-non-english-warning-toggle");
 const translateChineseToggle = document.querySelector("#translate-chinese-toggle");
 const statusMessage = document.querySelector("#status-message");
@@ -58,6 +60,7 @@ let optionsSearchUi = null;
 let allHistoryRecords = [];
 let showPopupSearchHistory = true;
 let tiktokCaptionAutoOpenEnabled = false;
+let tiktokCardMetricsEnabled = true;
 let tiktokCaptionNonEnglishWarningEnabled = true;
 let localToolkitFloatingIconEnabled = true;
 
@@ -164,6 +167,12 @@ async function getTikTokAutoOpenEnabled() {
   return result[TIKTOK_AUTO_OPEN_KEY] === true;
 }
 
+async function getTikTokCardMetricsEnabled() {
+  const result = await storageArea.get(TIKTOK_CARD_METRICS_ENABLED_KEY);
+
+  return result[TIKTOK_CARD_METRICS_ENABLED_KEY] !== false;
+}
+
 async function saveTikTokNonEnglishWarningEnabled(enabled) {
   const normalizedEnabled = Boolean(enabled);
 
@@ -179,6 +188,16 @@ async function saveTikTokAutoOpenEnabled(enabled) {
 
   await storageArea.set({
     [TIKTOK_AUTO_OPEN_KEY]: normalizedEnabled,
+  });
+
+  return normalizedEnabled;
+}
+
+async function saveTikTokCardMetricsEnabled(enabled) {
+  const normalizedEnabled = Boolean(enabled);
+
+  await storageArea.set({
+    [TIKTOK_CARD_METRICS_ENABLED_KEY]: normalizedEnabled,
   });
 
   return normalizedEnabled;
@@ -482,6 +501,7 @@ function render() {
   localToolkitFloatingIconToggle.checked = localToolkitFloatingIconEnabled;
   showPopupHistoryToggle.checked = showPopupSearchHistory;
   tiktokAutoOpenToggle.checked = tiktokCaptionAutoOpenEnabled;
+  tiktokCardMetricsToggle.checked = tiktokCardMetricsEnabled;
   tiktokNonEnglishWarningToggle.checked = tiktokCaptionNonEnglishWarningEnabled;
   translateChineseToggle.checked = settings.translateChineseToEnglish;
   renderTargetList();
@@ -532,6 +552,19 @@ tiktokAutoOpenToggle.addEventListener("change", async () => {
   } catch (error) {
     console.error(error);
     tiktokAutoOpenToggle.checked = tiktokCaptionAutoOpenEnabled;
+    setStatus("设置保存失败，请重新尝试。", "error");
+  }
+});
+
+tiktokCardMetricsToggle.addEventListener("change", async () => {
+  try {
+    tiktokCardMetricsEnabled =
+      await saveTikTokCardMetricsEnabled(tiktokCardMetricsToggle.checked);
+    tiktokCardMetricsToggle.checked = tiktokCardMetricsEnabled;
+    setStatus("设置已保存。");
+  } catch (error) {
+    console.error(error);
+    tiktokCardMetricsToggle.checked = tiktokCardMetricsEnabled;
     setStatus("设置保存失败，请重新尝试。", "error");
   }
 });
@@ -696,6 +729,7 @@ initOptionsNavigation();
 
 showPopupSearchHistory = await getShowPopupSearchHistory(storageArea);
 tiktokCaptionAutoOpenEnabled = await getTikTokAutoOpenEnabled();
+tiktokCardMetricsEnabled = await getTikTokCardMetricsEnabled();
 tiktokCaptionNonEnglishWarningEnabled = await getTikTokNonEnglishWarningEnabled();
 localToolkitFloatingIconEnabled = await getLocalToolkitFloatingIconEnabled(storageArea);
 settings = await getSearchSettings(storageArea);

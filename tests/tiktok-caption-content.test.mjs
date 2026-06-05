@@ -547,11 +547,13 @@ function createMetricsDocumentHarness({ cards = [], surface = "liked" } = {}) {
 function createMetricsSurfaceDocumentHarness({ cards = [], surface }) {
   const document = createDocumentHarness();
   const dataE2eBySurface = {
+    detailRelated: "related-video-item",
     music: "music-item",
     search: "search_video-item",
     tag: "challenge-item",
   };
   const locationPathBySurface = {
+    detailRelated: "/@demo/video/9999999999",
     music: "/music/demo-song-123",
     search: "/search/video?q=demo",
     tag: "/tag/demo",
@@ -565,6 +567,7 @@ function createMetricsSurfaceDocumentHarness({ cards = [], surface }) {
   };
   document.querySelectorAll = (selector) => {
     if (
+      (surface === "detailRelated" && selector.includes("related-video-item")) ||
       (surface === "search" && selector.includes("search_video-item")) ||
       (surface === "tag" && selector.includes("challenge-item")) ||
       (surface === "music" && selector.includes("music-item"))
@@ -4361,6 +4364,44 @@ describe("TikTok caption content", () => {
     }
   });
 
+  it("renders TikTok card metrics on detail-page related video list cards", async () => {
+    const {
+      createTikTokCardMetricsOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "4444444444",
+          stats: {
+            diggCount: 15000,
+            playCount: 60000,
+          },
+          video: {
+            duration: 88,
+          },
+        },
+      ],
+    });
+
+    const { cards, document } = createMetricsSurfaceDocumentHarness({
+      cards: ["https://www.tiktok.com/@demo/video/4444444444"],
+      surface: "detailRelated",
+    });
+    const overlay = createTikTokCardMetricsOverlay({
+      document,
+      mutationObserverClass: null,
+      setInterval: null,
+    });
+
+    assert.equal(overlay.refresh(), 1);
+    assert.equal(
+      cards[0].children.some((child) => child.classList.contains("msj-tiktok-card-metrics")),
+      true,
+    );
+  });
+
   it("adds lightweight TikTok card filter controls only on supported card surfaces", async () => {
     const { createTikTokCardMetricsOverlay } = await loadCaptionCore();
     const supported = createMetricsDocumentHarness({
@@ -4396,6 +4437,52 @@ describe("TikTok caption content", () => {
       unsupported.document.body.children.some((child) =>
         child.classList.contains("msj-tiktok-card-filter"),
       ),
+      false,
+    );
+  });
+
+  it("clears TikTok card metrics and filter controls when the setting is disabled", async () => {
+    const {
+      createTikTokCardMetricsOverlay,
+      ingestTikTokApiPayload,
+    } = await loadCaptionCore();
+
+    ingestTikTokApiPayload({
+      itemList: [
+        {
+          id: "7777777777",
+          stats: {
+            diggCount: 10000,
+            playCount: 100000,
+          },
+          video: {
+            duration: 80,
+          },
+        },
+      ],
+    });
+
+    const { document, links } = createMetricsDocumentHarness({
+      cards: ["https://www.tiktok.com/@demo/video/7777777777"],
+      surface: "liked",
+    });
+    const overlay = createTikTokCardMetricsOverlay({
+      document,
+      mutationObserverClass: null,
+      setInterval: null,
+    });
+
+    assert.equal(overlay.refresh(), 1);
+    assert.ok(overlay.filterRoot);
+    assert.equal(
+      links[0].children.some((child) => child.classList.contains("msj-tiktok-card-metrics")),
+      true,
+    );
+
+    assert.equal(overlay.setCardMetricsEnabled(false), 0);
+    assert.equal(overlay.filterRoot, null);
+    assert.equal(
+      links[0].children.some((child) => child.classList.contains("msj-tiktok-card-metrics")),
       false,
     );
   });

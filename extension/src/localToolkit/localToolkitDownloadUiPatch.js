@@ -11,6 +11,10 @@
     border: "#BBF7D0",
     text: "#166534"
   };
+  const DOWNLOAD_FLOATING_BALL_THEME = {
+    background: "transparent",
+    border: "transparent"
+  };
 
   const STYLE_ID = "msj-local-download-green-ui";
   const GREEN_DOWNLOAD_ICON_PATH = "assets/localToolkit/image/download-green.svg";
@@ -142,18 +146,21 @@
 
 .overview_new_download_button,
 .overview_download_button {
-  background-color: var(--msj-download-green-primary) !important;
-  border-color: var(--msj-download-green-border) !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
   color: #FFFFFF !important;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.28) !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  overflow: visible !important;
 }
 
 .overview_new_download_button:hover,
 .overview_new_download_button:focus,
 .overview_download_button:hover,
 .overview_download_button:focus {
-  background-color: var(--msj-download-green-hover) !important;
-  border-color: var(--msj-download-green-hover) !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
 }
 
 .overview_new_download_button img,
@@ -162,7 +169,7 @@
   width: 100% !important;
   height: 100% !important;
   border-radius: 50% !important;
-  object-fit: cover !important;
+  object-fit: contain !important;
 }
 
 .tiktok-user-btn-group,
@@ -382,10 +389,13 @@
 
   function styleFloatingDownloadButton(element) {
     if (!element?.style) return;
-    element.style.setProperty("background-color", DOWNLOAD_GREEN_THEME.primary, "important");
-    element.style.setProperty("border-color", DOWNLOAD_GREEN_THEME.border, "important");
+    element.style.setProperty("background-color", DOWNLOAD_FLOATING_BALL_THEME.background, "important");
+    element.style.setProperty("border-color", DOWNLOAD_FLOATING_BALL_THEME.border, "important");
     element.style.setProperty("color", "#FFFFFF", "important");
-    element.style.setProperty("box-shadow", "0 2px 8px rgba(22, 163, 74, 0.28)", "important");
+    element.style.setProperty("box-shadow", "none", "important");
+    element.style.setProperty("padding", "0", "important");
+    element.style.setProperty("border-radius", "50%", "important");
+    element.style.setProperty("overflow", "visible", "important");
   }
 
   function replaceLocalToolkitFloatingIcon(rootNode) {

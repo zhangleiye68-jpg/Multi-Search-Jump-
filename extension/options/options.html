@@ -311,6 +311,25 @@
                     </span>
                   </span>
                 </label>
+                <label class="switch-setting" for="tiktok-card-metrics-toggle">
+                  <span class="setting-label">
+                    <span class="setting-title-row">
+                      <span class="setting-title">视频列表显示数据指标</span>
+                      <span
+                        class="setting-help"
+                        tabindex="0"
+                        aria-label="说明：开启后，在支持的 TikTok 视频列表卡片上显示权重评价、每小时点赞量、总播放量、每小时播放量和发布时长。"
+                        data-tooltip="开启后，在支持的 TikTok 视频列表卡片上显示权重评价、每小时点赞量、总播放量、每小时播放量和发布时长。"
+                      >!</span>
+                    </span>
+                  </span>
+                  <span class="switch-control">
+                    <input id="tiktok-card-metrics-toggle" type="checkbox">
+                    <span class="switch-track" aria-hidden="true">
+                      <span class="switch-thumb"></span>
+                    </span>
+                  </span>
+                </label>
                 <label class="switch-setting" for="tiktok-non-english-warning-toggle">
                   <span class="setting-label">
                     <span class="setting-title-row">
@@ -404,62 +423,82 @@
           >
             <div class="module-heading">
               <h2 id="settings-guide-heading">使用说明</h2>
-              <p>查看插件的常用搜索方式、历史记录入口和注意事项。</p>
+              <p>查看插件支持的窗口、主要按钮和每个入口的大致功能。</p>
             </div>
 
             <div class="usage-guide">
-              <section class="usage-guide-block" aria-labelledby="usage-search-heading">
-                <h3 id="usage-search-heading">常用搜索</h3>
-                <ol>
-                  <li>点击浏览器右上角的 Multi Search Jump 图标。</li>
-                  <li>输入关键词后按 Enter，或点击「搜索」。</li>
-                  <li>插件会自动打开已启用网站的搜索结果页。</li>
-                </ol>
-                <p>新安装后，默认启用 TikTok、Google 图片、X 和 Facebook，Google 默认使用过去 24 小时筛选。其他平台可以在「搜索」里的「搜索网站与顺序」开启。</p>
-              </section>
-
-              <section class="usage-guide-block" aria-labelledby="usage-entry-heading">
-                <h3 id="usage-entry-heading">搜索入口与网站</h3>
+              <section class="usage-guide-block" aria-labelledby="usage-windows-heading">
+                <h3 id="usage-windows-heading">支持的窗口</h3>
                 <ul>
-                  <li>弹窗右上角的侧边栏图标可以打开右侧搜索面板。</li>
-                  <li>「搜索行为」里可以手动关闭上一次由插件打开的搜索结果标签组。</li>
-                  <li>「搜索网站与顺序」里可以开启或关闭平台，并拖动调整打开顺序。</li>
-                  <li>「Google 搜索类型」里可以切换图片搜索和过去 24 小时搜索。</li>
+                  <li>插件小窗口：输入关键词、发起搜索、打开侧边栏、打开设置、查看最近历史。</li>
+                  <li>侧边栏：固定在浏览器右侧，用来连续搜索；在 TikTok 页面也可显示字幕看板。</li>
+                  <li>设置页：管理搜索、字幕、下载和使用说明。</li>
+                  <li>TikTok 字幕悬浮窗：在 TikTok 页面点击 CC 后查看字幕、翻译、视频介绍和视频数据。</li>
                 </ul>
               </section>
 
-              <section class="usage-guide-block" aria-labelledby="usage-history-heading">
-                <h3 id="usage-history-heading">历史记录</h3>
+              <section class="usage-guide-block" aria-labelledby="usage-popup-buttons-heading">
+                <h3 id="usage-popup-buttons-heading">插件小窗口按钮</h3>
                 <ul>
-                  <li>开启「小窗口显示历史」后，小窗口只显示最近 5 条。</li>
-                  <li>小窗口不通过上滑下滑展开更多历史。</li>
-                  <li>「搜索」里的「历史记录」会显示全部历史记录，可以查找、重新搜索、删除单条记录或清空全部历史。</li>
-                  <li>历史记录不做去重，你搜过什么，就按实际搜索记录保存什么。</li>
+                  <li>「搜索」：根据输入关键词打开已启用网站的搜索结果页。</li>
+                  <li>侧边栏按钮：打开浏览器右侧的固定搜索面板。</li>
+                  <li>设置按钮：打开插件设置页。</li>
+                  <li>历史关键词：重新搜索这条历史关键词；旁边的 × 可以删除这一条历史。</li>
+                </ul>
+                <p>新安装后，默认启用 TikTok、Google 图片、X 和 Facebook，并按这个顺序打开；Google 默认使用过去 24 小时筛选。</p>
+              </section>
+
+              <section class="usage-guide-block" aria-labelledby="usage-sidebar-buttons-heading">
+                <h3 id="usage-sidebar-buttons-heading">侧边栏按钮</h3>
+                <ul>
+                  <li>「搜索」：在右侧面板里直接发起多平台搜索。</li>
+                  <li>设置按钮：打开插件设置页。</li>
+                  <li>「原版 / 原+中 / 中文」：切换 TikTok 字幕显示方式。</li>
+                  <li>「打开字幕悬浮窗」：把 TikTok 字幕看板切回页面上的悬浮窗。</li>
+                  <li>「- / +」：缩小或放大字幕文字。</li>
+                  <li>「刷新字幕 / 复制全部 / 复制原文」：重新读取字幕、复制字幕或复制视频介绍原文。</li>
                 </ul>
               </section>
 
-              <section class="usage-guide-block" aria-labelledby="usage-selection-heading">
-                <h3 id="usage-selection-heading">选中文字搜索</h3>
+              <section class="usage-guide-block" aria-labelledby="usage-settings-buttons-heading">
+                <h3 id="usage-settings-buttons-heading">设置页按钮和开关</h3>
                 <ul>
-                  <li>在网页里选中文字后，可以右键点击「用 Multi Search Jump 搜索」。</li>
-                  <li>也可以按快捷键 Alt+1 搜索选中文字；Mac 上默认是 Option+1。</li>
-                  <li>如果想修改快捷键，点击「设置快捷键」后在浏览器快捷键页面调整。</li>
+                  <li>「新搜索前关闭上次结果」：新搜索时自动关闭上一次由插件打开的标签组。</li>
+                  <li>「关闭上次结果」：手动关闭上一次由插件打开的搜索结果标签组。</li>
+                  <li>「将中文翻译成英文后搜索」：输入中文时先转成英文再搜索。</li>
+                  <li>「Google 图片搜索 / 使用过去 24 小时搜索」：控制 Google 搜索类型。</li>
+                  <li>「搜索网站与顺序」：开启或关闭平台，并拖动调整打开顺序。</li>
+                  <li>「小窗口显示历史」：小窗口只显示最近 5 条；「搜索」里的「历史记录」会显示全部历史记录。</li>
+                  <li>「设置快捷键」：修改选中文字搜索快捷键，默认是 Alt+1，Mac 默认是 Option+1。</li>
+                  <li>「自动打开字幕板 / 视频列表显示数据指标 / 非英语警示」：控制 TikTok 字幕和数据指标。</li>
+                  <li>「下载悬浮图标」：控制支持网站页面上的本地下载入口。</li>
+                </ul>
+              </section>
+
+              <section class="usage-guide-block" aria-labelledby="usage-tiktok-buttons-heading">
+                <h3 id="usage-tiktok-buttons-heading">TikTok 页面按钮</h3>
+                <ul>
+                  <li>「CC」：打开 TikTok 字幕悬浮窗。</li>
+                  <li>「原版 / 原+中 / 中文」：切换字幕显示方式。</li>
+                  <li>「刷新字幕 / 复制全部 / 复制原文」：重新读取字幕、复制字幕或复制视频介绍原文。</li>
+                  <li>「筛选」：打开视频列表筛选面板。</li>
+                  <li>「全部 / 高 / 中 / 低」：按爆款评价筛选视频。</li>
+                  <li>「近24小时 / 近2天 / 近7天 / 不限时间」：按发布时间范围筛选视频。</li>
+                  <li>「加载更多 / 重置 / 应用筛选」：加载更多卡片、清空筛选条件或应用当前筛选。</li>
                 </ul>
               </section>
 
               <section class="usage-guide-block" aria-labelledby="usage-download-heading">
-                <h3 id="usage-download-heading">下载入口</h3>
-                <ul>
-                  <li>「下载」里可以查看支持下载的网站。</li>
-                  <li>「下载悬浮图标」开关控制支持网站页面上的本地下载入口。</li>
-                </ul>
+                <h3 id="usage-download-heading">下载页面入口</h3>
+                <p>支持网站页面上的「下载悬浮图标」会显示本地下载入口，可能包含视频、音频、图片、封面、字幕、评论或页面可导出的数据。能否下载成功，取决于当前网页、平台接口和登录状态。</p>
               </section>
 
               <section class="usage-guide-block" aria-labelledby="usage-notes-heading">
                 <h3 id="usage-notes-heading">注意事项</h3>
                 <ul>
                   <li>X、Facebook、TikTok、Instagram、Reddit 等平台结果，取决于当前浏览器是否已登录对应账号。</li>
-                  <li>插件只负责打开搜索结果页，不抓取内容，不绕过平台限制。</li>
+                  <li>插件只负责打开搜索结果页，不绕过平台限制。</li>
+                  <li>下载功能是本地入口，不需要额外登录旧工具服务，不提供购买、会员或云端上传能力。</li>
                   <li>浏览器内部页面，比如 chrome://extensions，通常不能使用选中文字搜索。</li>
                   <li>修改插件代码后，需要在扩展管理页点击「刷新」让新版本生效。</li>
                 </ul>

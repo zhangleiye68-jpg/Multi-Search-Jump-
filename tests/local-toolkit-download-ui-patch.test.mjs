@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 const PATCH_FILE = "extension/src/localToolkit/localToolkitDownloadUiPatch.js";
 const PATCH_MANIFEST_PATH = "src/localToolkit/localToolkitDownloadUiPatch.js";
 const GREEN_DOWNLOAD_ICON_RESOURCE = "assets/localToolkit/image/download-green.svg";
+const GREEN_DOWNLOAD_ICON_FILE = `extension/${GREEN_DOWNLOAD_ICON_RESOURCE}`;
 
 async function loadPatchApi() {
   const source = await readFile(PATCH_FILE, "utf8");
@@ -38,6 +39,85 @@ async function loadFreeModeRoot() {
   return context.globalThis;
 }
 
+function createFakeStyle() {
+  const values = {};
+  return {
+    values,
+    setProperty(name, value) {
+      values[name] = value;
+    },
+  };
+}
+
+function createFakeElement({ className = "", src = "" } = {}) {
+  const element = {
+    children: [],
+    parentElement: null,
+    attributes: { class: className },
+    style: createFakeStyle(),
+    nodeType: 1,
+    currentSrc: src,
+    src,
+    ownerDocument: null,
+    getAttribute(name) {
+      return this.attributes[name] || "";
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+      if (name === "src") this.src = value;
+    },
+    matches(selector) {
+      const currentClass = this.attributes.class || "";
+      if (selector.includes(".x-extension") && currentClass.split(/\s+/u).includes("x-extension")) return true;
+      if (selector.includes('[class*="download"][class*="button"]')) {
+        return /download/u.test(currentClass) && /button/u.test(currentClass);
+      }
+      if (selector.includes('[class*="download"][class*="btn"]')) {
+        return /download/u.test(currentClass) && /btn/u.test(currentClass);
+      }
+      if (selector.includes(".overview_download_button")) {
+        return currentClass.split(/\s+/u).includes("overview_download_button");
+      }
+      if (selector.includes(".overview_new_download_button")) {
+        return currentClass.split(/\s+/u).includes("overview_new_download_button");
+      }
+      return false;
+    },
+    querySelectorAll(selector) {
+      const results = [];
+      const visit = (node) => {
+        for (const child of node.children || []) {
+          if (selector.includes('img[src*="/assets/localToolkit/image/') && child.src) {
+            results.push(child);
+          } else if (
+            selector.includes('[class*="download"][class*="button"]') ||
+            selector.includes('[class*="download"][class*="btn"]') ||
+            selector.includes(".overview_download_button") ||
+            selector.includes(".overview_new_download_button")
+          ) {
+            if (child.matches(selector)) results.push(child);
+          } else if (selector.includes(".x-extension") && child.matches(selector)) {
+            results.push(child);
+          }
+          visit(child);
+        }
+      };
+      visit(this);
+      return results;
+    },
+  };
+
+  for (const child of element.children) child.parentElement = element;
+  return element;
+}
+
+function appendFakeChild(parent, child) {
+  parent.children.push(child);
+  child.parentElement = parent;
+  child.ownerDocument = parent.ownerDocument;
+  return child;
+}
+
 describe("local toolkit download UI patch", () => {
   it("normalizes download quality labels without paid wording", async () => {
     const api = await loadPatchApi();
@@ -66,6 +146,38 @@ describe("local toolkit download UI patch", () => {
     assert.match(source, /overview_new_download_button/);
     assert.match(source, /overview_download_button/);
     assert.doesNotMatch(source, /#(?:3470ff|3470FF|409EFF|4986F9|7b68ee)/);
+  });
+
+  it("uses the requested teal down-arrow ball for replaced floating download icons", async () => {
+    const source = await readFile(PATCH_FILE, "utf8");
+    const svg = await readFile(GREEN_DOWNLOAD_ICON_FILE, "utf8");
+
+    assert.match(source, /DOWNLOAD_FLOATING_BALL_THEME/u);
+    assert.match(source, /box-shadow",\s*"none"/u);
+    assert.match(source, /padding",\s*"0"/u);
+    assert.match(svg, /<circle[^>]+fill="#3ADDBB"/u);
+    assert.match(svg, /stroke="#FFFFFF"/u);
+    assert.match(svg, /stroke-linecap="round"/u);
+    assert.match(svg, /stroke-linejoin="round"/u);
+    assert.doesNotMatch(svg, /linearGradient|<defs|stroke="#BBF7D0"|stroke="#DCFCE7"/u);
+    assert.doesNotMatch(svg, /<rect|#000000|M38 91|h52/u);
+  });
+
+  it("keeps X dynamic download buttons clickable after replacing their floating icon", async () => {
+    const api = await loadPatchApi();
+    const root = createFakeElement();
+    const surface = appendFakeChild(root, createFakeElement({ className: "x-extension" }));
+    const button = appendFakeChild(surface, createFakeElement({ className: "dt-single-download-button" }));
+    const image = appendFakeChild(
+      button,
+      createFakeElement({ src: "chrome-extension://id/assets/localToolkit/image/dt.png" }),
+    );
+
+    assert.equal(api.replaceLocalToolkitFloatingIcon(root), true);
+    assert.equal(image.getAttribute("src"), "chrome-extension://id/assets/localToolkit/image/download-green.svg");
+    assert.equal(button.style.values["box-shadow"], "none");
+    assert.equal(button.style.values.padding, "0");
+    assert.equal(button.style.values.overflow, "visible");
   });
 
   it("removes only redundant plain MP4 entries when real quality options exist", async () => {

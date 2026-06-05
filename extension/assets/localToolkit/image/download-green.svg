@@ -1,13 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="DataTool download">
-  <defs>
-    <linearGradient id="downloadGreen" x1="24" y1="12" x2="104" y2="116" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#22C55E"/>
-      <stop offset="0.58" stop-color="#16A34A"/>
-      <stop offset="1" stop-color="#15803D"/>
-    </linearGradient>
-  </defs>
-  <circle cx="64" cy="64" r="59" fill="url(#downloadGreen)" stroke="#BBF7D0" stroke-width="6"/>
-  <circle cx="64" cy="64" r="48" fill="none" stroke="#DCFCE7" stroke-opacity="0.55" stroke-width="3"/>
-  <path fill="#FFFFFF" d="M60 28h9v42l15-15 6 6-25 25-25-25 6-6 14 15V28Z"/>
-  <path fill="#FFFFFF" d="M38 91h52v9H38v-9Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Download">
+  <circle cx="64" cy="64" r="46" fill="#3ADDBB"/>
+  <path d="M64 36v48M43 63l21 21 21-21" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

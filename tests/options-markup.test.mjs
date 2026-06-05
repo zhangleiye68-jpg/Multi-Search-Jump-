@@ -56,10 +56,13 @@ describe("options markup", () => {
     assert.match(html, /id="all-search-history"/);
     assert.match(
       html,
-      /id="settings-captions"[\s\S]*id="tiktok-auto-open-toggle"[\s\S]*id="tiktok-non-english-warning-toggle"[\s\S]*<\/section>[\s\S]*id="settings-download"/,
+      /id="settings-captions"[\s\S]*id="tiktok-auto-open-toggle"[\s\S]*id="tiktok-card-metrics-toggle"[\s\S]*id="tiktok-non-english-warning-toggle"[\s\S]*<\/section>[\s\S]*id="settings-download"/,
     );
     assert.match(html, /id="tiktok-auto-open-toggle"/);
     assert.match(html, /自动打开字幕板/);
+    assert.match(html, /id="tiktok-card-metrics-toggle"/);
+    assert.match(html, /视频列表显示数据指标/);
+    assert.match(html, /权重评价、每小时点赞量、总播放量、每小时播放量和发布时长/);
     assert.match(html, /id="tiktok-non-english-warning-toggle"/);
     assert.match(html, /非英语警示/);
     assert.match(html, /非英内容/);
@@ -94,6 +97,14 @@ describe("options markup", () => {
     assert.match(html, /选中文字搜索/);
     assert.match(html, /搜索网站与顺序/);
     assert.match(html, /历史记录/);
+    assert.match(html, /支持的窗口/);
+    assert.match(html, /插件小窗口按钮/);
+    assert.match(html, /侧边栏按钮/);
+    assert.match(html, /设置页按钮和开关/);
+    assert.match(html, /TikTok 页面按钮/);
+    assert.match(html, /下载页面入口/);
+    assert.doesNotMatch(html, /<h3 id="usage-search-heading">常用搜索<\/h3>/);
+    assert.doesNotMatch(html, /<h3 id="usage-entry-heading">搜索入口与网站<\/h3>/);
     assert.match(html, /新安装后，默认启用 TikTok、Google 图片、X 和 Facebook/);
     assert.match(html, /手动关闭上一次由插件打开的搜索结果标签组/);
     assert.match(html, /小窗口只显示最近 5 条/);
@@ -155,6 +166,9 @@ describe("options markup", () => {
     assert.match(source, /#tiktok-auto-open-toggle/);
     assert.match(source, /TIKTOK_AUTO_OPEN_KEY/);
     assert.match(source, /tiktokCaptionAutoOpenEnabled/);
+    assert.match(source, /#tiktok-card-metrics-toggle/);
+    assert.match(source, /TIKTOK_CARD_METRICS_ENABLED_KEY/);
+    assert.match(source, /tiktokCardMetricsEnabled/);
     assert.match(source, /#tiktok-non-english-warning-toggle/);
     assert.match(source, /result\[TIKTOK_NON_ENGLISH_WARNING_KEY\] !== false/);
     assert.match(source, /result\[TIKTOK_AUTO_OPEN_KEY\] === true/);
