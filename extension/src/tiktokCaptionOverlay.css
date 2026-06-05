@@ -120,6 +120,7 @@
   color: #ffffff;
 }
 
+.msj-tiktok-caption-side-panel,
 .msj-tiktok-caption-close {
   min-width: 24px;
   width: 24px;
@@ -131,6 +132,11 @@
   cursor: pointer;
   font-size: 1.125em;
   line-height: 1;
+}
+
+.msj-tiktok-caption-side-panel {
+  font-size: 0.875em;
+  font-weight: 800;
 }
 
 .msj-tiktok-video-info {

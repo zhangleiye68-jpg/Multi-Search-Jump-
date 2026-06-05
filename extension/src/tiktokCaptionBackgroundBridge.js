@@ -1,5 +1,7 @@
 export const TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE =
   "MSJ_TIKTOK_CAPTION_BACKGROUND_COMMAND";
+export const TIKTOK_CAPTION_OPEN_SIDE_PANEL_MESSAGE_TYPE =
+  "MSJ_TIKTOK_CAPTION_OPEN_SIDE_PANEL";
 
 const CAPTION_BOARD_MESSAGE_TYPES = Object.freeze({
   ADJUST_FONT_SCALE: "MSJ_TIKTOK_CAPTION_ADJUST_FONT_SCALE",
@@ -7,6 +9,7 @@ const CAPTION_BOARD_MESSAGE_TYPES = Object.freeze({
   REFRESH: "MSJ_TIKTOK_CAPTION_REFRESH",
   REFRESH_IF_SOURCE_CHANGED: "MSJ_TIKTOK_CAPTION_REFRESH_IF_SOURCE_CHANGED",
   SET_DISPLAY_MODE: "MSJ_TIKTOK_CAPTION_SET_DISPLAY_MODE",
+  SET_OPEN: "MSJ_TIKTOK_CAPTION_SET_OPEN",
 });
 const CAPTION_BOARD_MESSAGE_TYPE_VALUES = new Set(
   Object.values(CAPTION_BOARD_MESSAGE_TYPES),
@@ -20,6 +23,10 @@ export function isTikTokCaptionBackgroundMessage(message) {
   return message?.type === TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE;
 }
 
+export function isTikTokCaptionOpenSidePanelMessage(message) {
+  return message?.type === TIKTOK_CAPTION_OPEN_SIDE_PANEL_MESSAGE_TYPE;
+}
+
 export async function runTikTokCaptionOverlayCommand(command = {}) {
   const messageTypes = {
     ADJUST_FONT_SCALE: "MSJ_TIKTOK_CAPTION_ADJUST_FONT_SCALE",
@@ -27,6 +34,7 @@ export async function runTikTokCaptionOverlayCommand(command = {}) {
     REFRESH: "MSJ_TIKTOK_CAPTION_REFRESH",
     REFRESH_IF_SOURCE_CHANGED: "MSJ_TIKTOK_CAPTION_REFRESH_IF_SOURCE_CHANGED",
     SET_DISPLAY_MODE: "MSJ_TIKTOK_CAPTION_SET_DISPLAY_MODE",
+    SET_OPEN: "MSJ_TIKTOK_CAPTION_SET_OPEN",
   };
   const typeValues = new Set(Object.values(messageTypes));
 
@@ -64,10 +72,50 @@ export async function runTikTokCaptionOverlayCommand(command = {}) {
     await overlay.adjustFontScale(command.delta);
   }
 
+  if (command.type === messageTypes.SET_OPEN) {
+    await overlay.setOpen(command.open === true, {
+      suppressAutoOpen: command.suppressAutoOpen === true,
+    });
+  }
+
   return {
     ok: true,
     state: overlay.getCaptionBoardState(),
   };
+}
+
+export async function handleTikTokCaptionOpenSidePanelMessage({
+  message,
+  sender,
+  sidePanelApi,
+  windowsApi,
+} = {}) {
+  if (!isTikTokCaptionOpenSidePanelMessage(message)) {
+    return null;
+  }
+
+  if (!sidePanelApi?.open) {
+    return {
+      error: "Side panel is unavailable",
+      ok: false,
+    };
+  }
+
+  const currentWindow = Number.isInteger(sender?.tab?.windowId)
+    ? { id: sender.tab.windowId }
+    : await windowsApi?.getCurrent?.();
+  const windowId = currentWindow?.id;
+
+  if (!Number.isInteger(windowId)) {
+    return {
+      error: "Invalid browser window id",
+      ok: false,
+    };
+  }
+
+  await sidePanelApi.open({ windowId });
+
+  return { ok: true };
 }
 
 export async function handleTikTokCaptionBackgroundMessage({

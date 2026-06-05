@@ -43,6 +43,8 @@
   const TIKTOK_REHYDRATION_SCRIPT_ID = "__UNIVERSAL_DATA_FOR_REHYDRATION__";
   const TIKTOK_API_HINT_ITEM_LIMIT = 16;
   const TIKTOK_CARD_METRIC_SCAN_INTERVAL_MS = 1000;
+  const TIKTOK_CAPTION_OPEN_SIDE_PANEL_MESSAGE_TYPE =
+    "MSJ_TIKTOK_CAPTION_OPEN_SIDE_PANEL";
   const TIKTOK_CARD_LOAD_MORE_RESTORE_DELAY_MS = 100;
   const TIKTOK_CARD_FILTER_CARD_SELECTOR = [
     "div[class*='-DivItemContainerV2']",
@@ -4376,6 +4378,7 @@
     const originalModeButton = createDisplayModeButton(documentRef, DISPLAY_MODES.original);
     const bilingualModeButton = createDisplayModeButton(documentRef, DISPLAY_MODES.bilingual);
     const chineseModeButton = createDisplayModeButton(documentRef, DISPLAY_MODES.chinese);
+    const sidePanelButton = documentRef.createElement("button");
     const closeButton = documentRef.createElement("button");
     const videoInfo = documentRef.createElement("div");
     const authorLink = documentRef.createElement("a");
@@ -4413,6 +4416,11 @@
     headerDragArea.className = "msj-tiktok-caption-header-drag";
     headerDragArea.setAttribute("aria-hidden", "true");
     modeGroup.className = "msj-tiktok-caption-mode-group";
+    sidePanelButton.className = "msj-tiktok-caption-side-panel";
+    sidePanelButton.type = "button";
+    sidePanelButton.textContent = "◧";
+    sidePanelButton.title = "打开侧边栏";
+    sidePanelButton.setAttribute("aria-label", "打开侧边栏");
     closeButton.className = "msj-tiktok-caption-close";
     closeButton.type = "button";
     closeButton.textContent = "×";
@@ -4475,7 +4483,7 @@
     }
 
     modeGroup.append(originalModeButton, bilingualModeButton, chineseModeButton);
-    header.append(headerDragArea, closeButton);
+    header.append(headerDragArea, sidePanelButton, closeButton);
     authorAvatarWrap.append(authorAvatar, authorFallback);
     authorLink.append(authorAvatarWrap, authorName);
     videoInfo.append(authorLink, potentialBadge, metricList);
@@ -4525,6 +4533,7 @@
       refreshButton,
       resizeHandle: resizeHandles.bottom,
       resizeHandles,
+      sidePanelButton,
       status,
       videoDetails,
       videoInfo,
@@ -5050,6 +5059,25 @@
       return Promise.resolve();
     }
 
+    async function openSidePanelFromCaptionBoard() {
+      let response;
+
+      try {
+        response = await globalThis.chrome?.runtime?.sendMessage?.({
+          type: TIKTOK_CAPTION_OPEN_SIDE_PANEL_MESSAGE_TYPE,
+        });
+      } catch (error) {
+        console.error(error);
+      }
+
+      if (response?.ok) {
+        return setOpen(false, { suppressAutoOpen: true });
+      }
+
+      setStatus("无法打开侧边栏，请确认浏览器支持 Side Panel。");
+      return Promise.resolve();
+    }
+
     function getCaptionCopyText(lines = currentDisplayLines) {
       return lines
         .flatMap((line) =>
@@ -5489,6 +5517,7 @@
     for (const [mode, modeButton] of Object.entries(panelParts.modeButtons)) {
       modeButton.addEventListener("click", () => updateDisplayMode(mode));
     }
+    panelParts.sidePanelButton.addEventListener("click", openSidePanelFromCaptionBoard);
     panelParts.closeButton.addEventListener("click", () => setOpen(false, { suppressAutoOpen: true }));
     panelParts.fontDecreaseButton.addEventListener("click", () => updateFontScale(-FONT_SCALE_STEP));
     panelParts.fontIncreaseButton.addEventListener("click", () => updateFontScale(FONT_SCALE_STEP));
@@ -5553,6 +5582,8 @@
       refreshCaptions,
       refreshCaptionsIfSourceChanged,
       setDisplayMode: updateDisplayMode,
+      setOpen,
+      sidePanelButton: panelParts.sidePanelButton,
       resizeHandle: panelParts.resizeHandle,
       resizeHandles: panelParts.resizeHandles,
       root,

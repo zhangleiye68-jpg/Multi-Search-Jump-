@@ -105,7 +105,7 @@ function normalizePathParts(input) {
   const rawFilename = String(getRawFilename(input) ?? "").trim();
 
   if (rawFilename.startsWith(`${LOCAL_TOOLKIT_DOWNLOAD_DIR}/`)) {
-    return rawFilename.split("/");
+    return rawFilename.split("/").slice(1);
   }
 
   const rawParts = rawFilename.split(/[\\/]+/u).filter(Boolean);
@@ -125,13 +125,7 @@ function normalizePathParts(input) {
 }
 
 export function normalizeLocalToolkitDownloadFilename(input = "") {
-  const parts = normalizePathParts(input);
-
-  if (parts[0] === LOCAL_TOOLKIT_DOWNLOAD_DIR) {
-    return parts.join("/");
-  }
-
-  return [LOCAL_TOOLKIT_DOWNLOAD_DIR, ...parts].join("/");
+  return normalizePathParts(input).join("/");
 }
 
 export function installLocalToolkitDownloadNaming(downloadsApi = globalThis.chrome?.downloads) {

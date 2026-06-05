@@ -28,6 +28,7 @@ const captionBoard = initCaptionBoardUi({
     detailsTranslation: document.querySelector("#caption-board-details-translation"),
     fontDecreaseButton: document.querySelector("#caption-board-font-decrease-button"),
     fontIncreaseButton: document.querySelector("#caption-board-font-increase-button"),
+    floatingButton: document.querySelector("#caption-board-floating-button"),
     metrics: document.querySelector("#caption-board-metrics"),
     modeButtons,
     potentialBadge: document.querySelector("#caption-board-potential"),

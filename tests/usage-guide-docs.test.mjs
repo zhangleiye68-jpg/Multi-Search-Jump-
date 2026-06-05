@@ -48,7 +48,8 @@ describe("usage guide docs", () => {
     assert.doesNotMatch(readme, /MIT License/i);
 
     const privacy = await readFile("PRIVACY.md", "utf8");
-    assert.match(privacy, /Multi Search Jump Local Toolkit/);
+    assert.match(privacy, /浏览器下载目录/);
+    assert.doesNotMatch(privacy, /Multi Search Jump Local Toolkit/);
     assert.match(privacy, /declarativeNetRequest/);
 
     const usageGuide = await readFile("docs/USAGE.zh-CN.md", "utf8");

@@ -9,6 +9,7 @@ import {
 } from "../extension/src/sidePanelCaptionBoard.js";
 
 const TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE = "MSJ_TIKTOK_CAPTION_BACKGROUND_COMMAND";
+const SET_OPEN_MESSAGE_TYPE = "MSJ_TIKTOK_CAPTION_SET_OPEN";
 
 function createClassList() {
   const values = new Set();
@@ -107,6 +108,7 @@ function createElements() {
     detailsTranslation: createElement("p"),
     fontDecreaseButton: createElement("button"),
     fontIncreaseButton: createElement("button"),
+    floatingButton: createElement("button"),
     metrics: createElement(),
     modeButtons: {
       bilingual: createElement("button"),
@@ -250,6 +252,53 @@ describe("side panel caption board", () => {
       ],
     );
     assert.deepEqual(copied, ["Fresh subtitle\n新鲜字幕"]);
+  });
+
+  it("opens the floating caption board from the side panel and closes the side panel", async () => {
+    const elements = createElements();
+    const messages = [];
+    const closedPanels = [];
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      runtimeApi: {
+        async sendMessage(tabId, message) {
+          messages.push({ message, tabId });
+
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return { ok: true, state: createCaptionState() };
+          }
+
+          return { ok: true };
+        },
+      },
+      setInterval: null,
+      sidePanelApi: {
+        async close(options) {
+          closedPanels.push(options);
+        },
+      },
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123", windowId: 9 }];
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+    await elements.floatingButton.click();
+
+    assert.deepEqual(
+      messages.map(({ tabId, message }) => [tabId, message.type, message.open]),
+      [
+        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED, undefined],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
+        [42, SET_OPEN_MESSAGE_TYPE, true],
+        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
+      ],
+    );
+    assert.deepEqual(closedPanels, [{ windowId: 9 }]);
   });
 
   it("shows a connecting status when the TikTok content script is temporarily unavailable", async () => {

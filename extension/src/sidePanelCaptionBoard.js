@@ -6,6 +6,7 @@ export const CAPTION_BOARD_MESSAGE_TYPES = Object.freeze({
   REFRESH: "MSJ_TIKTOK_CAPTION_REFRESH",
   REFRESH_IF_SOURCE_CHANGED: "MSJ_TIKTOK_CAPTION_REFRESH_IF_SOURCE_CHANGED",
   SET_DISPLAY_MODE: "MSJ_TIKTOK_CAPTION_SET_DISPLAY_MODE",
+  SET_OPEN: "MSJ_TIKTOK_CAPTION_SET_OPEN",
 });
 
 const DISPLAY_MODES = new Set(["original", "bilingual", "chinese"]);
@@ -256,9 +257,12 @@ export function initCaptionBoardUi({
   runtimeApi = globalThis.chrome?.tabs,
   setInterval: setIntervalRef = globalThis.setInterval?.bind(globalThis),
   clearInterval: clearIntervalRef = globalThis.clearInterval?.bind(globalThis),
+  sidePanelApi = globalThis.chrome?.sidePanel,
   tabsApi = globalThis.chrome?.tabs,
+  windowsApi = globalThis.chrome?.windows,
 } = {}) {
   let connectedTabId = null;
+  let connectedWindowId = null;
   let currentState = normalizeCaptionState();
   let intervalId = null;
 
@@ -351,6 +355,28 @@ export function initCaptionBoardUi({
     return assertOkResponse(await sendToTab(connectedTabId, message));
   }
 
+  async function closeSidePanel() {
+    if (!sidePanelApi?.close) {
+      setText(elements.status, "已打开字幕悬浮窗。当前浏览器不支持自动隐藏侧边栏。");
+      return;
+    }
+
+    const currentWindow = Number.isInteger(connectedWindowId)
+      ? { id: connectedWindowId }
+      : await windowsApi?.getCurrent?.();
+
+    if (!Number.isInteger(currentWindow?.id)) {
+      return;
+    }
+
+    try {
+      await sidePanelApi.close({ windowId: currentWindow.id });
+    } catch (error) {
+      console.error(error);
+      setText(elements.status, "已打开字幕悬浮窗，但无法自动隐藏侧边栏。");
+    }
+  }
+
   async function runCommand(message) {
     try {
       await sendCommandToConnectedTab(message);
@@ -365,6 +391,7 @@ export function initCaptionBoardUi({
 
     if (!isTikTokTab(activeTab)) {
       connectedTabId = null;
+      connectedWindowId = null;
       currentState = normalizeCaptionState();
       hideCaptionBoard(elements);
       return null;
@@ -375,6 +402,7 @@ export function initCaptionBoardUi({
 
     try {
       await readCaptionStateFromTab(activeTab.id);
+      connectedWindowId = activeTab.windowId ?? null;
       await sendCommandToConnectedTab({
         force: true,
         type: CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED,
@@ -410,6 +438,22 @@ export function initCaptionBoardUi({
       type: CAPTION_BOARD_MESSAGE_TYPES.ADJUST_FONT_SCALE,
     }),
   );
+  elements.floatingButton?.addEventListener("click", async () => {
+    if (!Number.isInteger(connectedTabId)) {
+      await syncActiveTab();
+    }
+
+    try {
+      await sendCommandToConnectedTab({
+        open: true,
+        type: CAPTION_BOARD_MESSAGE_TYPES.SET_OPEN,
+      });
+      await readConnectedCaptionState({ preserveRenderable: true });
+      await closeSidePanel();
+    } catch {
+      showConnectionPendingStatus();
+    }
+  });
   elements.copyButton.addEventListener("click", async () => {
     if (!currentState.copyText) {
       setText(elements.status, "没有可复制的字幕。");

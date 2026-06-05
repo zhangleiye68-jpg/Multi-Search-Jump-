@@ -5,6 +5,7 @@
     REFRESH: "MSJ_TIKTOK_CAPTION_REFRESH",
     REFRESH_IF_SOURCE_CHANGED: "MSJ_TIKTOK_CAPTION_REFRESH_IF_SOURCE_CHANGED",
     SET_DISPLAY_MODE: "MSJ_TIKTOK_CAPTION_SET_DISPLAY_MODE",
+    SET_OPEN: "MSJ_TIKTOK_CAPTION_SET_OPEN",
   });
   const CAPTION_BOARD_MESSAGE_TYPE_VALUES = new Set(
     Object.values(CAPTION_BOARD_MESSAGE_TYPES),
@@ -66,6 +67,12 @@
 
     if (message.type === CAPTION_BOARD_MESSAGE_TYPES.ADJUST_FONT_SCALE) {
       await overlay.adjustFontScale(message.delta);
+    }
+
+    if (message.type === CAPTION_BOARD_MESSAGE_TYPES.SET_OPEN) {
+      await overlay.setOpen(message.open === true, {
+        suppressAutoOpen: message.suppressAutoOpen === true,
+      });
     }
 
     return {

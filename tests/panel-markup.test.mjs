@@ -29,6 +29,7 @@ describe("side panel markup", () => {
     assert.match(html, /id="caption-board-list"/);
     assert.match(html, /id="caption-board-refresh-button"/);
     assert.match(html, /id="caption-board-copy-button"/);
+    assert.match(html, /id="caption-board-floating-button"/);
     assert.match(html, /data-caption-mode="original"/);
     assert.match(html, /data-caption-mode="bilingual"/);
     assert.match(html, /data-caption-mode="chinese"/);
@@ -47,6 +48,7 @@ describe("side panel markup", () => {
     assert.match(css, /\.caption-board-list\s*{/);
     assert.match(css, /\.caption-board-list p\s*{[\s\S]*font-size:\s*0\.8125em;/);
     assert.doesNotMatch(script, /historyList/);
+    assert.match(script, /floatingButton:\s*document\.querySelector\("#caption-board-floating-button"\)/);
     assert.match(script, /authorLink:\s*document\.querySelector\("#caption-board-author-link"\)/);
   });
 });

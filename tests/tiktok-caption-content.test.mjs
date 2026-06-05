@@ -1052,6 +1052,44 @@ describe("TikTok caption content", () => {
     assert.equal(overlay.navigator.clipboard.value, "Fresh subtitle\n新鲜字幕");
   });
 
+  it("opens the side panel from the floating caption board and closes the board", async () => {
+    const { createCaptionOverlay } = await loadCaptionCore();
+    const document = createDocumentHarness();
+    const previousChrome = globalThis.chrome;
+    const messages = [];
+    const overlay = createCaptionOverlay({
+      document,
+      setInterval: null,
+    });
+
+    globalThis.chrome = {
+      runtime: {
+        async sendMessage(message) {
+          messages.push(message);
+          return { ok: true };
+        },
+      },
+    };
+
+    try {
+      await overlay.button.click();
+      assert.equal(overlay.panel.hidden, false);
+
+      await overlay.sidePanelButton.click();
+
+      assert.deepEqual(messages, [
+        { type: "MSJ_TIKTOK_CAPTION_OPEN_SIDE_PANEL" },
+      ]);
+      assert.equal(overlay.panel.hidden, true);
+    } finally {
+      if (previousChrome === undefined) {
+        delete globalThis.chrome;
+      } else {
+        globalThis.chrome = previousChrome;
+      }
+    }
+  });
+
   it("keeps the CC button pinned to the browser right edge while dragging vertically", async () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();

@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  TIKTOK_CAPTION_OPEN_SIDE_PANEL_MESSAGE_TYPE,
   TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE,
+  handleTikTokCaptionOpenSidePanelMessage,
   handleTikTokCaptionBackgroundMessage,
   runTikTokCaptionOverlayCommand,
 } from "../extension/src/tiktokCaptionBackgroundBridge.js";
@@ -13,6 +15,7 @@ const CAPTION_BOARD_MESSAGE_TYPES = Object.freeze({
   REFRESH: "MSJ_TIKTOK_CAPTION_REFRESH",
   REFRESH_IF_SOURCE_CHANGED: "MSJ_TIKTOK_CAPTION_REFRESH_IF_SOURCE_CHANGED",
   SET_DISPLAY_MODE: "MSJ_TIKTOK_CAPTION_SET_DISPLAY_MODE",
+  SET_OPEN: "MSJ_TIKTOK_CAPTION_SET_OPEN",
 });
 
 function createCaptionState(overrides = {}) {
@@ -94,6 +97,9 @@ describe("TikTok caption background bridge", () => {
       setDisplayMode(displayMode) {
         calls.push(["mode", displayMode]);
       },
+      setOpen(isOpen, options) {
+        calls.push(["open", isOpen, options]);
+      },
     };
 
     await withOverlay(overlay, async () => {
@@ -122,6 +128,13 @@ describe("TikTok caption background bridge", () => {
         }),
         { ok: true, state },
       );
+      assert.deepEqual(
+        await runTikTokCaptionOverlayCommand({
+          open: true,
+          type: CAPTION_BOARD_MESSAGE_TYPES.SET_OPEN,
+        }),
+        { ok: true, state },
+      );
     });
 
     assert.deepEqual(calls, [
@@ -133,7 +146,25 @@ describe("TikTok caption background bridge", () => {
       ["state"],
       ["font", 10],
       ["state"],
+      ["open", true, { suppressAutoOpen: false }],
+      ["state"],
     ]);
+  });
+
+  it("opens the side panel from a TikTok caption overlay request", async () => {
+    const openedPanels = [];
+    const result = await handleTikTokCaptionOpenSidePanelMessage({
+      message: { type: TIKTOK_CAPTION_OPEN_SIDE_PANEL_MESSAGE_TYPE },
+      sender: { tab: { windowId: 12 } },
+      sidePanelApi: {
+        async open(options) {
+          openedPanels.push(options);
+        },
+      },
+    });
+
+    assert.deepEqual(result, { ok: true });
+    assert.deepEqual(openedPanels, [{ windowId: 12 }]);
   });
 
   it("returns ok false when no existing overlay is available", async () => {

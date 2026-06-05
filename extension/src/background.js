@@ -15,8 +15,10 @@ import {
   resetSelectionContextMenu,
 } from "./selectionSearch.js";
 import {
+  handleTikTokCaptionOpenSidePanelMessage,
   handleTikTokCaptionBackgroundMessage,
   isTikTokCaptionBackgroundMessage,
+  isTikTokCaptionOpenSidePanelMessage,
 } from "./tiktokCaptionBackgroundBridge.js";
 
 installLocalToolkitDownloadNaming(chrome.downloads);
@@ -69,7 +71,7 @@ async function handleCommandSearch() {
   });
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (isLocalToolkitMessage(message)) {
     handleLocalToolkitMessage(message)
       .then((result) => {
@@ -90,6 +92,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handleTikTokCaptionBackgroundMessage({
       message,
       scriptingApi: chrome.scripting,
+    })
+      .then((result) => {
+        sendResponse(result);
+      })
+      .catch((error) => {
+        console.error(error);
+        sendResponse({
+          error: error instanceof Error ? error.message : String(error),
+          ok: false,
+        });
+      });
+
+    return true;
+  }
+
+  if (isTikTokCaptionOpenSidePanelMessage(message)) {
+    handleTikTokCaptionOpenSidePanelMessage({
+      message,
+      sender,
+      sidePanelApi: chrome.sidePanel,
+      windowsApi: chrome.windows,
     })
       .then((result) => {
         sendResponse(result);

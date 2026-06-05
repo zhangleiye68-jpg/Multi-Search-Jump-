@@ -33,7 +33,7 @@ Local download support increases the package size because it includes migrated b
 - Search history can be deleted from the settings page.
 - Chinese queries may be sent to Google Translate only when the translation switch is enabled.
 - TikTok subtitles are read from the current page for temporary display and may be sent to Google Translate to show the Chinese line; they are not stored or added to search history.
-- Local Toolkit state is stored locally. Downloaded files go to the browser downloads folder under `Multi Search Jump Local Toolkit/`.
+- Local Toolkit state is stored locally. Downloaded files go to the browser downloads folder.
 - Local Toolkit does not log into DataTool, purchase access, upload files to DataTool cloud services, or restore cloud speech-to-text.
 - The extension does not load or execute remote JavaScript.
 

@@ -113,7 +113,7 @@ describe("local toolkit background messaging", () => {
 
     assert.deepEqual(calls, [
       {
-        filename: "Multi Search Jump Local Toolkit/local-toolkit-download.mp4",
+        filename: "local-toolkit-download.mp4",
         saveAs: false,
         url: "https://example.com/video.mp4",
       },
