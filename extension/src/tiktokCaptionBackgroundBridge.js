@@ -19,6 +19,12 @@ function toErrorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
+function settleCaptionOverlayCommand(promise) {
+  Promise.resolve(promise).catch((error) => {
+    console.error(error);
+  });
+}
+
 export function isTikTokCaptionBackgroundMessage(message) {
   return message?.type === TIKTOK_CAPTION_BACKGROUND_MESSAGE_TYPE;
 }
@@ -73,9 +79,15 @@ export async function runTikTokCaptionOverlayCommand(command = {}) {
   }
 
   if (command.type === messageTypes.SET_OPEN) {
-    await overlay.setOpen(command.open === true, {
+    const openResult = overlay.setOpen(command.open === true, {
       suppressAutoOpen: command.suppressAutoOpen === true,
     });
+
+    if (command.open === true) {
+      settleCaptionOverlayCommand(openResult);
+    } else {
+      await openResult;
+    }
   }
 
   return {

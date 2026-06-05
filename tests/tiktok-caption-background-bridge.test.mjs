@@ -151,6 +151,39 @@ describe("TikTok caption background bridge", () => {
     ]);
   });
 
+  it("responds to open commands before the caption refresh settles", async () => {
+    const state = createCaptionState();
+    let resolveSetOpen;
+    const setOpenPromise = new Promise((resolve) => {
+      resolveSetOpen = resolve;
+    });
+    const overlay = {
+      getCaptionBoardState() {
+        return state;
+      },
+      setOpen() {
+        return setOpenPromise;
+      },
+    };
+
+    await withOverlay(overlay, async () => {
+      const resultPromise = runTikTokCaptionOverlayCommand({
+        open: true,
+        type: CAPTION_BOARD_MESSAGE_TYPES.SET_OPEN,
+      });
+      const result = await Promise.race([
+        resultPromise,
+        new Promise((resolve) => {
+          setTimeout(() => resolve("pending"), 0);
+        }),
+      ]);
+
+      resolveSetOpen();
+      assert.deepEqual(result, { ok: true, state });
+      assert.deepEqual(await resultPromise, { ok: true, state });
+    });
+  });
+
   it("opens the side panel from a TikTok caption overlay request", async () => {
     const openedPanels = [];
     const result = await handleTikTokCaptionOpenSidePanelMessage({

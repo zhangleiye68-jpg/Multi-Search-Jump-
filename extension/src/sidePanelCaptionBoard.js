@@ -11,6 +11,7 @@ export const CAPTION_BOARD_MESSAGE_TYPES = Object.freeze({
 
 const DISPLAY_MODES = new Set(["original", "bilingual", "chinese"]);
 const AUTO_REFRESH_INTERVAL_MS = 800;
+const SIDE_PANEL_CLOSE_DELAY_MS = 120;
 const CONNECTING_STATUS = "正在连接 TikTok 字幕看板。";
 const RECOVERING_STATUS = "字幕看板连接恢复中。";
 
@@ -255,10 +256,13 @@ export function initCaptionBoardUi({
   extensionRuntimeApi = globalThis.chrome?.runtime,
   intervalMs = AUTO_REFRESH_INTERVAL_MS,
   runtimeApi = globalThis.chrome?.tabs,
+  closeDelayMs = SIDE_PANEL_CLOSE_DELAY_MS,
   setInterval: setIntervalRef = globalThis.setInterval?.bind(globalThis),
   clearInterval: clearIntervalRef = globalThis.clearInterval?.bind(globalThis),
+  setTimeout: setTimeoutRef = globalThis.setTimeout?.bind(globalThis),
   sidePanelApi = globalThis.chrome?.sidePanel,
   tabsApi = globalThis.chrome?.tabs,
+  window: windowRef = globalThis.window,
   windowsApi = globalThis.chrome?.windows,
 } = {}) {
   let connectedTabId = null;
@@ -356,8 +360,25 @@ export function initCaptionBoardUi({
   }
 
   async function closeSidePanel() {
+    function closeCurrentSidePanelWindow() {
+      if (typeof windowRef?.close !== "function") {
+        return false;
+      }
+
+      windowRef.close();
+      return true;
+    }
+
+    if (setTimeoutRef && closeDelayMs > 0) {
+      await new Promise((resolve) => {
+        setTimeoutRef(resolve, closeDelayMs);
+      });
+    }
+
     if (!sidePanelApi?.close) {
-      setText(elements.status, "已打开字幕悬浮窗。当前浏览器不支持自动隐藏侧边栏。");
+      if (!closeCurrentSidePanelWindow()) {
+        setText(elements.status, "已打开字幕悬浮窗。当前浏览器不支持自动隐藏侧边栏。");
+      }
       return;
     }
 
@@ -366,6 +387,7 @@ export function initCaptionBoardUi({
       : await windowsApi?.getCurrent?.();
 
     if (!Number.isInteger(currentWindow?.id)) {
+      closeCurrentSidePanelWindow();
       return;
     }
 
@@ -373,7 +395,9 @@ export function initCaptionBoardUi({
       await sidePanelApi.close({ windowId: currentWindow.id });
     } catch (error) {
       console.error(error);
-      setText(elements.status, "已打开字幕悬浮窗，但无法自动隐藏侧边栏。");
+      if (!closeCurrentSidePanelWindow()) {
+        setText(elements.status, "已打开字幕悬浮窗，但无法自动隐藏侧边栏。");
+      }
     }
   }
 
@@ -448,7 +472,6 @@ export function initCaptionBoardUi({
         open: true,
         type: CAPTION_BOARD_MESSAGE_TYPES.SET_OPEN,
       });
-      await readConnectedCaptionState({ preserveRenderable: true });
       await closeSidePanel();
     } catch {
       showConnectionPendingStatus();

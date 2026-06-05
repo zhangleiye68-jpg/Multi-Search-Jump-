@@ -1090,6 +1090,89 @@ describe("TikTok caption content", () => {
     }
   });
 
+  it("responds to open messages before the caption refresh settles", async () => {
+    const previousChrome = globalThis.chrome;
+    const previousDocument = globalThis.document;
+    const previousCaptions = globalThis.MultiSearchJumpTikTokCaptions;
+    const setOpenDeferred = createDeferred();
+    const state = {
+      displayMode: "bilingual",
+      fontScale: 100,
+      lines: [{ original: "Fresh subtitle", translation: "新鲜字幕" }],
+      status: "已读取 1 条字幕。",
+    };
+    let listener = null;
+
+    globalThis.document = {
+      readyState: "complete",
+      addEventListener() {},
+    };
+    globalThis.MultiSearchJumpTikTokCaptions = {
+      createCaptionOverlay() {
+        return {
+          getCaptionBoardState() {
+            return state;
+          },
+          ready: Promise.resolve(),
+          setOpen() {
+            return setOpenDeferred.promise;
+          },
+        };
+      },
+      createTikTokCardMetricsOverlay() {
+        return null;
+      },
+    };
+    globalThis.chrome = {
+      runtime: {
+        onMessage: {
+          addListener(nextListener) {
+            listener = nextListener;
+          },
+        },
+      },
+    };
+
+    try {
+      await import(`../extension/src/tiktokCaptionContent.js?cache=${Date.now()}-${Math.random()}`);
+      assert.equal(typeof listener, "function");
+
+      let response;
+      const handled = listener(
+        { open: true, type: "MSJ_TIKTOK_CAPTION_SET_OPEN" },
+        {},
+        (nextResponse) => {
+          response = nextResponse;
+        },
+      );
+      const responseBeforeRefreshSettles = await new Promise((resolve) => {
+        setTimeout(() => resolve(response), 0);
+      });
+
+      setOpenDeferred.resolve();
+      assert.equal(handled, true);
+      assert.deepEqual(responseBeforeRefreshSettles, { ok: true, state });
+    } finally {
+      if (previousChrome === undefined) {
+        delete globalThis.chrome;
+      } else {
+        globalThis.chrome = previousChrome;
+      }
+
+      if (previousDocument === undefined) {
+        delete globalThis.document;
+      } else {
+        globalThis.document = previousDocument;
+      }
+
+      if (previousCaptions === undefined) {
+        delete globalThis.MultiSearchJumpTikTokCaptions;
+      } else {
+        globalThis.MultiSearchJumpTikTokCaptions = previousCaptions;
+      }
+    }
+  });
+
   it("keeps the CC button pinned to the browser right edge while dragging vertically", async () => {
     const { createCaptionOverlay } = await loadCaptionCore();
     const document = createDocumentHarness();

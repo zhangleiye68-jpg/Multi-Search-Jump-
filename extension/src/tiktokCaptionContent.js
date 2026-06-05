@@ -22,6 +22,12 @@
       cardMetricsOverlay;
   }
 
+  function settleCaptionOverlayCommand(promise) {
+    Promise.resolve(promise).catch((error) => {
+      console.error(error);
+    });
+  }
+
   function waitForDocumentReady() {
     if (document.readyState !== "loading") {
       return Promise.resolve();
@@ -70,9 +76,15 @@
     }
 
     if (message.type === CAPTION_BOARD_MESSAGE_TYPES.SET_OPEN) {
-      await overlay.setOpen(message.open === true, {
+      const openResult = overlay.setOpen(message.open === true, {
         suppressAutoOpen: message.suppressAutoOpen === true,
       });
+
+      if (message.open === true) {
+        settleCaptionOverlayCommand(openResult);
+      } else {
+        await openResult;
+      }
     }
 
     return {

@@ -30,6 +30,14 @@ describe("side panel markup", () => {
     assert.match(html, /id="caption-board-refresh-button"/);
     assert.match(html, /id="caption-board-copy-button"/);
     assert.match(html, /id="caption-board-floating-button"/);
+    assert.match(
+      html,
+      /class="caption-board-heading"[\s\S]*id="caption-board-floating-button"[\s\S]*class="caption-board-mode-group"/,
+    );
+    assert.doesNotMatch(
+      html,
+      /class="caption-board-actions"[\s\S]*id="caption-board-floating-button"/,
+    );
     assert.match(html, /data-caption-mode="original"/);
     assert.match(html, /data-caption-mode="bilingual"/);
     assert.match(html, /data-caption-mode="chinese"/);

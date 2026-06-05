@@ -254,15 +254,25 @@ describe("side panel caption board", () => {
     assert.deepEqual(copied, ["Fresh subtitle\n新鲜字幕"]);
   });
 
-  it("opens the floating caption board from the side panel and closes the side panel", async () => {
+  it("opens the floating caption board from the side panel and closes the side panel after a short delay", async () => {
     const elements = createElements();
+    const events = [];
     const messages = [];
     const closedPanels = [];
+    const backgroundMessages = [];
     const board = initCaptionBoardUi({
+      closeDelayMs: 120,
       document: createDocument(),
       elements,
+      extensionRuntimeApi: {
+        async sendMessage(message) {
+          backgroundMessages.push(message);
+          return { ok: true };
+        },
+      },
       runtimeApi: {
         async sendMessage(tabId, message) {
+          events.push(["message", message.type, message.open]);
           messages.push({ message, tabId });
 
           if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
@@ -273,8 +283,13 @@ describe("side panel caption board", () => {
         },
       },
       setInterval: null,
+      setTimeout(callback, delayMs) {
+        events.push(["delay", delayMs]);
+        callback();
+      },
       sidePanelApi: {
         async close(options) {
+          events.push(["close", options.windowId]);
           closedPanels.push(options);
         },
       },
@@ -286,6 +301,7 @@ describe("side panel caption board", () => {
     });
 
     await board.syncActiveTab();
+    events.length = 0;
     await elements.floatingButton.click();
 
     assert.deepEqual(
@@ -295,10 +311,51 @@ describe("side panel caption board", () => {
         [42, CAPTION_BOARD_MESSAGE_TYPES.REFRESH_IF_SOURCE_CHANGED, undefined],
         [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
         [42, SET_OPEN_MESSAGE_TYPE, true],
-        [42, CAPTION_BOARD_MESSAGE_TYPES.GET_STATE, undefined],
       ],
     );
+    assert.deepEqual(events, [
+      ["message", SET_OPEN_MESSAGE_TYPE, true],
+      ["delay", 120],
+      ["close", 9],
+    ]);
     assert.deepEqual(closedPanels, [{ windowId: 9 }]);
+    assert.deepEqual(backgroundMessages, []);
+  });
+
+  it("closes the current side panel window when the sidePanel close API is unavailable", async () => {
+    const elements = createElements();
+    const closedWindows = [];
+    const board = initCaptionBoardUi({
+      document: createDocument(),
+      elements,
+      runtimeApi: {
+        async sendMessage(_tabId, message) {
+          if (message.type === CAPTION_BOARD_MESSAGE_TYPES.GET_STATE) {
+            return { ok: true, state: createCaptionState() };
+          }
+
+          return { ok: true };
+        },
+      },
+      setInterval: null,
+      sidePanelApi: {},
+      tabsApi: {
+        async query() {
+          return [{ id: 42, url: "https://www.tiktok.com/@demo/video/123", windowId: 9 }];
+        },
+      },
+      window: {
+        close() {
+          closedWindows.push("closed");
+        },
+      },
+    });
+
+    await board.syncActiveTab();
+    await elements.floatingButton.click();
+
+    assert.deepEqual(closedWindows, ["closed"]);
+    assert.notEqual(elements.status.textContent, "已打开字幕悬浮窗。当前浏览器不支持自动隐藏侧边栏。");
   });
 
   it("shows a connecting status when the TikTok content script is temporarily unavailable", async () => {
