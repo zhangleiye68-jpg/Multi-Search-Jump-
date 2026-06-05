@@ -9,6 +9,7 @@ const LOCAL_TOOLKIT_FILES = Object.freeze([
   "extension/src/localToolkit/localToolkitContent.js",
   "extension/src/localToolkit/localToolkitContent.css",
   "extension/src/localToolkit/localToolkitContentElements.css",
+  "extension/src/localToolkit/localToolkitDownloadUiPatch.js",
   "extension/src/localToolkit/localToolkitFreeMode.js",
   "extension/src/localToolkit/localToolkitPageBridge.js",
   "extension/src/localToolkit/localToolkitRelay.js",
@@ -32,6 +33,7 @@ const LOCAL_TOOLKIT_FILES = Object.freeze([
   "extension/assets/localToolkit/ffmpeg/ffmpeg-core.js",
   "extension/assets/localToolkit/ffmpeg/ffmpeg-core.wasm",
   "extension/assets/localToolkit/ffmpeg/ffmpeg-worker.js",
+  "extension/assets/localToolkit/image/download-green.svg",
   "extension/assets/localToolkit/image/dt.png",
   "extension/assets/localToolkit/image/tiktok.png",
   "extension/rules/localToolkitBackendBlock.json",
@@ -80,6 +82,7 @@ describe("local toolkit structure", () => {
     assert.equal(manifest.action.default_popup, "popup/popup.html");
     assert.ok(manifestFiles.includes("src/localToolkit/localToolkitFreeMode.js"));
     assert.ok(manifestFiles.includes("src/localToolkit/localToolkitContent.js"));
+    assert.ok(manifestFiles.includes("src/localToolkit/localToolkitDownloadUiPatch.js"));
     assert.ok(manifestFiles.includes("src/localToolkit/localToolkitRelay.js"));
     assert.ok(manifestFiles.includes("src/localToolkit/platforms/platformTikTok.js"));
     assert.ok(manifestFiles.includes("src/localToolkit/platforms/platformXiaohongshu.js"));
@@ -103,10 +106,22 @@ describe("local toolkit structure", () => {
       script.js?.some((file) => file.startsWith("src/localToolkit/platforms/")),
     );
 
-    assert.ok(mainFreeModeIndex >= 0, "local free mode should run in the main world");
+    assert.ok(mainFreeModeIndex >= 0, "open access mode should run in the main world");
     assert.ok(
       mainFreeModeIndex < firstMainPlatformIndex,
-      "local free mode should run before platform toolkit scripts",
+      "open access mode should run before platform toolkit scripts",
+    );
+
+    const mainDownloadUiPatchIndex = manifest.content_scripts.findIndex((script) =>
+      script.world === "MAIN" &&
+      script.run_at === "document_start" &&
+      script.js?.includes("src/localToolkit/localToolkitDownloadUiPatch.js"),
+    );
+
+    assert.ok(mainDownloadUiPatchIndex >= 0, "download UI patch should run in the main world");
+    assert.ok(
+      mainFreeModeIndex <= mainDownloadUiPatchIndex && mainDownloadUiPatchIndex < firstMainPlatformIndex,
+      "download UI patch should run after open access mode and before platform toolkit scripts",
     );
   });
 
@@ -167,6 +182,7 @@ describe("local toolkit structure", () => {
     assert.ok(resources.includes("src/localToolkit/localToolkitFreeMode.js"));
     assert.ok(resources.includes("src/localToolkit/localToolkitPageBridge.js"));
     assert.ok(resources.includes("assets/localToolkit/image/*.png"));
+    assert.ok(resources.includes("assets/localToolkit/image/*.svg"));
     assert.ok(resources.includes("assets/localToolkit/ffmpeg/*.wasm"));
     assert.deepEqual(manifest.declarative_net_request.rule_resources, [
       {

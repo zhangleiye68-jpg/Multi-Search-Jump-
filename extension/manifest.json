@@ -124,7 +124,8 @@
       ],
       "js": [
         "src/localToolkit/localToolkitFreeMode.js",
-        "src/localToolkit/localToolkitContent.js"
+        "src/localToolkit/localToolkitContent.js",
+        "src/localToolkit/localToolkitDownloadUiPatch.js"
       ],
       "run_at": "document_start",
       "css": [
@@ -174,7 +175,8 @@
         "https://b.taobao.com/*"
       ],
       "js": [
-        "src/localToolkit/localToolkitFreeMode.js"
+        "src/localToolkit/localToolkitFreeMode.js",
+        "src/localToolkit/localToolkitDownloadUiPatch.js"
       ],
       "run_at": "document_start",
       "world": "MAIN"
@@ -477,6 +479,7 @@
         "src/localToolkit/localToolkitFreeMode.js",
         "src/localToolkit/localToolkitPageBridge.js",
         "assets/localToolkit/image/*.png",
+        "assets/localToolkit/image/*.svg",
         "assets/localToolkit/ffmpeg/*.js",
         "assets/localToolkit/ffmpeg/*.wasm",
         "assets/localToolkit/js/*.js"

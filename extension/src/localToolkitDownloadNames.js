@@ -40,8 +40,7 @@ function getPlatformName(input) {
 function removeDataToolWords(value) {
   return value
     .replace(/data[\s._-]*tool/giu, "")
-    .replace(/datatool/giu, "")
-    .replace(/local[\s._-]*free/giu, "");
+    .replace(/datatool/giu, "");
 }
 
 function collapseRepeatedTimestamps(value) {

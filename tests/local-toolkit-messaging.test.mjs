@@ -105,7 +105,7 @@ describe("local toolkit background messaging", () => {
         name: LOCAL_TOOLKIT_MESSAGE_NAME,
         body: {
           action: "download",
-          data: { fileName: "DataTool Local Free.mp4", url: "https://example.com/video.mp4" },
+          data: { fileName: "DataTool.mp4", url: "https://example.com/video.mp4" },
         },
       },
       { downloadsApi },
@@ -142,7 +142,8 @@ describe("local toolkit background messaging", () => {
     );
 
     assert.equal(userInfo.success, true);
-    assert.equal(userInfo.data.email, "local-free@datatool.local");
+    assert.equal(userInfo.data.email, "open-access@datatool.local");
+    assert.equal(userInfo.data.access.unlimited, true);
     assert.equal(cloud.success, false);
     assert.equal(cloud.code, 451);
   });

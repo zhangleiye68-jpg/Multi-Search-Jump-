@@ -1,25 +1,24 @@
 (() => {
   const root = globalThis;
-  if (root.__DATATOOL_LOCAL_FREE_MODE__) return;
+  if (root.__DATATOOL_OPEN_ACCESS_MODE__) return;
+
+  const OPEN_ACCESS = Object.freeze({
+    allowed: true,
+    localOnly: true,
+    reduced: false,
+    restricted: false,
+    unlimited: true
+  });
 
   const LOCAL_USER = {
-    id: "local-free",
-    user_id: "local-free",
-    userId: "local-free",
-    uid: "local-free",
-    email: "local-free@datatool.local",
-    nickname: "Local Free",
-    name: "Local Free",
-    isVip: true,
-    is_vip: 1,
-    vip_ttl: 999999999,
-    vip_date_end: "2099-12-31",
-    vip: true,
-    isMember: true,
-    member: true,
-    subscription: { active: true, plan: "local-free" },
-    benefit: { active: true },
-    benefits: []
+    id: "local-open",
+    user_id: "local-open",
+    userId: "local-open",
+    uid: "local-open",
+    email: "open-access@datatool.local",
+    nickname: "Open Access",
+    name: "Open Access",
+    access: OPEN_ACCESS
   };
 
   const jsonResponse = (payload, status = 200) =>
@@ -27,11 +26,11 @@
       status,
       headers: {
         "content-type": "application/json; charset=utf-8",
-        "x-datatool-local-free": "1"
+        "x-msj-open-access": "1"
       }
     });
 
-  const ok = (data = {}, msg = "local-free") => ({
+  const ok = (data = {}, msg = "open-access") => ({
     success: true,
     status: 200,
     code: 0,
@@ -40,12 +39,12 @@
     data
   });
 
-  const disabled = (msg = "Local free mode only supports data available in the current browser page.") => ({
+  const disabled = (msg = "Current page does not expose local data for this action.") => ({
     success: false,
     code: 451,
     msg,
     message: msg,
-    data: null
+    data: OPEN_ACCESS
   });
 
   const urlOf = (input) => {
@@ -62,17 +61,9 @@
     try {
       const u = new URL(url, location && location.href ? location.href : "https://local.invalid/");
       if (u.hostname === "api.datatool.vip") return true;
-      if (u.hostname !== "www.datatool.vip") return false;
-      return (
-        u.pathname.startsWith("/api/") ||
-        u.pathname.startsWith("/frontend/") ||
-        u.pathname.startsWith("/auth/") ||
-        u.pathname.startsWith("/pricing") ||
-        u.pathname.startsWith("/workspace/") ||
-        u.pathname.startsWith("/user/donation-center")
-      );
+      return u.hostname === "www.datatool.vip";
     } catch {
-      return /(^|\/\/)(api|www)\.datatool\.vip\/(api|frontend|auth|pricing|workspace|user\/donation-center)/.test(url);
+      return /(^|\/\/)(api|www)\.datatool\.vip\//.test(url);
     }
   };
 
@@ -85,32 +76,20 @@
   const localBackendPayload = (url) => {
     if (/\/api\/auth\/login-out/.test(url)) return ok({});
     if (/\/api\/auth\/|\/api\/user\/info/.test(url)) return ok(LOCAL_USER);
-    if (/\/api\/coupon\/redeem/.test(url)) return ok({ redeemed: true, localFree: true });
-    if (/\/api\/index\/donate-modal/.test(url)) return ok({ enabled: false, show: false });
+    if (/\/api\/coupon\/redeem/.test(url)) return ok({ ...OPEN_ACCESS, redeemed: false });
+    if (/\/api\/index\/donate-modal/.test(url)) return ok({ ...OPEN_ACCESS, enabled: false, show: false });
     if (/\/api\/benefit\/check-benefits/.test(url)) {
-      return ok({ allowed: true, hasBenefit: true, is_allow: true, isVip: true, localFree: true });
+      return ok(OPEN_ACCESS);
     }
     if (/\/api\/benefit\/get-benefit-balance/.test(url)) {
-      return ok({
-        balance: 999999999,
-        remaining: 999999999,
-        remaining_seconds: 999999999,
-        remainingSeconds: 999999999,
-        daily_free_seconds: 999999999,
-        dailyGiftSeconds: 999999999,
-        quota: {
-          balance: 999999999,
-          remaining_seconds: 999999999,
-          daily_free_seconds: 999999999
-        }
-      });
+      return ok(OPEN_ACCESS);
     }
-    if (/\/api\/benefit\/reduce-benefits|\/api\/credits\/deduction/.test(url)) return ok({ reduced: false, localFree: true });
-    if (/\/api\/version\/check/.test(url)) return ok({ has_new: false, force: false, version: "local-free" });
-    if (/\/api\/data-original\/save|\/frontend\/user\/action-log\/add/.test(url)) return ok({ saved: false, localOnly: true });
+    if (/\/api\/benefit\/reduce-benefits|\/api\/credits\/deduction/.test(url)) return ok(OPEN_ACCESS);
+    if (/\/api\/version\/check/.test(url)) return ok({ ...OPEN_ACCESS, has_new: false, force: false, version: "open-access" });
+    if (/\/api\/data-original\/save|\/frontend\/user\/action-log\/add/.test(url)) return ok({ ...OPEN_ACCESS, saved: false });
     if (/\/api\/plugin\/proxy-url/.test(url)) return disabled();
     if (/\/api\/user-task\/|\/api\/video\/parse-original-video|frontend\/material\//.test(url)) return disabled();
-    return ok({ localFree: true });
+    return ok(OPEN_ACCESS);
   };
 
   const normalizeLang = (lang) => {
@@ -171,7 +150,7 @@
       translatorCache.set(key, translator);
       return translator;
     } catch (error) {
-      console.warn("[DataTool local-free] Chrome Translator API unavailable:", error);
+      console.warn("[DataTool open-access] Chrome Translator API unavailable:", error);
       return null;
     }
   };
@@ -197,7 +176,7 @@
         return jsonResponse(await translateBatch(target, texts));
       }
       if (isDatatoolBackend(url)) return jsonResponse(localBackendPayload(url));
-      if (isCloudTranscribeOrUpload(url)) return jsonResponse(disabled("Cloud upload and speech-to-text are disabled in local free mode."));
+      if (isCloudTranscribeOrUpload(url)) return jsonResponse(disabled("Cloud upload and speech-to-text are unavailable in the local extension."));
       return originalFetch(input, init);
     };
   }
@@ -218,7 +197,7 @@
           const payload = isTranslateEndpoint(url)
             ? [[String(args[0] || "")], []]
             : isCloudTranscribeOrUpload(url)
-              ? disabled("Cloud upload and speech-to-text are disabled in local free mode.")
+              ? disabled("Cloud upload and speech-to-text are unavailable in the local extension.")
               : localBackendPayload(url);
           const text = JSON.stringify(payload);
           const define = (key, value) => {
@@ -295,7 +274,7 @@
     }
   } catch {}
 
-  root.__DATATOOL_LOCAL_FREE_MODE__ = {
+  root.__DATATOOL_OPEN_ACCESS_MODE__ = {
     enabled: true,
     localUser: LOCAL_USER,
     translateBatch

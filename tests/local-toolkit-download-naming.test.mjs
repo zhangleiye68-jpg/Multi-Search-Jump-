@@ -20,7 +20,7 @@ describe("local toolkit download naming", () => {
       "local-toolkit-download.mp4",
     );
     assert.equal(
-      normalizeLocalToolkitDownloadFilename("DataTool Local Free.txt"),
+      normalizeLocalToolkitDownloadFilename("DataTool.txt"),
       "local-toolkit-download.txt",
     );
   });

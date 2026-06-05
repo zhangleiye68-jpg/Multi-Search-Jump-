@@ -4,27 +4,26 @@ export const LOCAL_TOOLKIT_MESSAGE_NAME = "datatool_background_trans";
 
 const DOWNLOAD_SITES_OPTIONS_PAGE_PATH = "options/options.html#settings-download-sites";
 
-const LOCAL_USER = Object.freeze({
-  id: "local-free",
-  user_id: "local-free",
-  userId: "local-free",
-  uid: "local-free",
-  email: "local-free@datatool.local",
-  nickname: "Local Free",
-  name: "Local Free",
-  isVip: true,
-  is_vip: 1,
-  vip_ttl: 999999999,
-  vip_date_end: "2099-12-31",
-  vip: true,
-  isMember: true,
-  member: true,
-  subscription: { active: true, plan: "local-free" },
-  benefit: { active: true },
-  benefits: [],
+const OPEN_ACCESS = Object.freeze({
+  allowed: true,
+  localOnly: true,
+  reduced: false,
+  restricted: false,
+  unlimited: true,
 });
 
-function ok(data = {}, msg = "local-free") {
+const LOCAL_USER = Object.freeze({
+  id: "local-open",
+  user_id: "local-open",
+  userId: "local-open",
+  uid: "local-open",
+  email: "open-access@datatool.local",
+  nickname: "Open Access",
+  name: "Open Access",
+  access: OPEN_ACCESS,
+});
+
+function ok(data = {}, msg = "open-access") {
   return {
     code: 0,
     data,
@@ -35,10 +34,10 @@ function ok(data = {}, msg = "local-free") {
   };
 }
 
-function disabled(message = "Local free mode only supports data available in the current browser page.") {
+function disabled(message = "Current page does not expose local data for this action.") {
   return {
     code: 451,
-    data: null,
+    data: OPEN_ACCESS,
     message,
     msg: message,
     success: false,
@@ -53,21 +52,9 @@ function isDatatoolBackend(url) {
       return true;
     }
 
-    if (parsedUrl.hostname !== "www.datatool.vip") {
-      return false;
-    }
-
-    return (
-      parsedUrl.pathname.startsWith("/api/") ||
-      parsedUrl.pathname.startsWith("/frontend/") ||
-      parsedUrl.pathname.startsWith("/auth/") ||
-      parsedUrl.pathname.startsWith("/pricing") ||
-      parsedUrl.pathname.startsWith("/workspace/") ||
-      parsedUrl.pathname.startsWith("/user/donation-center")
-    );
+    return parsedUrl.hostname === "www.datatool.vip";
   } catch {
-    return /(^|\/\/)(api|www)\.datatool\.vip\/(api|frontend|auth|pricing|workspace|user\/donation-center)/u
-      .test(String(url || ""));
+    return /(^|\/\/)(api|www)\.datatool\.vip\//u.test(String(url || ""));
   }
 }
 
@@ -83,39 +70,27 @@ export function isLocalToolkitMessage(message) {
 export function createLocalToolkitBackendPayload(url) {
   if (/\/api\/auth\/login-out/u.test(url)) return ok({});
   if (/\/api\/auth\/|\/api\/user\/info/u.test(url)) return ok(LOCAL_USER);
-  if (/\/api\/coupon\/redeem/u.test(url)) return ok({ localFree: true, redeemed: true });
-  if (/\/api\/index\/donate-modal/u.test(url)) return ok({ enabled: false, show: false });
+  if (/\/api\/coupon\/redeem/u.test(url)) return ok({ ...OPEN_ACCESS, redeemed: false });
+  if (/\/api\/index\/donate-modal/u.test(url)) return ok({ ...OPEN_ACCESS, enabled: false, show: false });
   if (/\/api\/benefit\/check-benefits/u.test(url)) {
-    return ok({ allowed: true, hasBenefit: true, is_allow: true, isVip: true, localFree: true });
+    return ok(OPEN_ACCESS);
   }
   if (/\/api\/benefit\/get-benefit-balance/u.test(url)) {
-    return ok({
-      balance: 999999999,
-      daily_free_seconds: 999999999,
-      dailyGiftSeconds: 999999999,
-      quota: {
-        balance: 999999999,
-        daily_free_seconds: 999999999,
-        remaining_seconds: 999999999,
-      },
-      remaining: 999999999,
-      remaining_seconds: 999999999,
-      remainingSeconds: 999999999,
-    });
+    return ok(OPEN_ACCESS);
   }
   if (/\/api\/benefit\/reduce-benefits|\/api\/credits\/deduction/u.test(url)) {
-    return ok({ localFree: true, reduced: false });
+    return ok(OPEN_ACCESS);
   }
-  if (/\/api\/version\/check/u.test(url)) return ok({ force: false, has_new: false, version: "local-free" });
+  if (/\/api\/version\/check/u.test(url)) return ok({ ...OPEN_ACCESS, force: false, has_new: false, version: "open-access" });
   if (/\/api\/data-original\/save|\/frontend\/user\/action-log\/add/u.test(url)) {
-    return ok({ localOnly: true, saved: false });
+    return ok({ ...OPEN_ACCESS, saved: false });
   }
   if (/\/api\/plugin\/proxy-url/u.test(url)) return disabled();
   if (/\/api\/user-task\/|\/api\/video\/parse-original-video|frontend\/material\//u.test(url)) {
     return disabled();
   }
 
-  return ok({ localFree: true });
+  return ok(OPEN_ACCESS);
 }
 
 async function readStorageValue(storageArea, key) {
@@ -128,7 +103,7 @@ async function fetchProxy(data, fetchImpl) {
   const url = data?.url || "";
 
   if (isCloudTranscribeOrUpload(url)) {
-    return disabled("Cloud upload and speech-to-text are disabled in local free mode.");
+    return disabled("Cloud upload and speech-to-text are unavailable in the local extension.");
   }
 
   if (isDatatoolBackend(url)) {
