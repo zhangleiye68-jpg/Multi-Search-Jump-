@@ -49,11 +49,13 @@ describe("side panel markup", () => {
     assert.match(css, /\.panel-search-area\s*{[\s\S]*position:\s*sticky;[\s\S]*top:\s*0;/);
     assert.match(css, /\.panel-content\s*{[\s\S]*min-height:\s*0;[\s\S]*overflow:\s*hidden;/);
     assert.match(css, /\.caption-board-section\s*{/);
+    assert.match(css, /\.caption-board-section\s*{[\s\S]*grid-template-rows:\s*auto auto auto minmax\(0,\s*auto\) minmax\(calc\(6\.296875em \+ 20px\),\s*1fr\) auto;/);
     assert.match(css, /\.caption-board-author\s*{/);
     assert.match(css, /\.caption-board-details-header\s*{[\s\S]*justify-content:\s*flex-start;/);
     assert.match(css, /\.caption-board-details-copy-button\s*{/);
     assert.match(css, /\.caption-board-details p\s*{[\s\S]*font-size:\s*0\.75em;/);
     assert.match(css, /\.caption-board-list\s*{/);
+    assert.match(css, /\.caption-board-list\s*{[\s\S]*min-height:\s*calc\(6\.296875em \+ 20px\)/);
     assert.match(css, /\.caption-board-list p\s*{[\s\S]*font-size:\s*0\.8125em;/);
     assert.doesNotMatch(script, /historyList/);
     assert.match(script, /floatingButton:\s*document\.querySelector\("#caption-board-floating-button"\)/);

@@ -21,13 +21,14 @@ describe("TikTok caption overlay style", () => {
     assert.match(css, /\.msj-tiktok-video-info\s*{[\s\S]*display:\s*flex/);
     assert.match(css, /\.msj-tiktok-video-metric-icon\s*{/);
     assert.match(css, /\.msj-tiktok-video-details-resize\s*{/);
-    assert.match(css, /grid-template-rows:\s*auto auto auto auto auto minmax\(0,\s*1fr\);/);
+    assert.match(css, /grid-template-rows:\s*auto auto auto auto auto minmax\(calc\(6\.296875em \+ 68px\),\s*1fr\);/);
     assert.match(css, /\.msj-tiktok-caption-actions\s*{[\s\S]*flex-wrap:\s*nowrap/);
     assert.match(css, /\.msj-tiktok-caption-actions\s*{[\s\S]*position:\s*absolute/);
     assert.match(css, /\.msj-tiktok-caption-actions\s*{[\s\S]*bottom:\s*10px/);
     assert.match(css, /\.msj-tiktok-caption-actions \.msj-tiktok-caption-status\s*{[\s\S]*text-overflow:\s*ellipsis/);
     assert.match(css, /\.msj-tiktok-caption-action-button\s*{[\s\S]*flex:\s*0 0 auto/);
     assert.match(css, /\.msj-tiktok-caption-font-button\s*{[\s\S]*flex:\s*0 0 auto/);
+    assert.match(css, /\.msj-tiktok-caption-list\s*{[\s\S]*min-height:\s*calc\(6\.296875em \+ 68px\)/);
     assert.match(css, /\.msj-tiktok-caption-list\s*{[\s\S]*padding:\s*10px 10px 58px/);
     assert.match(css, /\.msj-tiktok-caption-list\s*{[\s\S]*scroll-padding-bottom:\s*58px/);
     assert.match(css, /\.msj-tiktok-card-metrics\s*{[\s\S]*pointer-events:\s*none/);

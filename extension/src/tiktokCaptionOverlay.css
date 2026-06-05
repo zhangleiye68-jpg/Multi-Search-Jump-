@@ -51,7 +51,7 @@
   top: 72px;
   right: 92px;
   display: grid;
-  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto auto minmax(calc(6.296875em + 68px), 1fr);
   width: min(360px, calc(100vw - 96px));
   min-width: 280px;
   min-height: 260px;
@@ -356,7 +356,7 @@
 .msj-tiktok-caption-list {
   display: grid;
   align-content: start;
-  min-height: 0;
+  min-height: calc(6.296875em + 68px);
   gap: 8px;
   overflow: auto;
   border: 1px solid #edf3f0;
