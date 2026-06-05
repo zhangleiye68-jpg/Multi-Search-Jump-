@@ -19,6 +19,7 @@ describe("usage guide docs", () => {
     assert.equal(await fileExists("docs/WEB_STORE_REVIEW_NOTES.md"), true);
     assert.equal(await fileExists("PRIVACY.md"), true);
     assert.equal(await fileExists("CHANGELOG.md"), true);
+    assert.equal(await fileExists("INSTALL.zh-CN.md"), true);
     assert.equal(await fileExists(".github/workflows/ci.yml"), true);
 
     assert.equal(await fileExists("Multi Search Jump 插件使用说明.md"), false);
@@ -61,5 +62,24 @@ describe("usage guide docs", () => {
     assert.doesNotMatch(usageGuide, /默认只启用 Google 普通网页搜索/);
     assert.doesNotMatch(usageGuide, /Alt\+Shift\+S/);
     assert.doesNotMatch(usageGuide, /打开本地工具/);
+  });
+
+  it("keeps an external Markdown installation guide for package handoff", async () => {
+    const installGuide = await readFile("INSTALL.zh-CN.md", "utf8");
+
+    assert.match(installGuide, /# Multi Search Jump 安装与使用教程/);
+    assert.match(installGuide, /版本：1\.0\.0/);
+    assert.match(installGuide, /解压/);
+    assert.match(installGuide, /chrome:\/\/extensions/);
+    assert.match(installGuide, /edge:\/\/extensions/);
+    assert.match(installGuide, /加载已解压的扩展程序/);
+    assert.match(installGuide, /extension\//);
+    assert.match(installGuide, /不要选择 ZIP 文件/);
+    assert.match(installGuide, /不要选择仓库根目录/);
+    assert.match(installGuide, /搜索/);
+    assert.match(installGuide, /侧边栏/);
+    assert.match(installGuide, /TikTok 字幕/);
+    assert.match(installGuide, /下载悬浮图标/);
+    assert.match(installGuide, /刷新/);
   });
 });

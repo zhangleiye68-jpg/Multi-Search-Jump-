@@ -3,6 +3,14 @@ import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
 describe("extension manifest", () => {
+  it("keeps the visible extension and package versions aligned", async () => {
+    const manifest = JSON.parse(await readFile("extension/manifest.json", "utf8"));
+    const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+
+    assert.equal(manifest.version, "1.0.0");
+    assert.equal(packageJson.version, "1.0.0");
+  });
+
   it("declares a Manifest V3 action popup with tabs permission", async () => {
     const manifest = JSON.parse(await readFile("extension/manifest.json", "utf8"));
 

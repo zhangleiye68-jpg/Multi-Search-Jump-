@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0 - 2026-06-06
+
+- Set both the extension manifest version and package version to `1.0.0`.
+- Added `INSTALL.zh-CN.md` as an external Markdown installation and usage guide for package handoff.
+
 ## 0.2.0 - 2026-06-02
 
 - Embedded the DataTool local-free toolkit as `extension/local-toolkit/` without replacing the existing search popup, side panel, options page, history, or TikTok subtitle behavior.
